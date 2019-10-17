@@ -1,0 +1,27 @@
+{
+  "name": "qsys-remote-control",
+	"version": "0.0.1",
+	"api_version": "0.1.0",
+	"description": "Q-SYS Remote Control",
+	"keywords": [
+		"Remote",
+		"Control"
+	],
+	"manufacturer": "Q-SYS",
+	"product": ["Remote Control","QRC"],
+	"shortname": "Q-SYS Remote",
+	"homepage": "https://github.com/bitfocus/companion-module-qsys-remote-control#readme",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-qsys-remote-control.git"
+	},
+	"author": "Andreas H. Thomsen <mc-hauge@hotmail.com>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/bitfocus/companion-module-qsys-remote-control/issues"
+	}
+}

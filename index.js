@@ -11,14 +11,14 @@ function instance(system, id, config) {
 	instance_skel.apply(this, arguments);
 
 	self.actions(); // export actions
-	self.init_presets();
+	//self.init_presets();
 
 	return self;
 }
 
 instance.prototype.updateConfig = function(config) {
 	var self = this;
-	self.init_presets();
+	//self.init_presets();
 
 	if (self.socket !== undefined) {
 		self.socket.destroy();
@@ -34,7 +34,7 @@ instance.prototype.init = function() {
 
 	debug = self.debug;
 	log = self.log;
-	self.init_presets();
+	//self.init_presets();
 	self.init_tcp();
 };
 
@@ -155,7 +155,7 @@ instance.prototype.destroy = function() {
 	debug("destroy", self.id);
 };
 
-
+/*
 instance.prototype.init_presets = function () {
 	var self = this;
 	var presets = [];
@@ -163,6 +163,7 @@ instance.prototype.init_presets = function () {
 
 	self.setPresetDefinitions(presets);
 }
+*/
 
 instance.prototype.actions = function(system) {
 	var self = this;

@@ -9,5 +9,8 @@ Reference avalible here: https://q-syshelp.qsc.com/Content/External_Control/Q-Sy
 * Initial module
 * Includes most commands available, in a rough test state
 
+**V1.0.0**
+* Fixed login bug
+
 **To Do**
-* Change version to V1.0.0 when confirmed working by testing
+* Include in core when confirmed working by testing

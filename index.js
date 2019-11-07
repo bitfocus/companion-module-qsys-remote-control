@@ -65,7 +65,7 @@ instance.prototype.init_tcp = function() {
 			self.status(self.STATE_OK);
 			debug("Connected");
 
-			let login = '{ "jsonrpc":"2.0", "method":"Logon", "params": { "User":"' + self.config.user + '", "Password":"' + self.config.user + '" } }' + '\r';
+			let login = '{ "jsonrpc":"2.0", "method":"Logon", "params": { "User":"' + self.config.user + '", "Password":"' + self.config.pass + '" } }' + '\r';
 
 			if (cmd_debug == true) { console.log('Q-SYS Connected'); }
 			if (cmd_debug == true) { console.log('Q-SYS Send: ' + login); }
@@ -77,20 +77,7 @@ instance.prototype.init_tcp = function() {
 			})
 		})
 
-		self.socket.on('data', function (d) {
-/*
-			if (cmd_debug == true) { console.log('Recived: %s', d); }
-
-			if (String(d) == 'Login:\r') {
-				self.socket.write(self.config.user + '\r');
-				if (cmd_debug == true) { console.log('Response: ' + self.config.user); }
-			}
-			if (String(d) == 'Password:\r') {
-				self.socket.write(self.config.pass + '\r');
-				if (cmd_debug == true) { console.log('Response: ' + self.config.pass); }
-			}
-*/
-		})
+		self.socket.on('data', function (d) {})
 
 	}
 };

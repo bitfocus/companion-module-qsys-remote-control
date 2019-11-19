@@ -11,6 +11,3 @@ Reference avalible here: https://q-syshelp.qsc.com/Content/External_Control/Q-Sy
 
 **V1.0.0**
 * Fixed login bug
-
-**To Do**
-* Include in core when confirmed working by testing

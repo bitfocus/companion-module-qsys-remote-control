@@ -9,3 +9,6 @@ Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-S
 
 **V1.0.0**
 * Fixed login bug
+
+**V1.0.1**
+* Fixed termination bug

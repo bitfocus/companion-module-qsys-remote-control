@@ -2,7 +2,7 @@ var tcp           = require('../../tcp');
 var instance_skel = require('../../instance_skel');
 var debug;
 var log;
-var cmd_debug = true;
+var cmd_debug = false;
 
 function instance(system, id, config) {
 	var self = this;
@@ -65,7 +65,7 @@ instance.prototype.init_tcp = function() {
 			self.status(self.STATE_OK);
 			debug("Connected");
 
-			let login = '{ "jsonrpc":"2.0", "method":"Logon", "params": { "User":"' + self.config.user + '", "Password":"' + self.config.pass + '" } }' + '\r';
+			let login = '{ "jsonrpc":"2.0", "method":"Logon", "params": { "User":"' + self.config.user + '", "Password":"' + self.config.pass + '" } }' + '\x00';
 
 			if (cmd_debug == true) { console.log('Q-SYS Connected'); }
 			if (cmd_debug == true) { console.log('Q-SYS Send: ' + login); }
@@ -807,7 +807,7 @@ instance.prototype.action = function(action) {
 		debug('sending ','{ "jsonrpc": "2.0", "id": 1234, "method": ' + cmd,"to",self.config.host);
 
 		if (self.socket !== undefined && self.socket.connected) {
-			self.socket.send('{ "jsonrpc": "2.0", "id": 1234, "method": ' + cmd + '\r');
+			self.socket.send('{ "jsonrpc": "2.0", "id": 1234, "method": ' + cmd + '\x00');
 			if (cmd_debug == true) { console.log('Q-SYS Send: { "jsonrpc": "2.0", "id": 1234, "method": ' + cmd + '\r'); }
 
 		}

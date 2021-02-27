@@ -12,3 +12,6 @@ Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-S
 
 **V1.0.1**
 * Fixed termination bug
+
+**V1.0.2**
+* Fixed mixer_set* actions

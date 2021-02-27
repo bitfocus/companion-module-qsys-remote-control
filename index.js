@@ -286,14 +286,14 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
 				type: 'textinput',
-				id: 'output',
-				label: 'Output',
+				id: 'outputs',
+				label: 'Outputs',
 				default: '1',
 			},
 			{
@@ -301,13 +301,17 @@ instance.prototype.actions = function(system) {
 				id: 'value',
 				label: 'Value',
 				default: 0,
+				min: -100,
+				max: 20,
 				regex: self.REGEX_NUMBER
 			},
 			{
 				type: 'number',
 				id: 'ramp',
-				label: 'ramp',
+				label: 'Ramp',
 				default: 0,
+				min: 0,
+				max: 100,
 				regex: self.REGEX_NUMBER
 			},
 			]
@@ -322,14 +326,14 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
 				type: 'textinput',
-				id: 'output',
-				label: 'Output',
+				id: 'outputs',
+				label: 'Outputs',
 				default: '1',
 			},
 			{
@@ -337,13 +341,17 @@ instance.prototype.actions = function(system) {
 				id: 'value',
 				label: 'Value',
 				default: 0,
+				min: 0,
+				max: 60,
 				regex: self.REGEX_NUMBER
 			},
 			{
 				type: 'number',
 				id: 'ramp',
-				label: 'ramp',
+				label: 'Ramp',
 				default: 0,
+				min: 0,
+				max: 100,
 				regex: self.REGEX_NUMBER
 			},
 			]
@@ -358,14 +366,14 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
 				type: 'textinput',
-				id: 'output',
-				label: 'Output',
+				id: 'outputs',
+				label: 'Outputs',
 				default: '1',
 			},
 			{
@@ -390,14 +398,14 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
 				type: 'textinput',
-				id: 'output',
-				label: 'Output',
+				id: 'outputs',
+				label: 'Outputs',
 				default: '1',
 			},
 			{
@@ -422,8 +430,8 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
@@ -431,13 +439,17 @@ instance.prototype.actions = function(system) {
 				id: 'value',
 				label: 'Value',
 				default: 0,
+				min: -100,
+				max: 20,
 				regex: self.REGEX_NUMBER
 			},
 			{
 				type: 'number',
 				id: 'ramp',
-				label: 'ramp',
+				label: 'Ramp',
 				default: 0,
+				min: 0,
+				max: 100,
 				regex: self.REGEX_NUMBER
 			},
 			]
@@ -452,8 +464,8 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
@@ -465,13 +477,6 @@ instance.prototype.actions = function(system) {
 					{ id: 'true', label: 'true' },
 					{ id: 'false', label: 'false' },
 				]
-			},
-			{
-				type: 'number',
-				id: 'ramp',
-				label: 'ramp',
-				default: 0,
-				regex: self.REGEX_NUMBER
 			},
 			]
 		},
@@ -485,8 +490,8 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
@@ -511,8 +516,8 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'output',
-				label: 'Output',
+				id: 'outputs',
+				label: 'Outputs',
 				default: '1',
 			},
 			{
@@ -520,13 +525,17 @@ instance.prototype.actions = function(system) {
 				id: 'value',
 				label: 'Value',
 				default: 0,
+				min: -100,
+				max: 20,
 				regex: self.REGEX_NUMBER
 			},
 			{
 				type: 'number',
 				id: 'ramp',
-				label: 'ramp',
+				label: 'Ramp',
 				default: 0,
+				min: 0,
+				max: 100,
 				regex: self.REGEX_NUMBER
 			},
 			]
@@ -541,8 +550,8 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'output',
-				label: 'Output',
+				id: 'outputs',
+				label: 'Outputs',
 				default: '1',
 			},
 			{
@@ -602,13 +611,17 @@ instance.prototype.actions = function(system) {
 				id: 'value',
 				label: 'Value',
 				default: 0,
+				min: -100,
+				max: 20,
 				regex: self.REGEX_NUMBER
 			},
 			{
 				type: 'number',
 				id: 'ramp',
-				label: 'ramp',
+				label: 'Ramp',
 				default: 0,
+				min: 0,
+				max: 100,
 				regex: self.REGEX_NUMBER
 			},
 			]
@@ -629,8 +642,8 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
@@ -642,13 +655,6 @@ instance.prototype.actions = function(system) {
 					{ id: 'true', label: 'true' },
 					{ id: 'false', label: 'false' },
 				]
-			},
-			{
-				type: 'number',
-				id: 'ramp',
-				label: 'ramp',
-				default: 0,
-				regex: self.REGEX_NUMBER
 			},
 			]
 		},
@@ -668,8 +674,8 @@ instance.prototype.actions = function(system) {
 			},
 			{
 				type: 'textinput',
-				id: 'input',
-				label: 'Input',
+				id: 'inputs',
+				label: 'Inputs',
 				default: '1',
 			},
 			{
@@ -779,19 +785,19 @@ instance.prototype.action = function(action) {
 		case 'changeGroup_invalidate':					cmd = '"ChangeGroup.Invalidate", "params": { "Id": "' + action.options.id + '" } }';	break;
 		case 'changeGroup_clear':								cmd = '"ChangeGroup.Clear", "params": { "Id": "' + action.options.id + '" } }';	break;
 
-		case 'mixer_setCrossPointGain':					cmd = '"Mixer.SetCrossPointGain", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.input + '", "Outputs": "' + action.options.output + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
-		case 'mixer_setCrossPointDelay':				cmd = '"Mixer.SetCrossPointDelay", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.input + '", "Outputs": "' + action.options.output + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
-		case 'mixer_setCrossPointMute':					cmd = '"Mixer.SetCrossPointMute", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.input + '", "Outputs": "' + action.options.output + '", "Value": ' + action.options.value + ' } }';	break;
-		case 'mixer_setCrossPointSolo':					cmd = '"Mixer.SetCrossPointSolo", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.input + '", "Outputs": "' + action.options.output + '", "Value": ' + action.options.value + ' } }';	break;
-		case 'mixer_setInputGain':							cmd = '"Mixer.SetInputGain", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.input + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
-		case 'mixer_setInputMute':							cmd = '"Mixer.SetInputMute", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.input + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
-		case 'mixer_setInputSolo':							cmd = '"Mixer.SetInputSolo", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.input + '", "Value": ' + action.options.value + ' } }';	break;
-		case 'mixer_setOutputGain':							cmd = '"Mixer.SetOutputGain", "params": { "Name": "' + action.options.name + '", "Outputs": "' + action.options.output + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
-		case 'mixer_setOutputMute':							cmd = '"Mixer.SetOutputMute", "params": { "Name": "' + action.options.name + '", "Outputs": "' + action.options.output + '", "Value": ' + action.options.value + ' } }';	break;
+		case 'mixer_setCrossPointGain':					cmd = '"Mixer.SetCrossPointGain", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
+		case 'mixer_setCrossPointDelay':				cmd = '"Mixer.SetCrossPointDelay", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
+		case 'mixer_setCrossPointMute':					cmd = '"Mixer.SetCrossPointMute", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ' } }';	break;
+		case 'mixer_setCrossPointSolo':					cmd = '"Mixer.SetCrossPointSolo", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ' } }';	break;
+		case 'mixer_setInputGain':							cmd = '"Mixer.SetInputGain", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
+		case 'mixer_setInputMute':							cmd = '"Mixer.SetInputMute", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ' } }';	break;
+		case 'mixer_setInputSolo':							cmd = '"Mixer.SetInputSolo", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ' } }';	break;
+		case 'mixer_setOutputGain':							cmd = '"Mixer.SetOutputGain", "params": { "Name": "' + action.options.name + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
+		case 'mixer_setOutputMute':							cmd = '"Mixer.SetOutputMute", "params": { "Name": "' + action.options.name + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ' } }';	break;
 		case 'mixer_setCueMute':								cmd = '"Mixer.SetCueMute", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Value": ' + action.options.value + ' } }';	break;
 		case 'mixer_setCueGain':								cmd = '"Mixer.SetCueGain", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }';	break;
-		case 'mixer_setInputCueEnable':					cmd = '"Mixer.SetInputCueEnable", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Inputs": "' + action.options.input + '", "Value": ' + action.options.value + ' } }';	break;
-		case 'mixer_setInputCueAfl':						cmd = '"Mixer.SetInputCueAfl", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Inputs": "' + action.options.input + '", "Value": ' + action.options.value + ' } }';	break;
+		case 'mixer_setInputCueEnable':					cmd = '"Mixer.SetInputCueEnable", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ' } }';	break;
+		case 'mixer_setInputCueAfl':						cmd = '"Mixer.SetInputCueAfl", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ' } }';	break;
 
 		case 'loopPlayer_start':								cmd = '"LoopPlayer.Start", "params": { "Files": [ { "Name": "' + action.options.file_name + '", "Mode": "' + action.options.mode + '", "Output": ' + action.options.output + ' } ], "Name": "' + action.options.name + '", "StartTime": ' + action.options.startTime + ', "Loop": ' + action.options.loop + ', "Log": true }, }';	break;
 		case 'loopPlayer_stop':									cmd = '"LoopPlayer.Stop", "params": { "Name": "' + action.options.name + '", "Outputs": ' + action.options.output + ', "Log": true } }';	break;

@@ -3,9 +3,13 @@ var instance_skel = require('../../instance_skel');
 var debug;
 var log;
 var cmd_debug = false;
+var controls;
 
 function instance(system, id, config) {
 	var self = this;
+
+	self.defineConst('QRC_GET', 1);
+	self.defineConst('QRC_SET', 2);
 
 	// super-constructor
 	instance_skel.apply(this, arguments);
@@ -13,8 +17,16 @@ function instance(system, id, config) {
 	self.actions(); // export actions
 	//self.init_presets();
 
+	if (self.config.feedback_enabled) {
+		self.initControls();
+		self.initFeedbacks();
+		self.initPolling();
+	}
+
 	return self;
 }
+
+instance.prototype.pollQRCTimer = undefined;
 
 instance.prototype.updateConfig = function(config) {
 	var self = this;
@@ -25,8 +37,19 @@ instance.prototype.updateConfig = function(config) {
 		delete self.socket;
 	}
 
+	if (self.pollQRCTimer !== undefined) {
+		clearInterval(self.pollQRCTimer);
+		delete self.pollQRCTimer;
+	}
+
 	self.config = config;
 	self.init_tcp();
+
+	if (self.config.feedback_enabled) {
+		self.initControls();
+		self.initFeedbacks();
+		self.initPolling();
+	}
 };
 
 instance.prototype.init = function() {
@@ -75,13 +98,58 @@ instance.prototype.init_tcp = function() {
 			socket.once('close', function() {
 				if (cmd_debug == true) { console.log('Q-SYS Disconnect'); }
 			})
-		})
+		});
 
-		self.socket.on('data', function (d) {})
+		self.socket.on('data', function (d) {
+			response = d.toString();
+			if (cmd_debug == true) { console.log(response);}
+
+			if (self.config.feedback_enabled) {
+				self.processResponse(response);
+			}
+		});
 
 	}
 };
 
+instance.prototype.processResponse = function(response) {
+	var messages = this.getMessages(response);
+	var refresh = false;
+
+	for (message of messages) {
+		obj = JSON.parse(message.slice(0, -1)); // trim trailing null
+
+		if ((obj.id !== undefined) && (obj.id == this.QRC_GET)) {
+			if (obj.result !== undefined) {
+				this.updateControl(obj);
+				refresh = true;
+			} else if (obj.error !== undefined) {
+				console.log('Q-Sys error', obj.error);
+			}
+		}
+	}
+	if (refresh) { this.checkFeedbacks(); }
+};
+
+instance.prototype.getMessages = function(input) {
+	messageStart = '{"jsonrpc"';
+	remaining = input
+	i = 1; //looking for the next message, not the first one
+	messages = []
+
+	while (i > 0) {
+		i = remaining.indexOf(messageStart, 1);
+		if (i > 0) {  // if there is another message, split off the first and repeat
+			nextMessage = remaining.substring(0,i);
+			remaining = remaining.substring(i);
+
+			messages.push(nextMessage);
+		} else {  // else add the last remaining message
+			messages.push(remaining);
+		}
+	}
+	return messages;
+};
 
 // Return config fields for web config
 instance.prototype.config_fields = function () {
@@ -104,6 +172,20 @@ instance.prototype.config_fields = function () {
 			regex: self.REGEX_PORT
 		},
 		{
+			type: 'checkbox',
+			id: 'feedback_enabled',
+			label: 'Feedback Enabled',
+			default: false
+		},
+		{
+			type: 'number',
+			id: 'poll_interval',
+			label: 'Polling Interval (ms)',
+			min: 30,
+			max: 60000,
+			default: 100
+		},
+		{
 			type: 'text',
 			id: 'info',
 			label: 'Information',
@@ -123,7 +205,7 @@ instance.prototype.config_fields = function () {
 			label: 'Password',
 			width: 4,
 			default: '1234'
-		}
+		},
 	]
 };
 
@@ -137,6 +219,15 @@ instance.prototype.destroy = function() {
 
 	if (self.udp !== undefined) {
 		self.udp.destroy();
+	}
+
+	if (self.pollQRCTimer !== undefined) {
+		clearInterval(self.pollQRCTimer);
+		delete self.pollQRCTimer;
+	}
+
+	if (self.controls !== undefined) {
+		self.controls.destroy();
 	}
 
 	debug("destroy", self.id);
@@ -169,6 +260,16 @@ instance.prototype.actions = function(system) {
 				id: 'value',
 				label: 'Value:',
 				default: '',
+			}]
+		},
+		'control_toggle': {
+			label: 'Control.toggle',
+			options: [{
+				type: 'textinput',
+				id: 'name',
+				label: 'Name:',
+				default: '',
+				tooltip: 'Only applies to controls with an on/off state.'
 			}]
 		},
 		'component_set': {
@@ -776,6 +877,14 @@ instance.prototype.action = function(action) {
 	switch(action.action) {
 
 		case 'control_set':											cmd = '"Control.Set", "params": { "Name": "' + action.options.name + '", "Value": "' + action.options.value + '" } }';	break;
+		case 'control_toggle':									{
+			control = controls.get(action.options.name);
+			// set our internal state in anticipation of success, allowing two presses
+			// of the button faster than the polling interval to correctly toggle the state
+			control.value = !control.value;
+			cmd = '"Control.Set", "params": { "Name": "' + action.options.name + '", "Value": "' + control.value + '" } }';
+			break;
+		}
 		case 'component_set':										cmd = '"Component.Set", "params": { "Name": "' + action.options.name + '", "Controls": [{ "Name": "' + action.options.control_name + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' }] } }';	break;
 
 		case 'changeGroup_addControl':					cmd = '"ChangeGroup.AddControl", "params": { "Id": "' + action.options.id + '", "Controls": [ ' + action.options.controls + ' ] } }';	break;
@@ -805,23 +914,311 @@ instance.prototype.action = function(action) {
 
 	}
 
-
-
-
 	if (cmd !== undefined) {
-
-		debug('sending ','{ "jsonrpc": "2.0", "id": 1234, "method": ' + cmd,"to",self.config.host);
+		full_cmd = '{ "jsonrpc": "2.0", "id": ' + self.QRC_SET + ', "method": ' + cmd;
+		debug('sending ',full_cmd,"to",self.config.host);
 
 		if (self.socket !== undefined && self.socket.connected) {
-			self.socket.send('{ "jsonrpc": "2.0", "id": 1234, "method": ' + cmd + '\x00');
-			if (cmd_debug == true) { console.log('Q-SYS Send: { "jsonrpc": "2.0", "id": 1234, "method": ' + cmd + '\r'); }
+			self.socket.send(full_cmd + '\x00');
+			if (cmd_debug == true) { console.log('Q-SYS Send: ' + full_cmd + '\r'); }
 
 		}
 		else {
 			debug('Socket not connected :(');
 		}
 	}
+}
 
+instance.prototype.initControls = function() {
+	controls = new Map();
+
+	for (let bank in feedbacks) {
+		for (let button in feedbacks[bank]) {
+			feedback = feedbacks[bank][button];
+			if (Object.keys(feedback).length > 0) {
+				this.addControl(feedback[0]);
+			}
+		}
+	}
+}
+
+instance.prototype.initFeedbacks = function () {
+	var self = this;
+
+	// feedbacks
+	var feedbacks = {};
+
+	feedbacks['control-string'] = {
+		label: 'Change text to reflect control value',
+		description: 'Will return current state of a control as a string',
+		options: [{
+				type: 'textinput',
+				id: 'name',
+				label: 'Name:',
+				default: '',
+			},
+			{
+				type: 'dropdown',
+				id: 'type',
+				label: 'Type',
+				choices: [
+					{ id: 'string',   label: 'String'},
+					{ id: 'value',    label: 'Value'},
+					{ id: 'position', label: 'Position'}
+				],
+				default: 'value'
+			},
+		],
+		subscribe: (feedback) => { self.addControl(feedback); },
+		unsubscribe: (feedback) => { self.removeControl(feedback); },
+		callback: function(feedback, bank) {
+			var opt = feedback.options;
+			var control = controls.get(opt.name);
+			switch (opt.type) {
+				case 'string':   return { text: control.strval };
+				case 'value':    return { text: control.value.toString() };
+				case 'position': return { text: control.position.toString() };
+				default: break;
+			}
+
+		}
+	};
+
+	feedbacks['control-boolean'] = {
+		label: 'Toggle color on boolean control value',
+		description: 'Toggle color on boolean control value',
+		options: [{
+				type: 'textinput',
+				id: 'name',
+				label: 'Name:',
+				default: '',
+			},
+			{
+				type: 'dropdown',
+				id: 'value',
+				label: 'Control value',
+				choices: [
+					{ id: 'true', label: 'True'},
+					{ id: 'false', label: 'False'}
+				],
+				default: 'true'
+			},
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255,255,255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255,0,0)
+			},
+		],
+		subscribe: (feedback) => { self.addControl(feedback); },
+		unsubscribe: (feedback) => { self.removeControl(feedback); },
+		callback: function(feedback, bank) {
+			var opt = feedback.options;
+			var control = controls.get(opt.name);
+
+			switch (opt.value) {
+				case 'true':  if (control.value)  { return { color: opt.fg, bgcolor: opt.bg }; } break;
+				case 'false': if (!control.value) { return { color: opt.fg, bgcolor: opt.bg }; } break;
+				default: break;
+			}
+		}
+	};
+
+	feedbacks['control-threshold'] = {
+		label: 'Toggle color on control value at or exceeding threshold',
+		description: 'Toggle color on control value at or exceeding threshold',
+		options: [{
+				type: 'textinput',
+				id: 'name',
+				label: 'Name:',
+				default: '',
+			},
+			{
+				type: 'number',
+				id: 'threshold',
+				label: 'Threshold value',
+				default: '',
+				min: -10000,
+				max: 10000,
+				range: false,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255,255,255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255,0,0)
+			},
+		],
+		subscribe: (feedback) => { self.addControl(feedback); },
+		unsubscribe: (feedback) => { self.removeControl(feedback); },
+		callback: function(feedback, bank) {
+			var opt = feedback.options;
+			var control = controls.get(opt.name);
+
+			if (control.value >= opt.threshold) {
+				return { color: opt.fg, bgcolor: opt.bg };
+			}
+		}
+	};
+
+	feedbacks['control-fade'] = {
+		label: 'Fade color over control value range',
+		description: 'Fade color over control value range',
+		options: [{
+				type: 'textinput',
+				id: 'name',
+				label: 'Name:',
+				default: '',
+			},
+			{
+				type: 'number',
+				id: 'low_threshold',
+				label: 'Low threshold value',
+				default: '',
+				min: -10000,
+				max: 10000,
+				range: false,
+			},
+			{
+				type: 'number',
+				id: 'high_threshold',
+				label: 'High threshold value',
+				default: '',
+				min: -10000,
+				max: 10000,
+				range: false,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Low threshold color',
+				id: 'low_bg',
+				default: self.rgb(0,0,0)
+			},
+			{
+				type: 'colorpicker',
+				label: 'High threshold color',
+				id: 'high_bg',
+				default: self.rgb(255,0,0)
+			},
+		],
+		subscribe: (feedback) => { self.addControl(feedback); },
+		unsubscribe: (feedback) => { self.removeControl(feedback); },
+		callback: function(feedback, bank) {
+			var opt = feedback.options;
+			var control = controls.get(opt.name);
+			var numToRGB = function(num) {
+				var x = new Object();
+				x.r = (num & 0xff0000) >> 16;
+				x.g = (num & 0x00ff00) >> 8;
+				x.b = (num & 0x0000ff);
+				return x;
+			}
+
+			if ((control.value > opt.high_threshold) ||
+				  (control.value < opt.low_threshold)) {
+						return;
+			}
+
+			var range = opt.high_threshold - opt.low_threshold;
+			var ratio = (control.value - opt.low_threshold) / range;
+
+			hi_rgb = numToRGB(opt.high_bg);
+			lo_rgb = numToRGB(opt.low_bg);
+
+			var r = Math.round((hi_rgb.r - lo_rgb.r) * ratio) + lo_rgb.r;
+			var g = Math.round((hi_rgb.g - lo_rgb.g) * ratio) + lo_rgb.g;
+			var b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b;
+
+			return { bgcolor: self.rgb(r, g, b) };
+		}
+	};
+
+	self.setFeedbackDefinitions(feedbacks);
+}
+
+instance.prototype.getControlStatus = function(self, control) {
+	cmd = '"Control.Get", "params": ["' + control + '"] }';
+
+	if (cmd !== undefined) {
+
+		full_cmd = '{ "jsonrpc": "2.0", "id": ' + self.QRC_GET + ', "method": ' + cmd
+		debug('sending ',full_cmd,"to",self.config.host);
+
+		if (self.socket !== undefined && self.socket.connected) {
+			self.socket.send(full_cmd + '\x00');
+			if (cmd_debug == true) { console.log('Q-SYS Send: ' + full_cmd + '\r'); }
+
+		}
+		else {
+			debug('Socket not connected :(');
+		}
+	}
+}
+
+instance.prototype.getControlStatuses = function(self) {
+	for (control of controls.keys()) {
+		self.getControlStatus(self, control);
+	}
+}
+
+instance.prototype.initPolling = function () {
+	var self = this;
+	if (self.config.feedback_enabled) {
+		if (self.pollQRCTimer === undefined) {
+			self.pollQRCTimer = setInterval(function () {self.getControlStatuses(self)}, self.config.poll_interval);
+		}
+	}
+}
+
+instance.prototype.addControl = function(feedback) {
+	name = feedback['options']['name'];
+	if (controls.has(name)) {
+		control = controls.get(name);
+		if (control.ids === undefined) {
+			control.ids = new Set();
+		}
+		control.ids.add(feedback.id)
+	} else {
+		controls.set(name, {
+			ids: new Set([feedback.id]),
+			value: null,
+			position: null,
+			strval: ''});
+	}
+}
+
+instance.prototype.removeControl = function(feedback) {
+	name = feedback['options']['name'];
+
+	if (controls.has(name)) {
+		control = controls.get(name);
+		if (control.ids !== undefined) {
+			control.ids.delete(feedback.id);
+		}
+		if (control.ids.size == 0) {
+			controls.delete(name);
+		}
+	}
+}
+
+instance.prototype.updateControl = function(update) {
+	name = update.result[0].Name;
+	control = controls.get(name);
+	control.value    = update.result[0].Value;
+	control.strval   = update.result[0].String;
+	control.position = update.result[0].Position;
 }
 
 instance_skel.extendedBy(instance);

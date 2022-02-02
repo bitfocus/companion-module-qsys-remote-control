@@ -1,6 +1,6 @@
 {
-  "name": "qsys-remote-control",
-	"version": "1.0.3",
+	"name": "qsys-remote-control",
+	"version": "1.0.4",
 	"api_version": "0.1.0",
 	"description": "Q-SYS Remote Control",
 	"keywords": [
@@ -8,7 +8,10 @@
 		"Control"
 	],
 	"manufacturer": "Q-SYS",
-	"product": ["Remote Control","QRC"],
+	"product": [
+		"Remote Control",
+		"QRC"
+	],
 	"shortname": "Q-SYS Remote",
 	"homepage": "https://github.com/bitfocus/companion-module-qsys-remote-control#readme",
 	"main": "index.js",

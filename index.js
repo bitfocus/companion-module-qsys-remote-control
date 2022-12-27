@@ -2,6 +2,8 @@ var tcp           = require('../../tcp')
 var instance_skel = require('../../instance_skel')
 var controls
 
+import { InstanceBase, Regex, combineRgb, runEntrypoint } from '@companion-module/base'
+
 class QsysRemoteControl extends InstanceBase {	
 	async init(config) {
 		this.console_debug = false
@@ -101,8 +103,9 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	processResponse(response) {
-		var messages = this.getMessages(response)
-		var refresh = false
+		const messages = this.getMessages(response)
+		let refresh = false
+		let obj
 
 		for (message of messages) {
 			obj = JSON.parse(message.slice(0, -1)) // trim trailing null
@@ -112,18 +115,20 @@ class QsysRemoteControl extends InstanceBase {
 					this.updateControl(obj)
 					refresh = true
 				} else if (obj.error !== undefined) {
+					// @todo this should not be console.log
 					console.log('Q-Sys error', obj.error)
 				}
 			}
 		}
+
 		if (refresh) this.checkFeedbacks()
 	}
 
 	getMessages(input) {
-		messageStart = '{"jsonrpc"'
-		remaining = input
-		i = 1 //looking for the next message, not the first one
-		messages = []
+		const messageStart = '{"jsonrpc"'
+		const messages = []
+		let remaining = input
+		let i = 1 //looking for the next message, not the first one
 
 		while (i > 0) {
 			i = remaining.indexOf(messageStart, 1)
@@ -136,6 +141,7 @@ class QsysRemoteControl extends InstanceBase {
 				messages.push(remaining)
 			}
 		}
+
 		return messages
 	}
 
@@ -218,7 +224,7 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	actions(system) {
-		this.setActions({
+		this.setActionDefinitions({
 			'control_set': {
 				name: 'Control.set',
 				options: [
@@ -917,9 +923,11 @@ class QsysRemoteControl extends InstanceBase {
 	initFeedbacks() {
 		const feedbacks = {
 			"control-string": {
-				label: 'Change text to reflect control value',
+				name: 'Change text to reflect control value',
 				description: 'Will return current state of a control as a string',
-				options: [{
+				type: 'advanced',
+				options: [
+					{
 						type: 'textinput',
 						id: 'name',
 						label: 'Name:',
@@ -937,15 +945,11 @@ class QsysRemoteControl extends InstanceBase {
 						default: 'value'
 					},
 				],
-				subscribe: (feedback) => {
-					this.addControl(feedback)
-				},
-				unsubscribe: (feedback) => {
-					this.removeControl(feedback)
-				},
-				callback: function(feedback, bank) {
-					var opt = feedback.options
-					var control = controls.get(opt.name)
+				subscribe: feedback => this.addControl(feedback),
+				unsubscribe: feedback => this.removeControl(feedback),
+				callback: feedback => {
+					const opt = feedback.options
+					const control = controls.get(opt.name)
 
 					switch (opt.type) {
 						case 'string':
@@ -966,8 +970,13 @@ class QsysRemoteControl extends InstanceBase {
 				}
 			},
 			"control-boolean": {
-				label: 'Toggle color on boolean control value',
+				name: 'Toggle color on boolean control value',
 				description: 'Toggle color on boolean control value',
+				type: 'boolean',
+				defaultStyle: {
+					color: combineRgb(255, 255, 255), // fg
+					bgcolor: combineRgb(255, 0, 0), //bg
+				},
 				options: [
 					{
 						type: 'textinput',
@@ -985,50 +994,27 @@ class QsysRemoteControl extends InstanceBase {
 						],
 						default: 'true'
 					},
-					{
-						type: 'colorpicker',
-						label: 'Foreground color',
-						id: 'fg',
-						default: this.rgb(255,255,255)
-					},
-					{
-						type: 'colorpicker',
-						label: 'Background color',
-						id: 'bg',
-						default: this.rgb(255,0,0)
-					},
 				],
 				subscribe: feedback => this.addControl(feedback),
 				unsubscribe: feedback => this.removeControl(feedback),
-				callback: function(feedback, bank) {
-					var opt = feedback.options
-					var control = controls.get(opt.name)
+				callback: feedback => {
+					const opt = feedback.options
+					const control = controls.get(opt.name)
 
-					switch (opt.value) {
-						case 'true':
-							if (control.value)  {
-								return {
-									color: opt.fg, bgcolor: opt.bg
-								}
-							}
-							break
-						case 'false':
-							if (!control.value) {
-								return {
-									color: opt.fg,
-									bgcolor: opt.bg
-								}
-							}
-							break
-						default: break
-					}
+					return (opt.value === 'true' && control.value) || (opt.value === 'false' && !control.value)
 				}
 			},
 
 			"control-threshold": {
-				label: 'Toggle color on control value at or exceeding threshold',
+				name: 'Toggle color on control value at or exceeding threshold',
 				description: 'Toggle color on control value at or exceeding threshold',
-				options: [{
+				type: 'boolean',
+				defaultStyle: {
+					color: combineRgb(255, 255, 255), // fg
+					bgcolor: combineRgb(255, 0, 0), //bg
+				},
+				options: [
+					{
 						type: 'textinput',
 						id: 'name',
 						label: 'Name:',
@@ -1047,32 +1033,28 @@ class QsysRemoteControl extends InstanceBase {
 						type: 'colorpicker',
 						label: 'Foreground color',
 						id: 'fg',
-						default: this.rgb(255,255,255)
+						default: combineRgb(255,255,255)
 					},
 					{
 						type: 'colorpicker',
 						label: 'Background color',
 						id: 'bg',
-						default: this.rgb(255,0,0)
+						default: combineRgb(255,0,0)
 					},
 				],
 				subscribe: feedback => this.addControl(feedback),
 				unsubscribe: feedback => this.removeControl(feedback),
-				callback: function(feedback, bank) {
-					var opt = feedback.options
-					var control = controls.get(opt.name)
+				callback: feedback => {
+					const opt = feedback.options
+					const control = controls.get(opt.name)
 
-					if (control.value >= opt.threshold) {
-						return {
-							color: opt.fg,
-							bgcolor: opt.bg
-						}
-					}
+					return control.value >= opt.threshold
 				}
 			},
 			"control-fade": {
-				label: 'Fade color over control value range',
+				name: 'Fade color over control value range',
 				description: 'Fade color over control value range',
+				type: 'advanced',
 				options: [
 					{
 						type: 'textinput',
@@ -1102,26 +1084,26 @@ class QsysRemoteControl extends InstanceBase {
 						type: 'colorpicker',
 						label: 'Low threshold color',
 						id: 'low_bg',
-						default: this.rgb(0,0,0)
+						default: combineRgb(0,0,0)
 					},
 					{
 						type: 'colorpicker',
 						label: 'High threshold color',
 						id: 'high_bg',
-						default: this.rgb(255,0,0)
+						default: combineRgb(255,0,0)
 					},
 				],
 				subscribe: feedback => this.addControl(feedback),
 				unsubscribe: feedback => this.removeControl(feedback),
-				callback: function(feedback, bank) {
-					var opt = feedback.options
-					var control = controls.get(opt.name)
-					var numToRGB = function(num) {
-						var x = new Object()
-						x.r = (num & 0xff0000) >> 16
-						x.g = (num & 0x00ff00) >> 8
-						x.b = (num & 0x0000ff)
-						return x
+				callback: feedback => {
+					const opt = feedback.options
+					const control = controls.get(opt.name)
+					const numToRGB = num => {
+						return {
+							r: (num & 0xff0000) >> 16,
+							g: (num & 0x00ff00) >> 8,
+							b: (num & 0x0000ff)
+						}
 					}
 
 					if ((control.value > opt.high_threshold) ||
@@ -1129,18 +1111,18 @@ class QsysRemoteControl extends InstanceBase {
 								return
 					}
 
-					var range = opt.high_threshold - opt.low_threshold
-					var ratio = (control.value - opt.low_threshold) / range
+					const range = opt.high_threshold - opt.low_threshold
+					const ratio = (control.value - opt.low_threshold) / range
 
 					hi_rgb = numToRGB(opt.high_bg)
 					lo_rgb = numToRGB(opt.low_bg)
 
-					var r = Math.round((hi_rgb.r - lo_rgb.r) * ratio) + lo_rgb.r
-					var g = Math.round((hi_rgb.g - lo_rgb.g) * ratio) + lo_rgb.g
-					var b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b
+					const r = Math.round((hi_rgb.r - lo_rgb.r) * ratio) + lo_rgb.r
+					const g = Math.round((hi_rgb.g - lo_rgb.g) * ratio) + lo_rgb.g
+					const b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b
 
 					return {
-						bgcolor: this.rgb(r, g, b)
+						bgcolor: combineRgb(r, g, b)
 					}
 				}
 			}
@@ -1177,10 +1159,10 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	initPolling() {
-		if (this.config.feedback_enabled) {
-			if (this.pollQRCTimer === undefined) {
-				this.pollQRCTimer = setInterval(this.getControlStatuses.bind(this), this.config.poll_interval)
-			}
+		if (!this.config.feedback_enabled) return
+
+		if (this.pollQRCTimer === undefined) {
+			this.pollQRCTimer = setInterval(this.getControlStatuses.bind(this), this.config.poll_interval)
 		}
 	}
 

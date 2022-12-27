@@ -1,10 +1,8 @@
-var tcp           = require('../../tcp')
-var instance_skel = require('../../instance_skel')
 var controls
 
 import UpgradeScripts from './upgrades.js'
 
-import { InstanceBase, Regex, combineRgb, runEntrypoint } from '@companion-module/base'
+import { InstanceBase, Regex, combineRgb, runEntrypoint, TCPHelper } from '@companion-module/base'
 
 class QsysRemoteControl extends InstanceBase {	
 	async init(config) {
@@ -54,25 +52,15 @@ class QsysRemoteControl extends InstanceBase {
 			delete this.socket
 		}
 
-		this.status(this.STATE_WARNING, 'Connecting')
-
 		if (this.config.host) {
-			this.socket = new tcp(this.config.host, this.config.port)
-
-			this.socket.on('status_change', function (status, message) {
-				this.status(status, message)
-			})
+			this.socket = new TCPHelper(this.config.host, this.config.port)
 
 			this.socket.on('error', function (err) {
-				debug("Network error", err)
-				this.status(this.STATE_ERROR, err)
-				this.log('error',"Network error: " + err.message)
+				this.updateStatus('connection_failure')
+				this.log('error', `Network error: ${err.message}`)
 			})
 
 			this.socket.on('connect', function (socket) {
-				this.status(this.STATE_OK)
-				debug("Connected")
-
 				let login = '{ "jsonrpc":"2.0", "method":"Logon", "params": { "User":"' + this.config.user + '", "Password":"' + this.config.pass + '" } }' + '\x00'
 
 				if (this.console_debug) {
@@ -80,7 +68,7 @@ class QsysRemoteControl extends InstanceBase {
 					console.log('Q-SYS Send: ' + login)
 				}
 
-				this.socket.write(login)
+				this.socket.send(login)
 
 				socket.once('close', function() {
 					if (this.console_debug) {
@@ -221,8 +209,6 @@ class QsysRemoteControl extends InstanceBase {
 		if (this.controls !== undefined) {
 			this.controls.destroy()
 		}
-
-		debug("destroy", this.id)
 	}
 
 	actions(system) {
@@ -1133,18 +1119,15 @@ class QsysRemoteControl extends InstanceBase {
 		this.setFeedbackDefinitions(feedbacks)
 	}
 
-	callCommand(cmd, get_set = this.QRC_SET) {
+	async callCommand(cmd, get_set = this.QRC_SET) {
+		if (this.socket === undefined || !this.socket.connected) return
+
 		const full_cmd = '{ "jsonrpc": "2.0", "id": ' + get_set + ', "method": ' + cmd
-		debug('sending ',full_cmd, "to", this.config.host)
 
-		if (this.socket !== undefined && this.socket.connected) {
-			this.socket.send(full_cmd + '\x00')
+		await this.socket.send(full_cmd + '\x00')
 
-			if (this.console_debug) {
-				console.log('Q-SYS Send: ' + full_cmd + '\r')
-			}
-		} else {
-			debug('Socket not connected :(')
+		if (this.console_debug) {
+			console.log('Q-SYS Send: ' + full_cmd + '\r')
 		}
 	}
 

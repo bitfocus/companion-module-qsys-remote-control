@@ -72,15 +72,15 @@ class QsysRemoteControl extends InstanceBase {
 				let login = '{ "jsonrpc":"2.0", "method":"Logon", "params": { "User":"' + this.config.user + '", "Password":"' + this.config.pass + '" } }' + '\x00'
 
 				if (this.console_debug) {
-					console.log('Q-SYS Connected');
-					console.log('Q-SYS Send: ' + login);
+					console.log('Q-SYS Connected')
+					console.log('Q-SYS Send: ' + login)
 				}
 
 				this.socket.write(login)
 
 				socket.once('close', function() {
 					if (this.console_debug) {
-						console.log('Q-SYS Disconnect');
+						console.log('Q-SYS Disconnect')
 					}
 				})
 			})
@@ -89,7 +89,7 @@ class QsysRemoteControl extends InstanceBase {
 				const response = d.toString()
 
 				if (this.console_debug) {
-					console.log(response);
+					console.log(response)
 				}
 
 				if (this.config.feedback_enabled) {
@@ -116,7 +116,7 @@ class QsysRemoteControl extends InstanceBase {
 				}
 			}
 		}
-		if (refresh) { this.checkFeedbacks(); }
+		if (refresh) this.checkFeedbacks()
 	}
 
 	getMessages(input) {
@@ -220,7 +220,7 @@ class QsysRemoteControl extends InstanceBase {
 	actions(system) {
 		this.setActions({
 			'control_set': {
-				label: 'Control.set',
+				name: 'Control.set',
 				options: [
 					{
 						type: 'textinput',
@@ -237,7 +237,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'control_toggle': {
-				label: 'Control.toggle',
+				name: 'Control.toggle',
 				options: [
 					{
 						type: 'textinput',
@@ -249,7 +249,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'component_set': {
-				label: 'Component.Set',
+				name: 'Component.Set',
 				options: [
 					{
 						type: 'textinput',
@@ -277,11 +277,8 @@ class QsysRemoteControl extends InstanceBase {
 					}
 				]
 			},
-
-
-
 			'changeGroup_addControl': {
-				label: 'ChangeGroup.AddControl',
+				name: 'ChangeGroup.AddControl',
 				options: [
 					{
 						type: 'textinput',
@@ -298,7 +295,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'changeGroup_addComponentControl': {
-				label: 'ChangeGroup.AddComponentControl',
+				name: 'ChangeGroup.AddComponentControl',
 				options: [
 					{
 						type: 'textinput',
@@ -315,7 +312,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'changeGroup_remove': {
-				label: 'ChangeGroup.Remove',
+				name: 'ChangeGroup.Remove',
 				options: [
 					{
 						type: 'textinput',
@@ -332,7 +329,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'changeGroup_destroy': {
-				label: 'ChangeGroup.Destroy',
+				name: 'ChangeGroup.Destroy',
 				options: [
 					{
 						type: 'textinput',
@@ -343,7 +340,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'changeGroup_invalidate': {
-				label: 'ChangeGroup.Invalidate',
+				name: 'ChangeGroup.Invalidate',
 				options: [
 					{
 						type: 'textinput',
@@ -354,7 +351,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'changeGroup_clear': {
-				label: 'ChangeGroup.Clear',
+				name: 'ChangeGroup.Clear',
 				options: [
 					{
 						type: 'textinput',
@@ -366,7 +363,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 
 			'mixer_setCrossPointGain': {
-				label: 'Mixer.SetCrossPointGain',
+				name: 'Mixer.SetCrossPointGain',
 				options: [
 					{
 						type: 'textinput',
@@ -407,7 +404,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setCrossPointDelay': {
-				label: 'Mixer.SetCrossPointDelay',
+				name: 'Mixer.SetCrossPointDelay',
 				options: [
 					{
 						type: 'textinput',
@@ -448,7 +445,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setCrossPointMute': {
-				label: 'Mixer.SetCrossPointMute',
+				name: 'Mixer.SetCrossPointMute',
 				options: [
 					{
 						type: 'textinput',
@@ -481,7 +478,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setCrossPointSolo': {
-				label: 'Mixer.SetCrossPointSolo',
+				name: 'Mixer.SetCrossPointSolo',
 				options: [
 					{
 						type: 'textinput',
@@ -514,7 +511,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setInputGain': {
-				label: 'Mixer.SetInputGain',
+				name: 'Mixer.SetInputGain',
 				options: [
 					{
 						type: 'textinput',
@@ -549,7 +546,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setInputMute': {
-				label: 'Mixer.SetInputMute',
+				name: 'Mixer.SetInputMute',
 				options: [
 					{
 						type: 'textinput',
@@ -576,7 +573,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setInputSolo': {
-				label: 'Mixer.SetInputSolo',
+				name: 'Mixer.SetInputSolo',
 				options: [
 					{
 						type: 'textinput',
@@ -603,7 +600,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setOutputGain': {
-				label: 'Mixer.SetOutputGain',
+				name: 'Mixer.SetOutputGain',
 				options: [
 					{
 						type: 'textinput',
@@ -638,7 +635,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setOutputMute': {
-				label: 'Mixer.SetOutputMute',
+				name: 'Mixer.SetOutputMute',
 				options: [
 					{
 						type: 'textinput',
@@ -665,7 +662,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setCueMute': {
-				label: 'Mixer.SetCueMute',
+				name: 'Mixer.SetCueMute',
 				options: [
 					{
 						type: 'textinput',
@@ -692,7 +689,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setCueGain': {
-				label: 'Mixer.SetCueGain',
+				name: 'Mixer.SetCueGain',
 				options: [
 					{
 						type: 'textinput',
@@ -727,7 +724,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setInputCueEnable': {
-				label: 'Mixer.SetInputCueEnable',
+				name: 'Mixer.SetInputCueEnable',
 				options: [
 					{
 						type: 'textinput',
@@ -760,7 +757,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'mixer_setInputCueAfl': {
-				label: 'Mixer.SetInputCueAfl',
+				name: 'Mixer.SetInputCueAfl',
 				options: [
 					{
 						type: 'textinput',
@@ -792,11 +789,8 @@ class QsysRemoteControl extends InstanceBase {
 					},
 				]
 			},
-
-
-
 			'loopPlayer_start': {
-				label: 'LoopPlayer.Start',
+				name: 'LoopPlayer.Start',
 				options: [
 					{
 						type: 'textinput',
@@ -840,7 +834,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'loopPlayer_stop': {
-				label: 'LoopPlayer.Stop',
+				name: 'LoopPlayer.Stop',
 				options: [
 					{
 						type: 'textinput',
@@ -857,7 +851,7 @@ class QsysRemoteControl extends InstanceBase {
 				]
 			},
 			'loopPlayer_cancel': {
-				label: 'LoopPlayer.Cancel',
+				name: 'LoopPlayer.Cancel',
 				options: [
 					{
 						type: 'textinput',
@@ -878,14 +872,14 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	action(action) {
-		var cmd
+		let cmd
 
 		switch(action.action) {
 			case 'control_set':
 				cmd = '"Control.Set", "params": { "Name": "' + action.options.name + '", "Value": "' + action.options.value + '" } }'
 				break
 			case 'control_toggle':
-				control = controls.get(action.options.name)
+				let control = controls.get(action.options.name)
 				// set our internal state in anticipation of success, allowing two presses
 				// of the button faster than the polling interval to correctly toggle the state
 				control.value = !control.value
@@ -963,15 +957,15 @@ class QsysRemoteControl extends InstanceBase {
 		}
 
 		if (cmd !== undefined) {
-			full_cmd = '{ "jsonrpc": "2.0", "id": ' + this.QRC_SET + ', "method": ' + cmd
+			const full_cmd = '{ "jsonrpc": "2.0", "id": ' + this.QRC_SET + ', "method": ' + cmd
 			debug('sending ',full_cmd,"to",this.config.host)
 
 			if (this.socket !== undefined && this.socket.connected) {
 				this.socket.send(full_cmd + '\x00')
-				if (this.console_debug) {
-					console.log('Q-SYS Send: ' + full_cmd + '\r');
-				}
 
+				if (this.console_debug) {
+					console.log('Q-SYS Send: ' + full_cmd + '\r')
+				}
 			}
 			else {
 				debug('Socket not connected :(')
@@ -993,235 +987,233 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	initFeedbacks() {
-		var feedbacks = {}
+		const feedbacks = {
+			"control-string": {
+				label: 'Change text to reflect control value',
+				description: 'Will return current state of a control as a string',
+				options: [{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+					},
+					{
+						type: 'dropdown',
+						id: 'type',
+						label: 'Type',
+						choices: [
+							{ id: 'string',   label: 'String'},
+							{ id: 'value',    label: 'Value'},
+							{ id: 'position', label: 'Position'}
+						],
+						default: 'value'
+					},
+				],
+				subscribe: (feedback) => {
+					this.addControl(feedback)
+				},
+				unsubscribe: (feedback) => {
+					this.removeControl(feedback)
+				},
+				callback: function(feedback, bank) {
+					var opt = feedback.options
+					var control = controls.get(opt.name)
 
-		feedbacks['control-string'] = {
-			label: 'Change text to reflect control value',
-			description: 'Will return current state of a control as a string',
-			options: [{
-					type: 'textinput',
-					id: 'name',
-					label: 'Name:',
-					default: '',
-				},
-				{
-					type: 'dropdown',
-					id: 'type',
-					label: 'Type',
-					choices: [
-						{ id: 'string',   label: 'String'},
-						{ id: 'value',    label: 'Value'},
-						{ id: 'position', label: 'Position'}
-					],
-					default: 'value'
-				},
-			],
-			subscribe: (feedback) => {
-				this.addControl(feedback)
-			},
-			unsubscribe: (feedback) => {
-				this.removeControl(feedback)
-			},
-			callback: function(feedback, bank) {
-				var opt = feedback.options
-				var control = controls.get(opt.name)
-
-				switch (opt.type) {
-					case 'string':
-						return {
-							text: control.strval
-						}
-					case 'value':
-						return { 
-							text: control.value.toString()
-						}
-					case 'position':
-						return {
-							text: control.position.toString()
-						}
-					default:
-						break
-				}
-			}
-		}
-
-		feedbacks['control-boolean'] = {
-			label: 'Toggle color on boolean control value',
-			description: 'Toggle color on boolean control value',
-			options: [
-				{
-					type: 'textinput',
-					id: 'name',
-					label: 'Name:',
-					default: '',
-				},
-				{
-					type: 'dropdown',
-					id: 'value',
-					label: 'Control value',
-					choices: [
-						{ id: 'true', label: 'True'},
-						{ id: 'false', label: 'False'}
-					],
-					default: 'true'
-				},
-				{
-					type: 'colorpicker',
-					label: 'Foreground color',
-					id: 'fg',
-					default: this.rgb(255,255,255)
-				},
-				{
-					type: 'colorpicker',
-					label: 'Background color',
-					id: 'bg',
-					default: this.rgb(255,0,0)
-				},
-			],
-			subscribe: feedback => this.addControl(feedback),
-			unsubscribe: feedback => this.removeControl(feedback),
-			callback: function(feedback, bank) {
-				var opt = feedback.options
-				var control = controls.get(opt.name)
-
-				switch (opt.value) {
-					case 'true':
-						if (control.value)  {
+					switch (opt.type) {
+						case 'string':
 							return {
-								color: opt.fg, bgcolor: opt.bg
+								text: control.strval
 							}
-						}
-						break
-					case 'false':
-						if (!control.value) {
+						case 'value':
+							return { 
+								text: control.value.toString()
+							}
+						case 'position':
 							return {
-								color: opt.fg,
-								bgcolor: opt.bg
+								text: control.position.toString()
 							}
-						}
-						break
-					default: break
-				}
-			}
-		}
-
-		feedbacks['control-threshold'] = {
-			label: 'Toggle color on control value at or exceeding threshold',
-			description: 'Toggle color on control value at or exceeding threshold',
-			options: [{
-					type: 'textinput',
-					id: 'name',
-					label: 'Name:',
-					default: '',
-				},
-				{
-					type: 'number',
-					id: 'threshold',
-					label: 'Threshold value',
-					default: '',
-					min: -10000,
-					max: 10000,
-					range: false,
-				},
-				{
-					type: 'colorpicker',
-					label: 'Foreground color',
-					id: 'fg',
-					default: this.rgb(255,255,255)
-				},
-				{
-					type: 'colorpicker',
-					label: 'Background color',
-					id: 'bg',
-					default: this.rgb(255,0,0)
-				},
-			],
-			subscribe: feedback => this.addControl(feedback),
-			unsubscribe: feedback => this.removeControl(feedback),
-			callback: function(feedback, bank) {
-				var opt = feedback.options
-				var control = controls.get(opt.name)
-
-				if (control.value >= opt.threshold) {
-					return {
-						color: opt.fg,
-						bgcolor: opt.bg
+						default:
+							break
 					}
 				}
-			}
-		}
+			},
+			"control-boolean": {
+				label: 'Toggle color on boolean control value',
+				description: 'Toggle color on boolean control value',
+				options: [
+					{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+					},
+					{
+						type: 'dropdown',
+						id: 'value',
+						label: 'Control value',
+						choices: [
+							{ id: 'true', label: 'True'},
+							{ id: 'false', label: 'False'}
+						],
+						default: 'true'
+					},
+					{
+						type: 'colorpicker',
+						label: 'Foreground color',
+						id: 'fg',
+						default: this.rgb(255,255,255)
+					},
+					{
+						type: 'colorpicker',
+						label: 'Background color',
+						id: 'bg',
+						default: this.rgb(255,0,0)
+					},
+				],
+				subscribe: feedback => this.addControl(feedback),
+				unsubscribe: feedback => this.removeControl(feedback),
+				callback: function(feedback, bank) {
+					var opt = feedback.options
+					var control = controls.get(opt.name)
 
-		feedbacks['control-fade'] = {
-			label: 'Fade color over control value range',
-			description: 'Fade color over control value range',
-			options: [
-				{
-					type: 'textinput',
-					id: 'name',
-					label: 'Name:',
-					default: '',
-				},
-				{
-					type: 'number',
-					id: 'low_threshold',
-					label: 'Low threshold value',
-					default: '',
-					min: -10000,
-					max: 10000,
-					range: false,
-				},
-				{
-					type: 'number',
-					id: 'high_threshold',
-					label: 'High threshold value',
-					default: '',
-					min: -10000,
-					max: 10000,
-					range: false,
-				},
-				{
-					type: 'colorpicker',
-					label: 'Low threshold color',
-					id: 'low_bg',
-					default: this.rgb(0,0,0)
-				},
-				{
-					type: 'colorpicker',
-					label: 'High threshold color',
-					id: 'high_bg',
-					default: this.rgb(255,0,0)
-				},
-			],
-			subscribe: feedback => this.addControl(feedback),
-			unsubscribe: feedback => this.removeControl(feedback),
-			callback: function(feedback, bank) {
-				var opt = feedback.options
-				var control = controls.get(opt.name)
-				var numToRGB = function(num) {
-					var x = new Object()
-					x.r = (num & 0xff0000) >> 16
-					x.g = (num & 0x00ff00) >> 8
-					x.b = (num & 0x0000ff)
-					return x
+					switch (opt.value) {
+						case 'true':
+							if (control.value)  {
+								return {
+									color: opt.fg, bgcolor: opt.bg
+								}
+							}
+							break
+						case 'false':
+							if (!control.value) {
+								return {
+									color: opt.fg,
+									bgcolor: opt.bg
+								}
+							}
+							break
+						default: break
+					}
 				}
+			},
 
-				if ((control.value > opt.high_threshold) ||
-					(control.value < opt.low_threshold)) {
-							return
+			"control-threshold": {
+				label: 'Toggle color on control value at or exceeding threshold',
+				description: 'Toggle color on control value at or exceeding threshold',
+				options: [{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+					},
+					{
+						type: 'number',
+						id: 'threshold',
+						label: 'Threshold value',
+						default: '',
+						min: -10000,
+						max: 10000,
+						range: false,
+					},
+					{
+						type: 'colorpicker',
+						label: 'Foreground color',
+						id: 'fg',
+						default: this.rgb(255,255,255)
+					},
+					{
+						type: 'colorpicker',
+						label: 'Background color',
+						id: 'bg',
+						default: this.rgb(255,0,0)
+					},
+				],
+				subscribe: feedback => this.addControl(feedback),
+				unsubscribe: feedback => this.removeControl(feedback),
+				callback: function(feedback, bank) {
+					var opt = feedback.options
+					var control = controls.get(opt.name)
+
+					if (control.value >= opt.threshold) {
+						return {
+							color: opt.fg,
+							bgcolor: opt.bg
+						}
+					}
 				}
+			},
+			"control-fade": {
+				label: 'Fade color over control value range',
+				description: 'Fade color over control value range',
+				options: [
+					{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+					},
+					{
+						type: 'number',
+						id: 'low_threshold',
+						label: 'Low threshold value',
+						default: '',
+						min: -10000,
+						max: 10000,
+						range: false,
+					},
+					{
+						type: 'number',
+						id: 'high_threshold',
+						label: 'High threshold value',
+						default: '',
+						min: -10000,
+						max: 10000,
+						range: false,
+					},
+					{
+						type: 'colorpicker',
+						label: 'Low threshold color',
+						id: 'low_bg',
+						default: this.rgb(0,0,0)
+					},
+					{
+						type: 'colorpicker',
+						label: 'High threshold color',
+						id: 'high_bg',
+						default: this.rgb(255,0,0)
+					},
+				],
+				subscribe: feedback => this.addControl(feedback),
+				unsubscribe: feedback => this.removeControl(feedback),
+				callback: function(feedback, bank) {
+					var opt = feedback.options
+					var control = controls.get(opt.name)
+					var numToRGB = function(num) {
+						var x = new Object()
+						x.r = (num & 0xff0000) >> 16
+						x.g = (num & 0x00ff00) >> 8
+						x.b = (num & 0x0000ff)
+						return x
+					}
 
-				var range = opt.high_threshold - opt.low_threshold
-				var ratio = (control.value - opt.low_threshold) / range
+					if ((control.value > opt.high_threshold) ||
+						(control.value < opt.low_threshold)) {
+								return
+					}
 
-				hi_rgb = numToRGB(opt.high_bg)
-				lo_rgb = numToRGB(opt.low_bg)
+					var range = opt.high_threshold - opt.low_threshold
+					var ratio = (control.value - opt.low_threshold) / range
 
-				var r = Math.round((hi_rgb.r - lo_rgb.r) * ratio) + lo_rgb.r
-				var g = Math.round((hi_rgb.g - lo_rgb.g) * ratio) + lo_rgb.g
-				var b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b
+					hi_rgb = numToRGB(opt.high_bg)
+					lo_rgb = numToRGB(opt.low_bg)
 
-				return {
-					bgcolor: this.rgb(r, g, b)
+					var r = Math.round((hi_rgb.r - lo_rgb.r) * ratio) + lo_rgb.r
+					var g = Math.round((hi_rgb.g - lo_rgb.g) * ratio) + lo_rgb.g
+					var b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b
+
+					return {
+						bgcolor: this.rgb(r, g, b)
+					}
 				}
 			}
 		}
@@ -1230,14 +1222,15 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	getControlStatus(self, control) {
-		cmd = '"Control.Get", "params": ["' + control + '"] }'
+		const cmd = '"Control.Get", "params": ["' + control + '"] }'
 
 		if (cmd !== undefined) {
-			full_cmd = '{ "jsonrpc": "2.0", "id": ' + this.QRC_GET + ', "method": ' + cmd
+			const full_cmd = '{ "jsonrpc": "2.0", "id": ' + this.QRC_GET + ', "method": ' + cmd
 			debug('sending ', full_cmd, "to", this.config.host)
 
 			if (this.socket !== undefined && this.socket.connected) {
 				this.socket.send(full_cmd + '\x00')
+
 				if (this.console_debug) {
 					console.log('Q-SYS Send: ' + full_cmd + '\r')
 				}
@@ -1264,6 +1257,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	addControl(feedback) {
 		const name = feedback['options']['name']
+
 		if (controls.has(name)) {
 			const control = controls.get(name)
 			if (control.ids === undefined) {
@@ -1285,9 +1279,11 @@ class QsysRemoteControl extends InstanceBase {
 
 		if (controls.has(name)) {
 			const control = controls.get(name)
+
 			if (control.ids !== undefined) {
 				control.ids.delete(feedback.id)
 			}
+			
 			if (control.ids.size == 0) {
 				controls.delete(name)
 			}

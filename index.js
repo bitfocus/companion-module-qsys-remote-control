@@ -234,7 +234,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value:',
 						default: '',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"Control.Set", "params": { "Name": "' + evt.options.name + '", "Value": "' + evt.options.value + '" } }')
 			},
 			'control_toggle': {
 				name: 'Control.toggle',
@@ -246,7 +247,14 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 						tooltip: 'Only applies to controls with an on/off state.'
 					}
-				]
+				],
+				callback: evt => {
+					let control = controls.get(evt.options.name)
+					// set our internal state in anticipation of success, allowing two presses
+					// of the button faster than the polling interval to correctly toggle the state
+					control.value = !control.value
+					this.callCommand('"Control.Set", "params": { "Name": "' + evt.options.name + '", "Value": "' + evt.value + '" } }')
+				}
 			},
 			'component_set': {
 				name: 'Component.Set',
@@ -275,7 +283,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Ramp:',
 						default: '',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"Component.Set", "params": { "Name": "' + evt.options.name + '", "Controls": [{ "Name": "' + evt.options.control_name + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' }] } }')
 			},
 			'changeGroup_addControl': {
 				name: 'ChangeGroup.AddControl',
@@ -292,7 +301,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Controls:',
 						default: '',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"ChangeGroup.AddControl", "params": { "Id": "' + evt.options.id + '", "Controls": [ ' + evt.options.controls + ' ] } }')
 			},
 			'changeGroup_addComponentControl': {
 				name: 'ChangeGroup.AddComponentControl',
@@ -309,7 +319,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Controls:',
 						default: '',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"ChangeGroup.AddComponentControl", "params": { "Id": "' + evt.options.id + '", "Controls": [ ' + evt.options.controls + ' ] } }')
 			},
 			'changeGroup_remove': {
 				name: 'ChangeGroup.Remove',
@@ -326,7 +337,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Controls:',
 						default: '',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"ChangeGroup.Remove", "params": { "Id": "' + evt.options.id + '", "Controls": [ ' + evt.options.controls + ' ] } }')
 			},
 			'changeGroup_destroy': {
 				name: 'ChangeGroup.Destroy',
@@ -337,7 +349,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Group Id:',
 						default: '',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"ChangeGroup.Destroy", "params": { "Id": "' + evt.options.id + '" } }')
 			},
 			'changeGroup_invalidate': {
 				name: 'ChangeGroup.Invalidate',
@@ -348,7 +361,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Group Id:',
 						default: '',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"ChangeGroup.Invalidate", "params": { "Id": "' + evt.options.id + '" } }')
 			},
 			'changeGroup_clear': {
 				name: 'ChangeGroup.Clear',
@@ -359,7 +373,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Group Id:',
 						default: '',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"ChangeGroup.Clear", "params": { "Id": "' + evt.options.id + '" } }')
 			},
 
 			'mixer_setCrossPointGain': {
@@ -401,7 +416,8 @@ class QsysRemoteControl extends InstanceBase {
 						max: 100,
 						regex: this.REGEX_NUMBER
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetCrossPointGain", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
 			},
 			'mixer_setCrossPointDelay': {
 				name: 'Mixer.SetCrossPointDelay',
@@ -442,7 +458,8 @@ class QsysRemoteControl extends InstanceBase {
 						max: 100,
 						regex: this.REGEX_NUMBER
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetCrossPointDelay", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
 			},
 			'mixer_setCrossPointMute': {
 				name: 'Mixer.SetCrossPointMute',
@@ -475,7 +492,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetCrossPointMute", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ' } }')
 			},
 			'mixer_setCrossPointSolo': {
 				name: 'Mixer.SetCrossPointSolo',
@@ -508,7 +526,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetCrossPointSolo", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ' } }')
 			},
 			'mixer_setInputGain': {
 				name: 'Mixer.SetInputGain',
@@ -543,7 +562,8 @@ class QsysRemoteControl extends InstanceBase {
 						max: 100,
 						regex: this.REGEX_NUMBER
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetInputGain", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
 			},
 			'mixer_setInputMute': {
 				name: 'Mixer.SetInputMute',
@@ -570,7 +590,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetInputMute", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ' } }')
 			},
 			'mixer_setInputSolo': {
 				name: 'Mixer.SetInputSolo',
@@ -597,7 +618,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetInputSolo", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ' } }')
 			},
 			'mixer_setOutputGain': {
 				name: 'Mixer.SetOutputGain',
@@ -632,7 +654,8 @@ class QsysRemoteControl extends InstanceBase {
 						max: 100,
 						regex: this.REGEX_NUMBER
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetOutputGain", "params": { "Name": "' + evt.options.name + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
 			},
 			'mixer_setOutputMute': {
 				name: 'Mixer.SetOutputMute',
@@ -659,7 +682,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetOutputMute", "params": { "Name": "' + evt.options.name + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ' } }')
 			},
 			'mixer_setCueMute': {
 				name: 'Mixer.SetCueMute',
@@ -686,7 +710,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetCueMute", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Value": ' + evt.options.value + ' } }')
 			},
 			'mixer_setCueGain': {
 				name: 'Mixer.SetCueGain',
@@ -721,7 +746,8 @@ class QsysRemoteControl extends InstanceBase {
 						max: 100,
 						regex: this.REGEX_NUMBER
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetCueGain", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
 			},
 			'mixer_setInputCueEnable': {
 				name: 'Mixer.SetInputCueEnable',
@@ -754,7 +780,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetInputCueEnable", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ' } }')
 			},
 			'mixer_setInputCueAfl': {
 				name: 'Mixer.SetInputCueAfl',
@@ -787,7 +814,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					},
-				]
+				],
+				callback: evt => this.callCommand('"Mixer.SetInputCueAfl", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ' } }')
 			},
 			'loopPlayer_start': {
 				name: 'LoopPlayer.Start',
@@ -831,7 +859,8 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'false' },
 						]
 					}
-				]
+				],
+				callback: evt => this.callCommand('"LoopPlayer.Start", "params": { "Files": [ { "Name": "' + evt.options.file_name + '", "Mode": "' + evt.options.mode + '", "Output": ' + evt.options.output + ' } ], "Name": "' + evt.options.name + '", "StartTime": ' + evt.options.startTime + ', "Loop": ' + evt.options.loop + ', "Log": true }, }')
 			},
 			'loopPlayer_stop': {
 				name: 'LoopPlayer.Stop',
@@ -848,7 +877,8 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Output',
 						default: '1',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"LoopPlayer.Stop", "params": { "Name": "' + evt.options.name + '", "Outputs": ' + evt.options.output + ', "Log": true } }')
 			},
 			'loopPlayer_cancel': {
 				name: 'LoopPlayer.Cancel',
@@ -865,112 +895,10 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Output',
 						default: '1',
 					}
-				]
+				],
+				callback: evt => this.callCommand('"LoopPlayer.Cancel", "params": { "Name": "' + evt.options.name + '", "Outputs": ' + evt.options.output + ', "Log": true } }')
 			},
-
 		})
-	}
-
-	action(action) {
-		let cmd
-
-		switch(action.action) {
-			case 'control_set':
-				cmd = '"Control.Set", "params": { "Name": "' + action.options.name + '", "Value": "' + action.options.value + '" } }'
-				break
-			case 'control_toggle':
-				let control = controls.get(action.options.name)
-				// set our internal state in anticipation of success, allowing two presses
-				// of the button faster than the polling interval to correctly toggle the state
-				control.value = !control.value
-				cmd = '"Control.Set", "params": { "Name": "' + action.options.name + '", "Value": "' + control.value + '" } }'
-				break
-			case 'component_set':
-				cmd = '"Component.Set", "params": { "Name": "' + action.options.name + '", "Controls": [{ "Name": "' + action.options.control_name + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' }] } }'
-				break
-			case 'changeGroup_addControl':
-				cmd = '"ChangeGroup.AddControl", "params": { "Id": "' + action.options.id + '", "Controls": [ ' + action.options.controls + ' ] } }'
-				break
-			case 'changeGroup_addComponentControl':
-				cmd = '"ChangeGroup.AddComponentControl", "params": { "Id": "' + action.options.id + '", "Controls": [ ' + action.options.controls + ' ] } }'
-				break
-			case 'changeGroup_remove':
-				cmd = '"ChangeGroup.Remove", "params": { "Id": "' + action.options.id + '", "Controls": [ ' + action.options.controls + ' ] } }'
-				break
-			case 'changeGroup_destroy':
-				cmd = '"ChangeGroup.Destroy", "params": { "Id": "' + action.options.id + '" } }'
-				break
-			case 'changeGroup_invalidate':
-				cmd = '"ChangeGroup.Invalidate", "params": { "Id": "' + action.options.id + '" } }'
-				break
-			case 'changeGroup_clear':
-				cmd = '"ChangeGroup.Clear", "params": { "Id": "' + action.options.id + '" } }'
-				break
-			case 'mixer_setCrossPointGain':
-				cmd = '"Mixer.SetCrossPointGain", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }'
-				break
-			case 'mixer_setCrossPointDelay':
-				'"Mixer.SetCrossPointDelay", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }'
-				break
-			case 'mixer_setCrossPointMute':
-				cmd = '"Mixer.SetCrossPointMute", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ' } }'
-				break
-			case 'mixer_setCrossPointSolo':
-				cmd = '"Mixer.SetCrossPointSolo", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ' } }'
-				break
-			case 'mixer_setInputGain':
-				cmd = '"Mixer.SetInputGain", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }'
-				break
-			case 'mixer_setInputMute':
-				cmd = '"Mixer.SetInputMute", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ' } }'
-				break
-			case 'mixer_setInputSolo':
-				cmd = '"Mixer.SetInputSolo", "params": { "Name": "' + action.options.name + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ' } }'
-				break
-			case 'mixer_setOutputGain':
-				cmd = '"Mixer.SetOutputGain", "params": { "Name": "' + action.options.name + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }'
-				break
-			case 'mixer_setOutputMute':
-				cmd = '"Mixer.SetOutputMute", "params": { "Name": "' + action.options.name + '", "Outputs": "' + action.options.outputs + '", "Value": ' + action.options.value + ' } }'
-				break
-			case 'mixer_setCueMute':
-				cmd = '"Mixer.SetCueMute", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Value": ' + action.options.value + ' } }'
-				break
-			case 'mixer_setCueGain':
-				cmd = '"Mixer.SetCueGain", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Value": ' + action.options.value + ', "Ramp": ' + action.options.ramp + ' } }'
-				break
-			case 'mixer_setInputCueEnable':
-				cmd = '"Mixer.SetInputCueEnable", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ' } }'
-				break
-			case 'mixer_setInputCueAfl':
-				cmd = '"Mixer.SetInputCueAfl", "params": { "Name": "' + action.options.name + '", "Cues": "' + action.options.cues + '", "Inputs": "' + action.options.inputs + '", "Value": ' + action.options.value + ' } }'
-				break
-			case 'loopPlayer_start':
-				cmd = '"LoopPlayer.Start", "params": { "Files": [ { "Name": "' + action.options.file_name + '", "Mode": "' + action.options.mode + '", "Output": ' + action.options.output + ' } ], "Name": "' + action.options.name + '", "StartTime": ' + action.options.startTime + ', "Loop": ' + action.options.loop + ', "Log": true }, }'
-				break
-			case 'loopPlayer_stop':
-				cmd = '"LoopPlayer.Stop", "params": { "Name": "' + action.options.name + '", "Outputs": ' + action.options.output + ', "Log": true } }'
-				break
-			case 'loopPlayer_cancel':
-				cmd = '"LoopPlayer.Cancel", "params": { "Name": "' + action.options.name + '", "Outputs": ' + action.options.output + ', "Log": true } }'
-				break
-		}
-
-		if (cmd !== undefined) {
-			const full_cmd = '{ "jsonrpc": "2.0", "id": ' + this.QRC_SET + ', "method": ' + cmd
-			debug('sending ',full_cmd,"to",this.config.host)
-
-			if (this.socket !== undefined && this.socket.connected) {
-				this.socket.send(full_cmd + '\x00')
-
-				if (this.console_debug) {
-					console.log('Q-SYS Send: ' + full_cmd + '\r')
-				}
-			}
-			else {
-				debug('Socket not connected :(')
-			}
-		}
 	}
 
 	initControls() {
@@ -1221,36 +1149,37 @@ class QsysRemoteControl extends InstanceBase {
 		this.setFeedbackDefinitions(feedbacks)
 	}
 
-	getControlStatus(self, control) {
-		const cmd = '"Control.Get", "params": ["' + control + '"] }'
+	callCommand(cmd, get_set = this.QRC_SET) {
+		const full_cmd = '{ "jsonrpc": "2.0", "id": ' + get_set + ', "method": ' + cmd
+		debug('sending ',full_cmd, "to", this.config.host)
 
-		if (cmd !== undefined) {
-			const full_cmd = '{ "jsonrpc": "2.0", "id": ' + this.QRC_GET + ', "method": ' + cmd
-			debug('sending ', full_cmd, "to", this.config.host)
+		if (this.socket !== undefined && this.socket.connected) {
+			this.socket.send(full_cmd + '\x00')
 
-			if (this.socket !== undefined && this.socket.connected) {
-				this.socket.send(full_cmd + '\x00')
-
-				if (this.console_debug) {
-					console.log('Q-SYS Send: ' + full_cmd + '\r')
-				}
+			if (this.console_debug) {
+				console.log('Q-SYS Send: ' + full_cmd + '\r')
 			}
-			else {
-				debug('Socket not connected :(')
-			}
+		} else {
+			debug('Socket not connected :(')
 		}
 	}
 
-	getControlStatuses(self) {
+	getControlStatus(control) {
+		const cmd = '"Control.Get", "params": ["' + control + '"] }'
+
+		this.callServer(cmd, this.QRC_GET)
+	}
+
+	getControlStatuses() {
 		for (control of controls.keys()) {
-			this.getControlStatus(self, control)
+			this.getControlStatus(control)
 		}
 	}
 
 	initPolling() {
 		if (this.config.feedback_enabled) {
 			if (this.pollQRCTimer === undefined) {
-				this.pollQRCTimer = setInterval(() => this.getControlStatuses(this), this.config.poll_interval)
+				this.pollQRCTimer = setInterval(this.getControlStatuses.bind(this), this.config.poll_interval)
 			}
 		}
 	}
@@ -1283,7 +1212,7 @@ class QsysRemoteControl extends InstanceBase {
 			if (control.ids !== undefined) {
 				control.ids.delete(feedback.id)
 			}
-			
+
 			if (control.ids.size == 0) {
 				controls.delete(name)
 			}

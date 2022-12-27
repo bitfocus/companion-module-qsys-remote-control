@@ -2,6 +2,8 @@ var tcp           = require('../../tcp')
 var instance_skel = require('../../instance_skel')
 var controls
 
+import UpgradeScripts from './upgrades.js'
+
 import { InstanceBase, Regex, combineRgb, runEntrypoint } from '@companion-module/base'
 
 class QsysRemoteControl extends InstanceBase {	
@@ -153,7 +155,7 @@ class QsysRemoteControl extends InstanceBase {
 				id: 'host',
 				label: 'Target IP',
 				width: 5,
-				regex: this.REGEX_IP
+				regex: Regex.IP
 			},
 			{
 				type: 'textinput',
@@ -161,7 +163,7 @@ class QsysRemoteControl extends InstanceBase {
 				label: 'Target Port (Default: 1710)',
 				width: 3,
 				default: 1710,
-				regex: this.REGEX_PORT
+				regex: Regex.PORT
 			},
 			{
 				type: 'checkbox',
@@ -411,7 +413,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: -100,
 						max: 20,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 					{
 						type: 'number',
@@ -420,7 +422,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: 0,
 						max: 100,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 				],
 				callback: evt => this.callCommand('"Mixer.SetCrossPointGain", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
@@ -453,7 +455,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: 0,
 						max: 60,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 					{
 						type: 'number',
@@ -462,7 +464,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: 0,
 						max: 100,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 				],
 				callback: evt => this.callCommand('"Mixer.SetCrossPointDelay", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
@@ -557,7 +559,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: -100,
 						max: 20,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 					{
 						type: 'number',
@@ -566,7 +568,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: 0,
 						max: 100,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 				],
 				callback: evt => this.callCommand('"Mixer.SetInputGain", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
@@ -649,7 +651,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: -100,
 						max: 20,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 					{
 						type: 'number',
@@ -658,7 +660,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: 0,
 						max: 100,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 				],
 				callback: evt => this.callCommand('"Mixer.SetOutputGain", "params": { "Name": "' + evt.options.name + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
@@ -741,7 +743,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: -100,
 						max: 20,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 					{
 						type: 'number',
@@ -750,7 +752,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: 0,
 						max: 100,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 				],
 				callback: evt => this.callCommand('"Mixer.SetCueGain", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
@@ -853,7 +855,7 @@ class QsysRemoteControl extends InstanceBase {
 						id: 'startTime',
 						label: 'Start Time',
 						default: 0,
-						regex: this.REGEX_NUMBER
+						regex: Regex.NUMBER
 					},
 					{
 						type: 'dropdown',
@@ -974,8 +976,8 @@ class QsysRemoteControl extends InstanceBase {
 				description: 'Toggle color on boolean control value',
 				type: 'boolean',
 				defaultStyle: {
-					color: combineRgb(255, 255, 255), // fg
-					bgcolor: combineRgb(255, 0, 0), //bg
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(255, 0, 0),
 				},
 				options: [
 					{
@@ -1010,8 +1012,8 @@ class QsysRemoteControl extends InstanceBase {
 				description: 'Toggle color on control value at or exceeding threshold',
 				type: 'boolean',
 				defaultStyle: {
-					color: combineRgb(255, 255, 255), // fg
-					bgcolor: combineRgb(255, 0, 0), //bg
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(255, 0, 0),
 				},
 				options: [
 					{
@@ -1210,3 +1212,5 @@ class QsysRemoteControl extends InstanceBase {
 		control.position = update.result[0].Position
 	}
 }
+
+runEntrypoint(QsysRemoteControl, UpgradeScripts)

@@ -265,7 +265,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 					}
 				],
-				callback: evt => this.callCommand('"ChangeGroup.AddControl", "params": { "Id": "' + evt.options.id + '", "Controls": [ ' + evt.options.controls + ' ] } }')
+				callback: evt => this.changeGroup('AddControl', evt.options.id, evt.options.controls)
 			},
 			'changeGroup_addComponentControl': {
 				name: 'ChangeGroup.AddComponentControl',
@@ -283,7 +283,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 					}
 				],
-				callback: evt => this.callCommand('"ChangeGroup.AddComponentControl", "params": { "Id": "' + evt.options.id + '", "Controls": [ ' + evt.options.controls + ' ] } }')
+				callback: evt => this.changeGroup('AddComponentControl', evt.options.id, evt.options.controls)
 			},
 			'changeGroup_remove': {
 				name: 'ChangeGroup.Remove',
@@ -301,7 +301,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 					}
 				],
-				callback: evt => this.callCommand('"ChangeGroup.Remove", "params": { "Id": "' + evt.options.id + '", "Controls": [ ' + evt.options.controls + ' ] } }')
+				callback: evt => this.changeGroup('Remove', evt.options.id, evt.options.controls)
 			},
 			'changeGroup_destroy': {
 				name: 'ChangeGroup.Destroy',
@@ -313,7 +313,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 					}
 				],
-				callback: evt => this.callCommand('"ChangeGroup.Destroy", "params": { "Id": "' + evt.options.id + '" } }')
+				callback: evt => this.changeGroup('Destroy', evt.options.id)
 			},
 			'changeGroup_invalidate': {
 				name: 'ChangeGroup.Invalidate',
@@ -325,7 +325,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 					}
 				],
-				callback: evt => this.callCommand('"ChangeGroup.Invalidate", "params": { "Id": "' + evt.options.id + '" } }')
+				callback: evt => this.changeGroup('Invalidate', evt.options.id)
 			},
 			'changeGroup_clear': {
 				name: 'ChangeGroup.Clear',
@@ -337,9 +337,8 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 					}
 				],
-				callback: evt => this.callCommand('"ChangeGroup.Clear", "params": { "Id": "' + evt.options.id + '" } }')
+				callback: evt => this.changeGroup('Clear', evt.options.id)
 			},
-
 			'mixer_setCrossPointGain': {
 				name: 'Mixer.SetCrossPointGain',
 				options: [
@@ -1096,15 +1095,42 @@ class QsysRemoteControl extends InstanceBase {
 		}
 	}
 
-	getControlStatus(control) {
-		const cmd = '"Control.Get", "params": ["' + control + '"] }'
+	async callCommandObj(cmd, get_set = this.QRC_SET) {
+		if (this.socket === undefined || !this.socket.isConnected) return
 
-		this.callCommand(cmd, this.QRC_GET)
+		cmd.jsonrpc = 2.0
+		cmd.id = get_set
+
+		await this.socket.send(JSON.stringify(cmd) + '\x00')
+
+		if (this.console_debug) {
+			console.log('Q-SYS Send: ' + full_cmd + '\r')
+		}
+	}
+
+	async changeGroup(type, id, controls = null) {
+		const obj = {
+			method: 'ChangeGroup.' + type,
+			params: {
+				Id: id
+			}
+		}
+		if (controls !== null) {
+			obj.params.Controls = [controls]
+		}
+		await this.callCommandObj(obj)
 	}
 
 	getControlStatuses() {
-		this.controls.forEach((v, k) => {
-			this.getControlStatus(k)
+		// It is possible to group multiple statuses; HOWEVER, if one doesn't exist, nothing will be returned...
+		// thus, it's probably better to send one at a time
+		this.controls.forEach((x, k) => {
+			const cmd = {
+				method: 'Control.Get',
+				params: [k]
+			}
+
+			this.callCommandObj(cmd, this.QRC_GET)
 		})
 	}
 

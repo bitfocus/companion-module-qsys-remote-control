@@ -32,6 +32,20 @@ class QsysRemoteControl extends InstanceBase {
 
 		this.initFeedbacks()
 		this.initPolling()
+		this.initVariables()
+	}
+
+	initVariables() {
+		if (!('variables' in this.config)) return
+
+		this.config.variables.split(',').forEach(v => {
+			this.addControl({
+				options: {
+					name: v
+				},
+				id: 'var'
+			})
+		})
 	}
 
 	init_tcp() {
@@ -116,21 +130,50 @@ class QsysRemoteControl extends InstanceBase {
 				type: 'textinput',
 				id: 'host',
 				label: 'Target IP',
-				width: 5,
+				width: 6,
 				regex: Regex.IP
 			},
 			{
 				type: 'textinput',
 				id: 'port',
 				label: 'Target Port (Default: 1710)',
-				width: 3,
+				width: 6,
 				default: 1710,
 				regex: Regex.PORT
+			},
+			{
+				type: 'static-text',
+				id: 'info',
+				label: 'Login Information',
+				width: 12,
+				value: 'If you have login enabled, specify the creditials below.'
+			},
+			{
+				type: 'textinput',
+				id: 'user',
+				label: 'Username',
+				width: 6,
+				default: ''
+			},
+			{
+				type: 'textinput',
+				id: 'pass',
+				label: 'Password',
+				width: 6,
+				default: ''
+			},
+			{
+				type: 'static-text',
+				id: 'info',
+				label: 'Feedback and Variables',
+				width: 12,
+				value: 'Feedback must be enabled to watch for variables and feedbacks'
 			},
 			{
 				type: 'checkbox',
 				id: 'feedback_enabled',
 				label: 'Feedback Enabled',
+				width: 6,
 				default: false
 			},
 			{
@@ -139,28 +182,22 @@ class QsysRemoteControl extends InstanceBase {
 				label: 'Polling Interval (ms)',
 				min: 30,
 				max: 60000,
+				width: 6,
 				default: 100
 			},
 			{
 				type: 'static-text',
 				id: 'info',
-				label: 'Information',
+				label: 'Control Variables',
 				width: 12,
-				value: 'Please type in your ID and Password credentials:'
+				value: 'Specify a list of named controls to add as Companion variables. Separated by commas. Any feedbacks used are automatically added to the variable list.'
 			},
 			{
 				type: 'textinput',
-				id: 'user',
-				label: 'ID',
-				width: 4,
-				default: 'username'
-			},
-			{
-				type: 'textinput',
-				id: 'pass',
-				label: 'Password',
-				width: 4,
-				default: '1234'
+				id: 'variables',
+				label: 'Variables',
+				width: 12,
+				default: ''
 			},
 		]
 	}
@@ -181,7 +218,7 @@ class QsysRemoteControl extends InstanceBase {
 		}
 	}
 
-	actions(system) {
+	actions() {
 		this.setActionDefinitions({
 			'control_set': {
 				name: 'Control.set',
@@ -197,9 +234,14 @@ class QsysRemoteControl extends InstanceBase {
 						id: 'value',
 						label: 'Value:',
 						default: '',
+						useVariables: true,
 					}
 				],
-				callback: evt => this.callCommand('"Control.Set", "params": { "Name": "' + evt.options.name + '", "Value": "' + evt.options.value + '" } }')
+				callback: async (evt) => {
+					const value = await this.parseVariablesInString(evt.options.value);
+
+					this.callCommand('"Control.Set", "params": { "Name": "' + evt.options.name + '", "Value": "' + value + '" } }')
+				}
 			},
 			'control_toggle': {
 				name: 'Control.toggle',
@@ -514,7 +556,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: 0,
 						min: -100,
 						max: 20,
-						regex: Regex.NUMBER
+						regex: Regex.NUMBER,
 					},
 					{
 						type: 'number',
@@ -865,6 +907,7 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	initFeedbacks() {
+		this.variables = []
 		if(!this.config.feedback_enabled) {
 			this.setFeedbackDefinitions({})
 			this.controls = undefined
@@ -1159,6 +1202,19 @@ class QsysRemoteControl extends InstanceBase {
 				position: null,
 				strval: ''
 			})
+
+			this.variables.push({
+				name: `${name} Value`,
+				variableId: `${name}_value`,
+			}, {
+				name: `${name} Position`,
+				variableId: `${name}_position`,
+			}, {
+				name: `${name} String`,
+				variableId: `${name}_string`,
+			})
+
+			this.setVariableDefinitions(this.variables)
 		}
 	}
 
@@ -1185,6 +1241,12 @@ class QsysRemoteControl extends InstanceBase {
 		control.value    = update.result[0].Value
 		control.strval   = update.result[0].String
 		control.position = update.result[0].Position
+
+		this.setVariableValues({
+			[`${name}_string`]: update.result[0].String,
+			[`${name}_position`]: update.result[0].Position,
+			[`${name}_value`]: update.result[0].Value
+		})
 	}
 }
 

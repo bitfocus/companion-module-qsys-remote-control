@@ -12,6 +12,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.QRC_GET = 1
 		this.QRC_SET = 2
 
+		this.actions()
 		await this.configUpdated(config)
 	}
 

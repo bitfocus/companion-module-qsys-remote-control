@@ -15,3 +15,10 @@ Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-S
 
 **V1.0.2**
 * Fixed mixer_set* actions
+
+**V2.0.0**
+* Upgrades for Companion v3 compatibility
+* Added support for variables: any feedbacks currently in use can be variables, and additional can be set in module config
+* EngineStatus variables added
+* Threshold and boolean feedbacks are now boolean feedbacks
+* Better response handling and command sending

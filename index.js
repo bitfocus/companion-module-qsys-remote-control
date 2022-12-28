@@ -1088,8 +1088,7 @@ class QsysRemoteControl extends InstanceBase {
 				}
 			},
 			"control-boolean": {
-				name: 'Toggle color on boolean control value',
-				description: 'Toggle color on boolean control value',
+				name: 'Feedback on boolean control value',
 				type: 'boolean',
 				defaultStyle: {
 					color: combineRgb(255, 255, 255),
@@ -1122,10 +1121,8 @@ class QsysRemoteControl extends InstanceBase {
 					return (opt.value === 'true' && control.value) || (opt.value === 'false' && !control.value)
 				}
 			},
-
 			"control-threshold": {
-				name: 'Toggle color on control value at or exceeding threshold',
-				description: 'Toggle color on control value at or exceeding threshold',
+				name: 'Feedback if control value at or exceeds threshold',
 				type: 'boolean',
 				defaultStyle: {
 					color: combineRgb(255, 255, 255),
@@ -1146,18 +1143,6 @@ class QsysRemoteControl extends InstanceBase {
 						min: -10000,
 						max: 10000,
 						range: false,
-					},
-					{
-						type: 'colorpicker',
-						label: 'Foreground color',
-						id: 'fg',
-						default: combineRgb(255,255,255)
-					},
-					{
-						type: 'colorpicker',
-						label: 'Background color',
-						id: 'bg',
-						default: combineRgb(255,0,0)
 					},
 				],
 				subscribe: feedback => this.addControl(feedback),
@@ -1277,7 +1262,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	getControlStatuses() {
 		// It is possible to group multiple statuses; HOWEVER, if one doesn't exist, nothing will be returned...
-		// thus, it's probably better to send one at a time
+		// thus, we send one at a time
 		this.controls.forEach((x, k) => {
 			const cmd = {
 				method: 'Control.Get',

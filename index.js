@@ -36,6 +36,20 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	initVariables() {
+		this.variables.push({
+			name: 'State',
+			variableId: 'state'
+		}, {
+			name: 'Design Name',
+			variableId: 'design_name'
+		}, {
+			name: 'redundant',
+			variableId: 'redundant'
+		}, {
+			name: 'emulator',
+			variableId: 'emulator'
+		})
+
 		if (!('variables' in this.config)) return
 
 		this.config.variables.split(',').forEach(v => {
@@ -117,6 +131,13 @@ class QsysRemoteControl extends InstanceBase {
 					// @todo this should not be console.log
 					console.log('Q-Sys error', obj.error)
 				}
+			} else if (obj.method === 'EngineStatus') {
+				this.setVariableValues({
+					state: obj.params.State,
+					design_name: obj.params.DesignName,
+					redundant: obj.params.IsRedundant,
+					emulator: obj.params.IsEmulator
+				})
 			}
 		})
 

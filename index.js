@@ -128,8 +128,7 @@ class QsysRemoteControl extends InstanceBase {
 					this.updateControl(obj)
 					refresh = true
 				} else if (obj.error !== undefined) {
-					// @todo this should not be console.log
-					console.log('Q-Sys error', obj.error)
+					this.log('error', obj.error)
 				}
 			} else if (obj.method === 'EngineStatus') {
 				this.setVariableValues({

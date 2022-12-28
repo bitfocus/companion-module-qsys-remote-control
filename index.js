@@ -89,7 +89,6 @@ class QsysRemoteControl extends InstanceBase {
 	processResponse(response) {
 		const list = response.split('\x00')
 		list.pop()
-		console.log(list)
 		let refresh = false
 
 		list.forEach(jsonstr => {
@@ -142,7 +141,7 @@ class QsysRemoteControl extends InstanceBase {
 				default: 100
 			},
 			{
-				type: 'text',
+				type: 'static-text',
 				id: 'info',
 				label: 'Information',
 				width: 12,

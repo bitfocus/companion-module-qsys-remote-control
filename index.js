@@ -77,7 +77,7 @@ class QsysRemoteControl extends InstanceBase {
 			})
 
 			this.socket.on('connect', socket => {
-				let login = {
+				const login = {
 					jsonrpc: 2.0,
 					method: 'Logon',
 					params: {}
@@ -125,7 +125,7 @@ class QsysRemoteControl extends InstanceBase {
 
 			if ((obj.id !== undefined) && (obj.id == this.QRC_GET)) {
 				if (obj.result !== undefined) {
-					this.updateControl(obj)
+					this.updateControl(obj.result[0])
 					refresh = true
 				} else if (obj.error !== undefined) {
 					this.log('error', obj.error)
@@ -238,9 +238,16 @@ class QsysRemoteControl extends InstanceBase {
 		}
 	}
 
+	sendCommand(command, params) {
+		this.callCommandObj({
+			method: command,
+			params: params
+		})
+	}
+
 	actions() {
 		this.setActionDefinitions({
-			'control_set': {
+			control_set: {
 				name: 'Control.set',
 				options: [
 					{
@@ -260,10 +267,13 @@ class QsysRemoteControl extends InstanceBase {
 				callback: async (evt) => {
 					const value = await this.parseVariablesInString(evt.options.value);
 
-					this.callCommand('"Control.Set", "params": { "Name": "' + evt.options.name + '", "Value": "' + value + '" } }')
+					this.sendCommand('Control.Set', {
+						Name: evt.options.name,
+						Value: value
+					})
 				}
 			},
-			'control_toggle': {
+			control_toggle: {
 				name: 'Control.toggle',
 				options: [
 					{
@@ -278,8 +288,10 @@ class QsysRemoteControl extends InstanceBase {
 					let control = this.controls.get(evt.options.name)
 					// set our internal state in anticipation of success, allowing two presses
 					// of the button faster than the polling interval to correctly toggle the state
-					control.value = !control.value
-					this.callCommand('"Control.Set", "params": { "Name": "' + evt.options.name + '", "Value": "' + control.value + '" } }')
+					this.sendCommand('Control.Set', {
+						Name: evt.options.name,
+						Value: !control.value
+					})
 				}
 			},
 			'component_set': {
@@ -310,9 +322,16 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 					}
 				],
-				callback: evt => this.callCommand('"Component.Set", "params": { "Name": "' + evt.options.name + '", "Controls": [{ "Name": "' + evt.options.control_name + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' }] } }')
+				callback: evt => this.sendCommand('Component.Set', {
+					Name: evt.options.name,
+					Controls: [{
+						Name: evt.options.control_name,
+						Value: evt.options.value,
+						Ramp: evt.options.ramp
+					}]
+				})
 			},
-			'changeGroup_addControl': {
+			changeGroup_addControl: {
 				name: 'ChangeGroup.AddControl',
 				options: [
 					{
@@ -330,7 +349,7 @@ class QsysRemoteControl extends InstanceBase {
 				],
 				callback: evt => this.changeGroup('AddControl', evt.options.id, evt.options.controls)
 			},
-			'changeGroup_addComponentControl': {
+			changeGroup_addComponentControl: {
 				name: 'ChangeGroup.AddComponentControl',
 				options: [
 					{
@@ -348,7 +367,7 @@ class QsysRemoteControl extends InstanceBase {
 				],
 				callback: evt => this.changeGroup('AddComponentControl', evt.options.id, evt.options.controls)
 			},
-			'changeGroup_remove': {
+			changeGroup_remove: {
 				name: 'ChangeGroup.Remove',
 				options: [
 					{
@@ -366,7 +385,7 @@ class QsysRemoteControl extends InstanceBase {
 				],
 				callback: evt => this.changeGroup('Remove', evt.options.id, evt.options.controls)
 			},
-			'changeGroup_destroy': {
+			changeGroup_destroy: {
 				name: 'ChangeGroup.Destroy',
 				options: [
 					{
@@ -378,7 +397,7 @@ class QsysRemoteControl extends InstanceBase {
 				],
 				callback: evt => this.changeGroup('Destroy', evt.options.id)
 			},
-			'changeGroup_invalidate': {
+			changeGroup_invalidate: {
 				name: 'ChangeGroup.Invalidate',
 				options: [
 					{
@@ -390,7 +409,7 @@ class QsysRemoteControl extends InstanceBase {
 				],
 				callback: evt => this.changeGroup('Invalidate', evt.options.id)
 			},
-			'changeGroup_clear': {
+			changeGroup_clear: {
 				name: 'ChangeGroup.Clear',
 				options: [
 					{
@@ -402,7 +421,7 @@ class QsysRemoteControl extends InstanceBase {
 				],
 				callback: evt => this.changeGroup('Clear', evt.options.id)
 			},
-			'mixer_setCrossPointGain': {
+			mixer_setCrossPointGain: {
 				name: 'Mixer.SetCrossPointGain',
 				options: [
 					{
@@ -442,9 +461,15 @@ class QsysRemoteControl extends InstanceBase {
 						regex: Regex.NUMBER
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetCrossPointGain", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetCrossPointGain', {
+					Name: evt.options.name,
+					Inputs: evt.options.inputs,
+					Outputs: evt.options.outputs,
+					Value: evt.options.value,
+					Ramp: evt.options.ramp
+				})
 			},
-			'mixer_setCrossPointDelay': {
+			mixer_setCrossPointDelay: {
 				name: 'Mixer.SetCrossPointDelay',
 				options: [
 					{
@@ -484,9 +509,15 @@ class QsysRemoteControl extends InstanceBase {
 						regex: Regex.NUMBER
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetCrossPointDelay", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetCrossPointDelay', {
+					Name: evt.options.name,
+					Inputs: evt.options.inputs,
+					Outputs: evt.options.outputs,
+					Value: evt.options.value,
+					Ramp: evt.options.ramp,
+				})
 			},
-			'mixer_setCrossPointMute': {
+			mixer_setCrossPointMute: {
 				name: 'Mixer.SetCrossPointMute',
 				options: [
 					{
@@ -518,9 +549,14 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetCrossPointMute", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetCrossPointMute', {
+					Name: evt.options.name,
+					Inputs: evt.options.inputs,
+					Outputs: evt.options.outputs,
+					Value: evt.options.value,
+				})
 			},
-			'mixer_setCrossPointSolo': {
+			mixer_setCrossPointSolo: {
 				name: 'Mixer.SetCrossPointSolo',
 				options: [
 					{
@@ -552,9 +588,14 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetCrossPointSolo", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetCrossPointSolo', {
+					Name: evt.options.name,
+					Inputs: evt.options.inputs,
+					Outputs: evt.options.outputs,
+					Value: evt.options.value,
+				})
 			},
-			'mixer_setInputGain': {
+			mixer_setInputGain: {
 				name: 'Mixer.SetInputGain',
 				options: [
 					{
@@ -588,7 +629,12 @@ class QsysRemoteControl extends InstanceBase {
 						regex: Regex.NUMBER
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetInputGain", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetInputGain', {
+					Name: evt.options.name,
+					Inputs: evt.options.inputs,
+					Value: evt.options.value,
+					Ramp: evt.options.ramp,
+				})
 			},
 			'mixer_setInputMute': {
 				name: 'Mixer.SetInputMute',
@@ -616,9 +662,13 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetInputMute", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetInputMute', {
+					Name: evt.options.name,
+					Inputs: evt.options.inputs,
+					Value: evt.options.value,
+				})
 			},
-			'mixer_setInputSolo': {
+			mixer_setInputSolo: {
 				name: 'Mixer.SetInputSolo',
 				options: [
 					{
@@ -644,9 +694,13 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetInputSolo", "params": { "Name": "' + evt.options.name + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetInputSolo', {
+					Name: evt.options.name,
+					Inputs: evt.options.inputs,
+					Value: evt.options.value,
+				})
 			},
-			'mixer_setOutputGain': {
+			mixer_setOutputGain: {
 				name: 'Mixer.SetOutputGain',
 				options: [
 					{
@@ -680,9 +734,14 @@ class QsysRemoteControl extends InstanceBase {
 						regex: Regex.NUMBER
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetOutputGain", "params": { "Name": "' + evt.options.name + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetOutputGain', {
+					Name: evt.options.name,
+					Outputs: evt.options.outputs,
+					Value: evt.options.value,
+					Ramp: evt.options.ramp,
+				})
 			},
-			'mixer_setOutputMute': {
+			mixer_setOutputMute: {
 				name: 'Mixer.SetOutputMute',
 				options: [
 					{
@@ -708,9 +767,13 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetOutputMute", "params": { "Name": "' + evt.options.name + '", "Outputs": "' + evt.options.outputs + '", "Value": ' + evt.options.value + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetOutputMute', {
+					Name: evt.options.name,
+					Outputs: evt.options.outputs,
+					Value: evt.options.value,
+				})
 			},
-			'mixer_setCueMute': {
+			mixer_setCueMute: {
 				name: 'Mixer.SetCueMute',
 				options: [
 					{
@@ -736,9 +799,13 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetCueMute", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Value": ' + evt.options.value + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetCueMute', {
+					Name: evt.options.name,
+					Cues: evt.options.cues,
+					Value: evt.options.value,
+				})
 			},
-			'mixer_setCueGain': {
+			mixer_setCueGain: {
 				name: 'Mixer.SetCueGain',
 				options: [
 					{
@@ -772,9 +839,14 @@ class QsysRemoteControl extends InstanceBase {
 						regex: Regex.NUMBER
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetCueGain", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Value": ' + evt.options.value + ', "Ramp": ' + evt.options.ramp + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetCueGain', {
+					Name: evt.options.name,
+					Cues: evt.options.cues,
+					Value: evt.options.value,
+					Ramp: evt.options.ramp,
+				})
 			},
-			'mixer_setInputCueEnable': {
+			mixer_setInputCueEnable: {
 				name: 'Mixer.SetInputCueEnable',
 				options: [
 					{
@@ -806,9 +878,14 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetInputCueEnable", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetInputCueEnable', {
+					Name: evt.options.name,
+					Cues: evt.options.cues,
+					Inputs: evt.options.inputs,
+					Value: evt.options.value,
+				})
 			},
-			'mixer_setInputCueAfl': {
+			mixer_setInputCueAfl: {
 				name: 'Mixer.SetInputCueAfl',
 				options: [
 					{
@@ -840,9 +917,14 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					},
 				],
-				callback: evt => this.callCommand('"Mixer.SetInputCueAfl", "params": { "Name": "' + evt.options.name + '", "Cues": "' + evt.options.cues + '", "Inputs": "' + evt.options.inputs + '", "Value": ' + evt.options.value + ' } }')
+				callback: evt => this.sendCommand('Mixer.SetInputCueAfl', {
+					Name: evt.options.name,
+					Cues: evt.options.cues,
+					Inputs: evt.options.inputs,
+					Value: evt.options.value,
+				})
 			},
-			'loopPlayer_start': {
+			loopPlayer_start: {
 				name: 'LoopPlayer.Start',
 				options: [
 					{
@@ -885,9 +967,21 @@ class QsysRemoteControl extends InstanceBase {
 						]
 					}
 				],
-				callback: evt => this.callCommand('"LoopPlayer.Start", "params": { "Files": [ { "Name": "' + evt.options.file_name + '", "Mode": "' + evt.options.mode + '", "Output": ' + evt.options.output + ' } ], "Name": "' + evt.options.name + '", "StartTime": ' + evt.options.startTime + ', "Loop": ' + evt.options.loop + ', "Log": true }, }')
+				callback: evt => this.sendCommand('LoopPlayer.Start', {
+					Files: [
+						{
+							Name: evt.options.file_name,
+							Mode: evt.options.mode,
+							Output: evt.options.output
+						}
+					],
+					Name: evt.options.name,
+					StartTime: evt.options.startTime,
+					Loop: evt.options.loop,
+					Log: true
+				})
 			},
-			'loopPlayer_stop': {
+			loopPlayer_stop: {
 				name: 'LoopPlayer.Stop',
 				options: [
 					{
@@ -903,9 +997,13 @@ class QsysRemoteControl extends InstanceBase {
 						default: '1',
 					}
 				],
-				callback: evt => this.callCommand('"LoopPlayer.Stop", "params": { "Name": "' + evt.options.name + '", "Outputs": ' + evt.options.output + ', "Log": true } }')
+				callback: evt => this.sendCommand('LoopPlayer.Stop', {
+					Name: evt.options.name,
+					Outputs: evt.options.output,
+					Log: true
+				})
 			},
-			'loopPlayer_cancel': {
+			loopPlayer_cancel: {
 				name: 'LoopPlayer.Cancel',
 				options: [
 					{
@@ -921,7 +1019,11 @@ class QsysRemoteControl extends InstanceBase {
 						default: '1',
 					}
 				],
-				callback: evt => this.callCommand('"LoopPlayer.Cancel", "params": { "Name": "' + evt.options.name + '", "Outputs": ' + evt.options.output + ', "Log": true } }')
+				callback: evt => this.sendCommand('LoopPlayer.Cancel', {
+					Name: evt.options.name,
+					Outputs: evt.options.output,
+					Log: true
+				})
 			},
 		})
 	}
@@ -1147,18 +1249,6 @@ class QsysRemoteControl extends InstanceBase {
 		this.setFeedbackDefinitions(feedbacks)
 	}
 
-	async callCommand(cmd, get_set = this.QRC_SET) {
-		if (this.socket === undefined || !this.socket.isConnected) return
-
-		const full_cmd = '{ "jsonrpc": "2.0", "id": ' + get_set + ', "method": ' + cmd
-
-		await this.socket.send(full_cmd + '\x00')
-
-		if (this.console_debug) {
-			console.log('Q-SYS Send: ' + full_cmd + '\r')
-		}
-	}
-
 	async callCommandObj(cmd, get_set = this.QRC_SET) {
 		if (this.socket === undefined || !this.socket.isConnected) return
 
@@ -1255,17 +1345,17 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	updateControl(update) {
-		const name = update.result[0].Name
+		const name = update.Name
 		const control = this.controls.get(name)
 
-		control.value    = update.result[0].Value
-		control.strval   = update.result[0].String
-		control.position = update.result[0].Position
+		control.value    = update.Value
+		control.strval   = update.String
+		control.position = update.Position
 
 		this.setVariableValues({
-			[`${name}_string`]: update.result[0].String,
-			[`${name}_position`]: update.result[0].Position,
-			[`${name}_value`]: update.result[0].Value
+			[`${name}_string`]: update.String,
+			[`${name}_position`]: update.Position,
+			[`${name}_value`]: update.Value
 		})
 	}
 }

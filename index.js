@@ -216,7 +216,7 @@ class QsysRemoteControl extends InstanceBase {
 					// set our internal state in anticipation of success, allowing two presses
 					// of the button faster than the polling interval to correctly toggle the state
 					control.value = !control.value
-					this.callCommand('"Control.Set", "params": { "Name": "' + evt.options.name + '", "Value": "' + evt.value + '" } }')
+					this.callCommand('"Control.Set", "params": { "Name": "' + evt.options.name + '", "Value": "' + control.value + '" } }')
 				}
 			},
 			'component_set': {

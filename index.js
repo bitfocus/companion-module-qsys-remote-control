@@ -1,5 +1,3 @@
-var controls
-
 import UpgradeScripts from './upgrades.js'
 
 import { InstanceBase, Regex, combineRgb, runEntrypoint, TCPHelper } from '@companion-module/base'
@@ -9,23 +7,15 @@ class QsysRemoteControl extends InstanceBase {
 		this.console_debug = false
 
 		this.pollQRCTimer = undefined
-		this.config = config
+		this.controls = undefined
 
 		this.QRC_GET = 1
 		this.QRC_SET = 2
 
-//		this.actions(); // export actions
-
-		if (this.config.feedback_enabled) {
-			this.initControls()
-			this.initFeedbacks()
-			this.initPolling()
-		}
-
-		this.init_tcp()
+		await this.configUpdated(config)
 	}
 
-	updateConfig(config) {
+	async configUpdated(config) {
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 			delete this.socket
@@ -39,11 +29,8 @@ class QsysRemoteControl extends InstanceBase {
 		this.config = config
 		this.init_tcp()
 
-		if (this.config.feedback_enabled) {
-			this.initControls()
-			this.initFeedbacks()
-			this.initPolling()
-		}
+		this.initFeedbacks()
+		this.initPolling()
 	}
 
 	init_tcp() {
@@ -55,29 +42,36 @@ class QsysRemoteControl extends InstanceBase {
 		if (this.config.host) {
 			this.socket = new TCPHelper(this.config.host, this.config.port)
 
-			this.socket.on('error', function (err) {
+			this.socket.on('error', err => {
 				this.updateStatus('connection_failure')
 				this.log('error', `Network error: ${err.message}`)
 			})
 
-			this.socket.on('connect', function (socket) {
-				let login = '{ "jsonrpc":"2.0", "method":"Logon", "params": { "User":"' + this.config.user + '", "Password":"' + this.config.pass + '" } }' + '\x00'
+			this.socket.on('connect', socket => {
+				let login = {
+					jsonrpc: 2.0,
+					method: 'Logon',
+					params: {}
+				}
+
+				if ('user' in this.config && 'pass' in this.config) {
+					login.params = {
+						User: this.config.user,
+						Password: this.config.pass
+					}
+				}
 
 				if (this.console_debug) {
 					console.log('Q-SYS Connected')
 					console.log('Q-SYS Send: ' + login)
 				}
 
-				this.socket.send(login)
+				this.socket.send(JSON.stringify(login) + '\x00')
 
-				socket.once('close', function() {
-					if (this.console_debug) {
-						console.log('Q-SYS Disconnect')
-					}
-				})
+				this.updateStatus('ok')
 			})
 
-			this.socket.on('data', function (d) {
+			this.socket.on('data', d => {
 				const response = d.toString()
 
 				if (this.console_debug) {
@@ -93,12 +87,13 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	processResponse(response) {
-		const messages = this.getMessages(response)
+		const list = response.split('\x00')
+		list.pop()
+		console.log(list)
 		let refresh = false
-		let obj
 
-		for (message of messages) {
-			obj = JSON.parse(message.slice(0, -1)) // trim trailing null
+		list.forEach(jsonstr => {
+			const obj = JSON.parse(jsonstr)
 
 			if ((obj.id !== undefined) && (obj.id == this.QRC_GET)) {
 				if (obj.result !== undefined) {
@@ -109,34 +104,13 @@ class QsysRemoteControl extends InstanceBase {
 					console.log('Q-Sys error', obj.error)
 				}
 			}
-		}
+		})
 
 		if (refresh) this.checkFeedbacks()
 	}
 
-	getMessages(input) {
-		const messageStart = '{"jsonrpc"'
-		const messages = []
-		let remaining = input
-		let i = 1 //looking for the next message, not the first one
-
-		while (i > 0) {
-			i = remaining.indexOf(messageStart, 1)
-			if (i > 0) {  // if there is another message, split off the first and repeat
-				nextMessage = remaining.substring(0,i)
-				remaining = remaining.substring(i)
-
-				messages.push(nextMessage)
-			} else {  // else add the last remaining message
-				messages.push(remaining)
-			}
-		}
-
-		return messages
-	}
-
 	// Return config fields for web config
-	config_fields() {
+	getConfigFields() {
 		return [
 			{
 				type: 'textinput',
@@ -197,17 +171,13 @@ class QsysRemoteControl extends InstanceBase {
 			this.socket.destroy()
 		}
 
-		if (this.udp !== undefined) {
-			this.udp.destroy()
-		}
-
 		if (this.pollQRCTimer !== undefined) {
 			clearInterval(this.pollQRCTimer)
 			delete this.pollQRCTimer
 		}
 
 		if (this.controls !== undefined) {
-			this.controls.destroy()
+			this.controls = undefined
 		}
 	}
 
@@ -243,7 +213,7 @@ class QsysRemoteControl extends InstanceBase {
 					}
 				],
 				callback: evt => {
-					let control = controls.get(evt.options.name)
+					let control = this.controls.get(evt.options.name)
 					// set our internal state in anticipation of success, allowing two presses
 					// of the button faster than the polling interval to correctly toggle the state
 					control.value = !control.value
@@ -895,20 +865,15 @@ class QsysRemoteControl extends InstanceBase {
 		})
 	}
 
-	initControls() {
-		controls = new Map()
-
-		for (let bank in feedbacks) {
-			for (let button in feedbacks[bank]) {
-				feedback = feedbacks[bank][button]
-				if (Object.keys(feedback).length > 0) {
-					this.addControl(feedback[0])
-				}
-			}
-		}
-	}
-
 	initFeedbacks() {
+		if(!this.config.feedback_enabled) {
+			this.setFeedbackDefinitions({})
+			this.controls = undefined
+			return
+		}
+
+		this.controls = new Map()
+
 		const feedbacks = {
 			"control-string": {
 				name: 'Change text to reflect control value',
@@ -937,7 +902,8 @@ class QsysRemoteControl extends InstanceBase {
 				unsubscribe: feedback => this.removeControl(feedback),
 				callback: feedback => {
 					const opt = feedback.options
-					const control = controls.get(opt.name)
+					const control = this.controls.get(opt.name)
+					if (!control.value) return
 
 					switch (opt.type) {
 						case 'string':
@@ -987,7 +953,7 @@ class QsysRemoteControl extends InstanceBase {
 				unsubscribe: feedback => this.removeControl(feedback),
 				callback: feedback => {
 					const opt = feedback.options
-					const control = controls.get(opt.name)
+					const control = this.controls.get(opt.name)
 
 					return (opt.value === 'true' && control.value) || (opt.value === 'false' && !control.value)
 				}
@@ -1034,7 +1000,7 @@ class QsysRemoteControl extends InstanceBase {
 				unsubscribe: feedback => this.removeControl(feedback),
 				callback: feedback => {
 					const opt = feedback.options
-					const control = controls.get(opt.name)
+					const control = this.controls.get(opt.name)
 
 					return control.value >= opt.threshold
 				}
@@ -1085,7 +1051,7 @@ class QsysRemoteControl extends InstanceBase {
 				unsubscribe: feedback => this.removeControl(feedback),
 				callback: feedback => {
 					const opt = feedback.options
-					const control = controls.get(opt.name)
+					const control = this.controls.get(opt.name)
 					const numToRGB = num => {
 						return {
 							r: (num & 0xff0000) >> 16,
@@ -1120,7 +1086,7 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	async callCommand(cmd, get_set = this.QRC_SET) {
-		if (this.socket === undefined || !this.socket.connected) return
+		if (this.socket === undefined || !this.socket.isConnected) return
 
 		const full_cmd = '{ "jsonrpc": "2.0", "id": ' + get_set + ', "method": ' + cmd
 
@@ -1134,34 +1100,34 @@ class QsysRemoteControl extends InstanceBase {
 	getControlStatus(control) {
 		const cmd = '"Control.Get", "params": ["' + control + '"] }'
 
-		this.callServer(cmd, this.QRC_GET)
+		this.callCommand(cmd, this.QRC_GET)
 	}
 
 	getControlStatuses() {
-		for (control of controls.keys()) {
-			this.getControlStatus(control)
-		}
+		this.controls.forEach((v, k) => {
+			this.getControlStatus(k)
+		})
 	}
 
 	initPolling() {
 		if (!this.config.feedback_enabled) return
 
 		if (this.pollQRCTimer === undefined) {
-			this.pollQRCTimer = setInterval(this.getControlStatuses.bind(this), this.config.poll_interval)
+			this.pollQRCTimer = setInterval(() => this.getControlStatuses(), this.config.poll_interval)
 		}
 	}
 
 	addControl(feedback) {
 		const name = feedback['options']['name']
 
-		if (controls.has(name)) {
-			const control = controls.get(name)
+		if (this.controls.has(name)) {
+			const control = this.controls.get(name)
 			if (control.ids === undefined) {
 				control.ids = new Set()
 			}
 			control.ids.add(feedback.id)
 		} else {
-			controls.set(name, {
+			this.controls.set(name, {
 				ids: new Set([feedback.id]),
 				value: null,
 				position: null,
@@ -1173,22 +1139,22 @@ class QsysRemoteControl extends InstanceBase {
 	removeControl(feedback) {
 		const name = feedback['options']['name']
 
-		if (controls.has(name)) {
-			const control = controls.get(name)
+		if (this.controls.has(name)) {
+			const control = this.controls.get(name)
 
 			if (control.ids !== undefined) {
 				control.ids.delete(feedback.id)
 			}
 
 			if (control.ids.size == 0) {
-				controls.delete(name)
+				this.controls.delete(name)
 			}
 		}
 	}
 
 	updateControl(update) {
 		const name = update.result[0].Name
-		const control = controls.get(name)
+		const control = this.controls.get(name)
 
 		control.value    = update.result[0].Value
 		control.strval   = update.result[0].String

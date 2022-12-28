@@ -6,9 +6,7 @@
 	"version": "2.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-qsys-remote-control.git",
-	"bugs": {
-		"url": "https://github.com/bitfocus/companion-module-qsys-remote-control/issues"
-	},
+	"bugs": "https://github.com/bitfocus/companion-module-qsys-remote-control/issues",
 	"maintainers": [
 		{
 			"name": "Andreas H. Thomsen",

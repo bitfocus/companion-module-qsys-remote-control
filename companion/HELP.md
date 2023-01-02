@@ -28,8 +28,11 @@ This module will connect to Q-SYS Remote Control.
 * LoopPlayer.Stop
 * LoopPlayer.Cancel
 
-**Not Implementet**
+**Variables and Feedbacks**
 * EngineStatus
+* Named control values
+
+**Not Implementet**
 * StatusGet
 * Control.Get
 * Component.Get

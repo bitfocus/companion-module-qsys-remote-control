@@ -7,7 +7,6 @@ class QsysRemoteControl extends InstanceBase {
 		this.console_debug = false
 
 		this.pollQRCTimer = undefined
-		this.controls = undefined
 
 		this.QRC_GET = 1
 		this.QRC_SET = 2
@@ -32,7 +31,6 @@ class QsysRemoteControl extends InstanceBase {
 
 		this.initFeedbacks()
 		this.initPolling()
-		this.initVariables()
 	}
 
 	initVariables() {
@@ -50,12 +48,15 @@ class QsysRemoteControl extends InstanceBase {
 			variableId: 'emulator'
 		})
 
-		if (!('variables' in this.config)) return
+		if (!('variables' in this.config) || this.config.variables === '') {
+			this.setVariableDefinitions(this.variables) // This gets called in addControls if there are vars
+			return
+		}
 
 		this.config.variables.split(',').forEach(v => {
 			this.addControl({
 				options: {
-					name: v
+					name: v.trim()
 				},
 				id: 'var'
 			})
@@ -69,6 +70,8 @@ class QsysRemoteControl extends InstanceBase {
 		}
 
 		if (this.config.host) {
+			this.controls = new Map()
+
 			this.socket = new TCPHelper(this.config.host, this.config.port)
 
 			this.socket.on('error', err => {
@@ -98,6 +101,8 @@ class QsysRemoteControl extends InstanceBase {
 				this.socket.send(JSON.stringify(login) + '\x00')
 
 				this.updateStatus('ok')
+
+				this.initVariables()
 			})
 
 			this.socket.on('data', d => {
@@ -124,11 +129,11 @@ class QsysRemoteControl extends InstanceBase {
 			const obj = JSON.parse(jsonstr)
 
 			if ((obj.id !== undefined) && (obj.id == this.QRC_GET)) {
-				if (obj.result !== undefined) {
-					this.updateControl(obj.result[0])
+				if (Array.isArray(obj?.result)) {
+					obj.result.forEach(r => this.updateControl(r))
 					refresh = true
 				} else if (obj.error !== undefined) {
-					this.log('error', obj.error)
+					this.log('error', obj?.error)
 				}
 			} else if (obj.method === 'EngineStatus') {
 				this.setVariableValues({
@@ -187,12 +192,22 @@ class QsysRemoteControl extends InstanceBase {
 				id: 'info',
 				label: 'Feedback and Variables',
 				width: 12,
-				value: 'Feedback must be enabled to watch for variables and feedbacks'
+				value: 'Feedback must be enabled to watch for variables and feedbacks. Bundling feedbacks will send every variable/feedback control in one request vs multiple. ' +
+					'Depending on the amount of watched controls, this can add a lot of additional, unneccesary traffic to the device (polling interval &times; the number of named controls). ' +
+					'However, if one control name is incorrect, all of the feedbacks and variables will fail to load. Therefore, it may be useful to keep this disabled while testing, ' +
+					'and then enable it in a production environment.'
 			},
 			{
 				type: 'checkbox',
 				id: 'feedback_enabled',
 				label: 'Feedback Enabled',
+				width: 6,
+				default: false
+			},
+			{
+				type: 'checkbox',
+				id: 'bundle_feedbacks',
+				label: 'Bundle Feedbacks?',
 				width: 6,
 				default: false
 			},
@@ -1032,11 +1047,8 @@ class QsysRemoteControl extends InstanceBase {
 		this.variables = []
 		if(!this.config.feedback_enabled) {
 			this.setFeedbackDefinitions({})
-			this.controls = undefined
 			return
 		}
-
-		this.controls = new Map()
 
 		const feedbacks = {
 			"control-string": {
@@ -1263,14 +1275,21 @@ class QsysRemoteControl extends InstanceBase {
 	getControlStatuses() {
 		// It is possible to group multiple statuses; HOWEVER, if one doesn't exist, nothing will be returned...
 		// thus, we send one at a time
-		this.controls.forEach((x, k) => {
-			const cmd = {
-				method: 'Control.Get',
-				params: [k]
-			}
+		if(!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
+			this.controls.forEach((x, k) => {
+				const cmd = {
+					method: 'Control.Get',
+					params: [k]
+				}
 
-			this.callCommandObj(cmd, this.QRC_GET)
-		})
+				this.callCommandObj(cmd, this.QRC_GET)
+			})
+		} else {
+			this.callCommandObj({
+				method: 'Control.Get',
+				params: [...this.controls.keys()]
+			}, this.QRC_GET)
+		}
 	}
 
 	initPolling() {

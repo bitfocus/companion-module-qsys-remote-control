@@ -2,7 +2,7 @@ import UpgradeScripts from './upgrades.js'
 
 import { InstanceBase, Regex, combineRgb, runEntrypoint, TCPHelper } from '@companion-module/base'
 
-class QsysRemoteControl extends InstanceBase {	
+class QsysRemoteControl extends InstanceBase {
 	async init(config) {
 		this.console_debug = false
 
@@ -80,6 +80,8 @@ class QsysRemoteControl extends InstanceBase {
 			})
 
 			this.socket.on('connect', socket => {
+				this.response_buffer = ''
+
 				const login = {
 					jsonrpc: 2.0,
 					method: 'Logon',
@@ -121,8 +123,8 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	processResponse(response) {
-		const list = response.split('\x00')
-		list.pop()
+		const list = (this.response_buffer + response).split('\x00')
+		this.response_buffer = list.pop()
 		let refresh = false
 
 		list.forEach(jsonstr => {
@@ -1087,7 +1089,7 @@ class QsysRemoteControl extends InstanceBase {
 								text: control.strval
 							}
 						case 'value':
-							return { 
+							return {
 								text: control.value.toString()
 							}
 						case 'position':

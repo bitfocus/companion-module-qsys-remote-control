@@ -30,6 +30,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.init_tcp()
 
 		this.initFeedbacks()
+		this.subscribeFeedbacks()  // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
 	}
 
@@ -1257,7 +1258,7 @@ class QsysRemoteControl extends InstanceBase {
 		await this.socket.send(JSON.stringify(cmd) + '\x00')
 
 		if (this.console_debug) {
-			console.log('Q-SYS Send: ' + full_cmd + '\r')
+			console.log('Q-SYS Send: ' + JSON.stringify(cmd) + '\r')
 		}
 	}
 

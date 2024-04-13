@@ -1043,6 +1043,57 @@ class QsysRemoteControl extends InstanceBase {
 					Log: true
 				})
 			},
+			snapshot_load: {
+				name: 'Snapshot.Load',
+				options: [
+					{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+					},
+					{
+						type: 'number',
+						id: 'bank',
+						label: 'Bank:',
+						default: '',
+						tooltip: 'Specific bank number to recall from the snapshot'
+					},
+					{
+						type: 'number',
+						id: 'ramp',
+						label: 'Ramp',
+						tooltip: 'Time in seconds to ramp to banked snapshot'
+					}
+				],
+				callback: evt => this.sendCommand('Snapshot.Load', {
+						Name: evt.options.name,
+						Bank: evt.options.bank,
+						Ramp: evt.options.ramp
+				})
+			},
+			snapshot_save: {
+				name: 'Snapshot.Save',
+				options: [
+					{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+					},
+					{
+						type: 'number',
+						id: 'bank',
+						label: 'Bank:',
+						default: '',
+						tooltip: 'Specific bank number to save to within the snapshot'
+					}
+				],
+				callback: evt => this.sendCommand('Snapshot.Save', {
+						Name: evt.options.name,
+						Bank: evt.options.bank
+				})
+			}
 		})
 	}
 

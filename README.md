@@ -22,3 +22,10 @@ Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-S
 * EngineStatus variables added
 * Threshold and boolean feedbacks are now boolean feedbacks
 * Better response handling and command sending
+
+**V2.0.1**
+* Fix debug logging
+* Fix configuration update to resubscribe feedbacks
+
+**V2.1.0**
+* Add Snapshot.Load and Snapshot.Save methods

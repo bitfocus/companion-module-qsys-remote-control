@@ -30,6 +30,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.init_tcp()
 
 		this.initFeedbacks()
+		this.subscribeFeedbacks()  // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
 	}
 
@@ -1042,6 +1043,57 @@ class QsysRemoteControl extends InstanceBase {
 					Log: true
 				})
 			},
+			snapshot_load: {
+				name: 'Snapshot.Load',
+				options: [
+					{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+					},
+					{
+						type: 'number',
+						id: 'bank',
+						label: 'Bank:',
+						default: '',
+						tooltip: 'Specific bank number to recall from the snapshot'
+					},
+					{
+						type: 'number',
+						id: 'ramp',
+						label: 'Ramp',
+						tooltip: 'Time in seconds to ramp to banked snapshot'
+					}
+				],
+				callback: evt => this.sendCommand('Snapshot.Load', {
+						Name: evt.options.name,
+						Bank: evt.options.bank,
+						Ramp: evt.options.ramp
+				})
+			},
+			snapshot_save: {
+				name: 'Snapshot.Save',
+				options: [
+					{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+					},
+					{
+						type: 'number',
+						id: 'bank',
+						label: 'Bank:',
+						default: '',
+						tooltip: 'Specific bank number to save to within the snapshot'
+					}
+				],
+				callback: evt => this.sendCommand('Snapshot.Save', {
+						Name: evt.options.name,
+						Bank: evt.options.bank
+				})
+			}
 		})
 	}
 
@@ -1257,7 +1309,7 @@ class QsysRemoteControl extends InstanceBase {
 		await this.socket.send(JSON.stringify(cmd) + '\x00')
 
 		if (this.console_debug) {
-			console.log('Q-SYS Send: ' + full_cmd + '\r')
+			console.log('Q-SYS Send: ' + JSON.stringify(cmd) + '\r')
 		}
 	}
 

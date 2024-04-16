@@ -27,5 +27,5 @@ Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-S
 * Fix debug logging
 * Fix configuration update to resubscribe feedbacks
 
-**V2.0.2**
+**V2.1.0**
 * Add Snapshot.Load and Snapshot.Save methods

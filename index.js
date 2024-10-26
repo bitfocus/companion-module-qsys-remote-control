@@ -1093,6 +1093,51 @@ class QsysRemoteControl extends InstanceBase {
 						Name: evt.options.name,
 						Bank: evt.options.bank
 				})
+			},
+			page_submit_message: {
+				name: 'PA.PageSubmit - Message',
+				options: [
+					{
+						type: 'textinput',
+						id: 'zones',
+						label: 'Zone Number(s):',
+						tooltip: 'Comma-seperated for multiple zones',
+						regex: "\d+(?:,\d+)*",
+						required: true,
+						default: '',
+					},
+					{
+						type: 'number',
+						id: 'priority',
+						label: 'Priority:',
+						tooltip: "1 is highest",
+						min: 1,
+						required: true,
+						default: '',
+					},
+					{
+						type: 'textinput',
+						id: 'preamble',
+						label: 'Preamble:',
+						tooltip: 'File name of the preamble',
+						default: '',
+					},
+					{
+						type: 'textinput',
+						id: 'message',
+						label: 'Message:',
+						tooltip: 'File name of the message',
+						default: '',
+					}
+				],
+				callback: evt => this.sendCommand('PA.PageSubmit', {
+						Mode: "message",
+						Zones: evt.options.zones.split(",").map(Number),
+						Priority: evt.options.priority,
+						Preamble: evt.options.preamble,
+						Message: evt.options.message,
+						Start: true
+				})
 			}
 		})
 	}

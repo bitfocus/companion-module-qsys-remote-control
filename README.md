@@ -29,3 +29,6 @@ Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-S
 
 **V2.1.0**
 * Add Snapshot.Load and Snapshot.Save methods
+
+**V2.2.0**
+* Add PA.PageSubmit command for message type pages only

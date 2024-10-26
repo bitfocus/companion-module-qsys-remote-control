@@ -1,7 +1,7 @@
 # companion-module-qsys-remote-control
 See HELP.md and LICENSE
 
-Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-Sys_Remote_Control/QRC.htm
+Reference available here: https://q-syshelp.qsc.com/content/External_Control_APIs/QRC/QRC_Overview.htm
 
 **V0.0.1** 
 * Initial module
@@ -29,3 +29,6 @@ Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-S
 
 **V2.1.0**
 * Add Snapshot.Load and Snapshot.Save methods
+
+**V2.2.0**
+* Add PA.PageSubmit command for message type pages only

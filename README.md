@@ -1,7 +1,7 @@
 # companion-module-qsys-remote-control
 See HELP.md and LICENSE
 
-Reference available here: https://q-syshelp.qsc.com/Content/External_Control/Q-Sys_Remote_Control/QRC.htm
+Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/QRC_Overview.htm
 
 **V0.0.1** 
 * Initial module

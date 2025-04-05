@@ -2,3 +2,7 @@ node_modules/
 /pkg
 /pkg.tgz
 .DS_Store
+DEBUG-*
+.vscode/
+.yarn/
+qsys=remote-control-*.tgz

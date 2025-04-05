@@ -33,36 +33,41 @@ class QsysRemoteControl extends InstanceBase {
 		this.init_tcp()
 
 		this.initFeedbacks()
-		this.subscribeFeedbacks()  // ensures control hashmap is updated with all feedbacks when config is changed
+		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
 	}
 
 	initVariables() {
-		this.variables.push({
-			name: 'State',
-			variableId: 'state'
-		}, {
-			name: 'Design Name',
-			variableId: 'design_name'
-		}, {
-			name: 'redundant',
-			variableId: 'redundant'
-		}, {
-			name: 'emulator',
-			variableId: 'emulator'
-		})
+		this.variables.push(
+			{
+				name: 'State',
+				variableId: 'state',
+			},
+			{
+				name: 'Design Name',
+				variableId: 'design_name',
+			},
+			{
+				name: 'redundant',
+				variableId: 'redundant',
+			},
+			{
+				name: 'emulator',
+				variableId: 'emulator',
+			},
+		)
 
 		if (!('variables' in this.config) || this.config.variables === '') {
 			this.setVariableDefinitions(this.variables) // This gets called in addControls if there are vars
 			return
 		}
 
-		this.config.variables.split(',').forEach(v => {
+		this.config.variables.split(',').forEach((v) => {
 			this.addControl({
 				options: {
-					name: v.trim()
+					name: v.trim(),
 				},
-				id: 'var'
+				id: 'var',
 			})
 		})
 	}
@@ -79,24 +84,24 @@ class QsysRemoteControl extends InstanceBase {
 
 			this.socket = new TCPHelper(this.config.host, this.config.port)
 
-			this.socket.on('error', err => {
+			this.socket.on('error', (err) => {
 				this.updateStatus('connection_failure')
 				this.log('error', `Network error: ${err.message}`)
 			})
 
-			this.socket.on('connect', socket => {
+			this.socket.on('connect', () => {
 				this.response_buffer = ''
 
 				const login = {
 					jsonrpc: 2.0,
 					method: 'Logon',
-					params: {}
+					params: {},
 				}
 
 				if ('user' in this.config && 'pass' in this.config) {
 					login.params = {
 						User: this.config.user,
-						Password: this.config.pass
+						Password: this.config.pass,
 					}
 				}
 
@@ -112,7 +117,7 @@ class QsysRemoteControl extends InstanceBase {
 				this.initVariables()
 			})
 
-			this.socket.on('data', d => {
+			this.socket.on('data', (d) => {
 				const response = d.toString()
 
 				if (this.console_debug) {
@@ -123,7 +128,6 @@ class QsysRemoteControl extends InstanceBase {
 					this.processResponse(response)
 				}
 			})
-
 		}
 	}
 
@@ -132,12 +136,12 @@ class QsysRemoteControl extends InstanceBase {
 		this.response_buffer = list.pop()
 		let refresh = false
 
-		list.forEach(jsonstr => {
+		list.forEach((jsonstr) => {
 			const obj = JSON.parse(jsonstr)
 
-			if ((obj.id !== undefined) && (obj.id == this.QRC_GET)) {
+			if (obj.id !== undefined && obj.id == this.QRC_GET) {
 				if (Array.isArray(obj?.result)) {
-					obj.result.forEach(r => this.updateControl(r))
+					obj.result.forEach((r) => this.updateControl(r))
 					refresh = true
 				} else if (obj.error !== undefined) {
 					this.log('error', obj?.error)
@@ -147,7 +151,7 @@ class QsysRemoteControl extends InstanceBase {
 					state: obj.params.State,
 					design_name: obj.params.DesignName,
 					redundant: obj.params.IsRedundant,
-					emulator: obj.params.IsEmulator
+					emulator: obj.params.IsEmulator,
 				})
 			}
 		})
@@ -163,7 +167,7 @@ class QsysRemoteControl extends InstanceBase {
 				id: 'host',
 				label: 'Target IP',
 				width: 6,
-				regex: Regex.IP
+				regex: Regex.IP,
 			},
 			{
 				type: 'textinput',
@@ -171,52 +175,53 @@ class QsysRemoteControl extends InstanceBase {
 				label: 'Target Port (Default: 1710)',
 				width: 6,
 				default: 1710,
-				regex: Regex.PORT
+				regex: Regex.PORT,
 			},
 			{
 				type: 'static-text',
 				id: 'info',
 				label: 'Login Information',
 				width: 12,
-				value: 'If you have login enabled, specify the creditials below.'
+				value: 'If you have login enabled, specify the creditials below.',
 			},
 			{
 				type: 'textinput',
 				id: 'user',
 				label: 'Username',
 				width: 6,
-				default: ''
+				default: '',
 			},
 			{
 				type: 'textinput',
 				id: 'pass',
 				label: 'Password',
 				width: 6,
-				default: ''
+				default: '',
 			},
 			{
 				type: 'static-text',
 				id: 'info',
 				label: 'Feedback and Variables',
 				width: 12,
-				value: 'Feedback must be enabled to watch for variables and feedbacks. Bundling feedbacks will send every variable/feedback control in one request vs multiple. ' +
+				value:
+					'Feedback must be enabled to watch for variables and feedbacks. Bundling feedbacks will send every variable/feedback control in one request vs multiple. ' +
 					'Depending on the amount of watched controls, this can add a lot of additional, unneccesary traffic to the device (polling interval &times; the number of named controls). ' +
 					'However, if one control name is incorrect, all of the feedbacks and variables will fail to load. Therefore, it may be useful to keep this disabled while testing, ' +
-					'and then enable it in a production environment.'
+					'and then enable it in a production environment.',
 			},
 			{
 				type: 'checkbox',
 				id: 'feedback_enabled',
 				label: 'Feedback Enabled',
 				width: 6,
-				default: false
+				default: false,
 			},
 			{
 				type: 'checkbox',
 				id: 'bundle_feedbacks',
 				label: 'Bundle Feedbacks?',
 				width: 6,
-				default: false
+				default: false,
 			},
 			{
 				type: 'number',
@@ -225,21 +230,22 @@ class QsysRemoteControl extends InstanceBase {
 				min: 30,
 				max: 60000,
 				width: 6,
-				default: 100
+				default: 100,
 			},
 			{
 				type: 'static-text',
 				id: 'info',
 				label: 'Control Variables',
 				width: 12,
-				value: 'Specify a list of named controls to add as Companion variables. Separated by commas. Any feedbacks used are automatically added to the variable list.'
+				value:
+					'Specify a list of named controls to add as Companion variables. Separated by commas. Any feedbacks used are automatically added to the variable list.',
 			},
 			{
 				type: 'textinput',
 				id: 'variables',
 				label: 'Variables',
 				width: 12,
-				default: ''
+				default: '',
 			},
 		]
 	}
@@ -264,7 +270,7 @@ class QsysRemoteControl extends InstanceBase {
 	async sendCommand(command, params) {
 		await this.callCommandObj({
 			method: command,
-			params: params
+			params: params,
 		})
 	}
 
@@ -1224,15 +1230,14 @@ class QsysRemoteControl extends InstanceBase {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Bank: evt.options.bank,
 					})
-				}
-					,
+				},
 			},
 		})
 	}
 
 	initFeedbacks() {
 		this.variables = []
-		if(!this.config.feedback_enabled) {
+		if (!this.config.feedback_enabled) {
 			this.setFeedbackDefinitions({})
 			return
 		}
@@ -1419,8 +1424,8 @@ class QsysRemoteControl extends InstanceBase {
 					const range = opt.high_threshold - opt.low_threshold
 					const ratio = (control.value - opt.low_threshold) / range
 
-					hi_rgb = numToRGB(opt.high_bg)
-					lo_rgb = numToRGB(opt.low_bg)
+					const hi_rgb = numToRGB(opt.high_bg)
+					const lo_rgb = numToRGB(opt.low_bg)
 
 					const r = Math.round((hi_rgb.r - lo_rgb.r) * ratio) + lo_rgb.r
 					const g = Math.round((hi_rgb.g - lo_rgb.g) * ratio) + lo_rgb.g
@@ -1457,8 +1462,8 @@ class QsysRemoteControl extends InstanceBase {
 		const obj = {
 			method: 'ChangeGroup.' + type,
 			params: {
-				Id: id
-			}
+				Id: id,
+			},
 		}
 		if (controls !== null) {
 			obj.params.Controls = [controls]
@@ -1469,20 +1474,23 @@ class QsysRemoteControl extends InstanceBase {
 	async getControlStatuses() {
 		// It is possible to group multiple statuses; HOWEVER, if one doesn't exist, nothing will be returned...
 		// thus, we send one at a time
-		if(!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
+		if (!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
 			this.controls.forEach(async (x, k) => {
 				const cmd = {
 					method: 'Control.Get',
-					params: [k]
+					params: [k],
 				}
 
 				await this.callCommandObj(cmd, this.QRC_GET)
 			})
 		} else {
-			await this.callCommandObj({
-				method: 'Control.Get',
-				params: [...this.controls.keys()]
-			}, this.QRC_GET)
+			await this.callCommandObj(
+				{
+					method: 'Control.Get',
+					params: [...this.controls.keys()],
+				},
+				this.QRC_GET,
+			)
 		}
 	}
 
@@ -1490,7 +1498,7 @@ class QsysRemoteControl extends InstanceBase {
 		if (!this.config.feedback_enabled) return
 
 		if (this.pollQRCTimer === undefined) {
-			this.pollQRCTimer = setInterval(() => this.getControlStatuses().catch(()=>{}), this.config.poll_interval)
+			this.pollQRCTimer = setInterval(() => this.getControlStatuses().catch(() => {}), this.config.poll_interval)
 		}
 	}
 
@@ -1508,19 +1516,23 @@ class QsysRemoteControl extends InstanceBase {
 				ids: new Set([feedback.id]),
 				value: null,
 				position: null,
-				strval: ''
+				strval: '',
 			})
 
-			this.variables.push({
-				name: `${name} Value`,
-				variableId: `${name}_value`,
-			}, {
-				name: `${name} Position`,
-				variableId: `${name}_position`,
-			}, {
-				name: `${name} String`,
-				variableId: `${name}_string`,
-			})
+			this.variables.push(
+				{
+					name: `${name} Value`,
+					variableId: `${name}_value`,
+				},
+				{
+					name: `${name} Position`,
+					variableId: `${name}_position`,
+				},
+				{
+					name: `${name} String`,
+					variableId: `${name}_string`,
+				},
+			)
 
 			this.setVariableDefinitions(this.variables)
 		}
@@ -1546,14 +1558,14 @@ class QsysRemoteControl extends InstanceBase {
 		const name = update.Name
 		const control = this.controls.get(name)
 
-		control.value    = update.Value
-		control.strval   = update.String
+		control.value = update.Value
+		control.strval = update.String
 		control.position = update.Position
 
 		this.setVariableValues({
 			[`${name}_string`]: update.String,
 			[`${name}_position`]: update.Position,
-			[`${name}_value`]: update.Value
+			[`${name}_value`]: update.Value,
 		})
 	}
 }

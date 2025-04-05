@@ -5,4 +5,4 @@ node_modules/
 DEBUG-*
 .vscode/
 .yarn/
-qsys=remote-control-*.tgz
+qsys-remote-control-*.tgz

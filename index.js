@@ -3,6 +3,8 @@ import UpgradeScripts from './upgrades.js'
 import { InstanceBase, Regex, combineRgb, runEntrypoint, TCPHelper } from '@companion-module/base'
 import PQueue from 'p-queue'
 const queue = new PQueue({ concurrency: 1, interval: 5, intervalCap: 1 })
+const QRC_GET = 1
+const QRC_SET = 2
 
 class QsysRemoteControl extends InstanceBase {
 	async init(config) {
@@ -10,18 +12,19 @@ class QsysRemoteControl extends InstanceBase {
 
 		this.pollQRCTimer = undefined
 
-		this.QRC_GET = 1
-		this.QRC_SET = 2
-
 		this.actions()
 		await this.configUpdated(config)
 	}
 
 	async configUpdated(config) {
 		queue.clear()
-		if (this.socket !== undefined) {
-			this.socket.destroy()
-			delete this.socket
+		if (this.socketPri !== undefined) {
+			this.socketPri.destroy()
+			delete this.socketPri
+		}
+		if (this.socketSec !== undefined) {
+			this.socketSec.destroy()
+			delete this.socketSec
 		}
 
 		if (this.pollQRCTimer !== undefined) {
@@ -30,8 +33,15 @@ class QsysRemoteControl extends InstanceBase {
 		}
 
 		this.config = config
-		this.init_tcp()
-
+		this.controls = new Map()
+		this.init_tcp(this.socketPri, this.config.host, this.config.port)
+		if (this.config.redundant) {
+			if (this.config.hostSecondary) {
+				this.init_tcp(this.socketSec, this.config.hostSecondary, this.config.portSecondary)
+			} else {
+				this.log('warn', `Redundancy enabled by Secondary Host missing`)
+			}
+		}
 		this.initFeedbacks()
 		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
@@ -72,24 +82,20 @@ class QsysRemoteControl extends InstanceBase {
 		})
 	}
 
-	init_tcp() {
-		if (this.socket !== undefined) {
-			queue.clear()
-			this.socket.destroy()
-			delete this.socket
+	init_tcp(socket, host, port) {
+		if (socket !== undefined) {
+			socket.destroy()
 		}
 
-		if (this.config.host) {
-			this.controls = new Map()
+		if (host) {
+			socket = new TCPHelper(host, port)
 
-			this.socket = new TCPHelper(this.config.host, this.config.port)
-
-			this.socket.on('error', (err) => {
+			socket.on('error', (err) => {
 				this.updateStatus('connection_failure')
-				this.log('error', `Network error: ${err.message}`)
+				this.log('error', `Network error from ${host}: ${err.message}`)
 			})
 
-			this.socket.on('connect', () => {
+			socket.on('connect', () => {
 				this.response_buffer = ''
 
 				const login = {
@@ -106,22 +112,22 @@ class QsysRemoteControl extends InstanceBase {
 				}
 
 				if (this.console_debug) {
-					console.log('Q-SYS Connected')
+					console.log(`Q-SYS Connected to ${host}:${port}`)
 					console.log('Q-SYS Send: ' + login)
 				}
 
-				this.socket.send(JSON.stringify(login) + '\x00')
+				socket.send(JSON.stringify(login) + '\x00')
 
 				this.updateStatus('ok')
 
 				this.initVariables()
 			})
 
-			this.socket.on('data', (d) => {
+			socket.on('data', (d) => {
 				const response = d.toString()
 
 				if (this.console_debug) {
-					console.log(response)
+					console.log(`Message recieved from ${host}: ${response}`)
 				}
 
 				if (this.config.feedback_enabled) {
@@ -139,7 +145,7 @@ class QsysRemoteControl extends InstanceBase {
 		list.forEach((jsonstr) => {
 			const obj = JSON.parse(jsonstr)
 
-			if (obj.id !== undefined && obj.id == this.QRC_GET) {
+			if (obj.id !== undefined && obj.id == QRC_GET) {
 				if (Array.isArray(obj?.result)) {
 					obj.result.forEach((r) => this.updateControl(r))
 					refresh = true
@@ -163,19 +169,49 @@ class QsysRemoteControl extends InstanceBase {
 	getConfigFields() {
 		return [
 			{
+				type: 'checkbox',
+				id: 'redundant',
+				label: 'Redunant Cores?',
+				width: 6,
+				default: false,
+			},
+			{
 				type: 'textinput',
 				id: 'host',
-				label: 'Target IP',
+				label: 'Primary Target IP',
 				width: 6,
-				regex: Regex.IP,
+				regex: Regex.IP | Regex.HOSTNAME,
 			},
 			{
 				type: 'textinput',
 				id: 'port',
-				label: 'Target Port (Default: 1710)',
+				label: 'Primary Target Port',
 				width: 6,
-				default: 1710,
+				default: `1710`,
 				regex: Regex.PORT,
+				tooltip: 'Default: 1710',
+			},
+			{
+				type: 'textinput',
+				id: 'hostSecondary',
+				label: 'Secondary Target IP',
+				width: 6,
+				regex: Regex.IP | Regex.HOSTNAME,
+				isVisible: (options) => {
+					return !!options.redundant
+				},
+			},
+			{
+				type: 'textinput',
+				id: 'portSecondary',
+				label: 'Secondary Target Port',
+				width: 6,
+				default: `1710`,
+				regex: Regex.PORT,
+				tooltip: 'Default: 1710',
+				isVisible: (options) => {
+					return !!options.redundant
+				},
 			},
 			{
 				type: 'static-text',
@@ -253,8 +289,11 @@ class QsysRemoteControl extends InstanceBase {
 	// When module gets deleted
 	destroy() {
 		queue.clear()
-		if (this.socket !== undefined) {
-			this.socket.destroy()
+		if (this.socketPri !== undefined) {
+			this.socketPri.destroy()
+		}
+		if (this.socketSec !== undefined) {
+			this.socketSec.destroy()
 		}
 
 		if (this.pollQRCTimer !== undefined) {
@@ -1441,19 +1480,29 @@ class QsysRemoteControl extends InstanceBase {
 		this.setFeedbackDefinitions(feedbacks)
 	}
 
-	async callCommandObj(cmd, get_set = this.QRC_SET) {
-		if (this.socket === undefined || !this.socket.isConnected) return
-
+	async callCommandObj(cmd, get_set = QRC_SET) {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
 		await queue.add(async () => {
-			const sent = await this.socket.send(JSON.stringify(cmd) + '\x00')
-			if (sent) {
-				if (this.console_debug) {
-					console.log('Q-SYS Send: ' + JSON.stringify(cmd) + '\r')
+			if (this.socketPri !== undefined && this.socketPri.isConnected) {
+				const sent = await this.socketPri.send(JSON.stringify(cmd) + '\x00')
+				if (sent) {
+					if (this.console_debug) {
+						console.log(`Q-SYS Sent to ${this.config.host}: ` + JSON.stringify(cmd) + '\r')
+					}
+				} else {
+					this.log('warn', `Q-SYS Send to ${this.config.host} Failed: ` + JSON.stringify(cmd) + '\r')
 				}
-			} else {
-				this.log('warn', 'Q-SYS Send Failed: ' + JSON.stringify(cmd) + '\r')
+			}
+			if (this.socketSec !== undefined && this.socketSec.isConnected) {
+				const sent = await this.socketSec.send(JSON.stringify(cmd) + '\x00')
+				if (sent) {
+					if (this.console_debug) {
+						console.log(`Q-SYS Sent to ${this.config.hostSecondary}: ` + JSON.stringify(cmd) + '\r')
+					}
+				} else {
+					this.log('warn', `Q-SYS Send to ${this.config.hostSecondary} Failed: ` + JSON.stringify(cmd) + '\r')
+				}
 			}
 		})
 	}
@@ -1481,7 +1530,7 @@ class QsysRemoteControl extends InstanceBase {
 					params: [k],
 				}
 
-				await this.callCommandObj(cmd, this.QRC_GET)
+				await this.callCommandObj(cmd, QRC_GET)
 			})
 		} else {
 			await this.callCommandObj(
@@ -1489,7 +1538,7 @@ class QsysRemoteControl extends InstanceBase {
 					method: 'Control.Get',
 					params: [...this.controls.keys()],
 				},
-				this.QRC_GET,
+				QRC_GET,
 			)
 		}
 	}

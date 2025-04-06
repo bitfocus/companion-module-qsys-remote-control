@@ -41,3 +41,6 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 * * Declare consts in `control-fade` callback
 * * Add `name` option to `loopPlayer_start` action def. Previously referenced in callback without option def.
 * Lint
+
+**V2.3.0**
+* Connect to & control redundant Qsys Cores

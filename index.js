@@ -199,6 +199,13 @@ class QsysRemoteControl extends InstanceBase {
 				default: false,
 			},
 			{
+				type: 'static-text',
+				id: 'filler1',
+				label: '',
+				width: 6,
+				value: '',
+			},
+			{
 				type: 'textinput',
 				id: 'host',
 				label: 'Primary Target IP',
@@ -234,6 +241,26 @@ class QsysRemoteControl extends InstanceBase {
 				tooltip: 'Default: 1710',
 				isVisible: (options) => {
 					return !!options.redundant
+				},
+			},
+			{
+				type: 'static-text',
+				id: 'filler2',
+				label: '',
+				width: 6,
+				value: '',
+				isVisible: (options) => {
+					return !options.redundant
+				},
+			},
+			{
+				type: 'static-text',
+				id: 'filler3',
+				label: '',
+				width: 6,
+				value: '',
+				isVisible: (options) => {
+					return !options.redundant
 				},
 			},
 			{

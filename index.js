@@ -7,11 +7,13 @@ const QRC_GET = 1
 const QRC_SET = 2
 
 class QsysRemoteControl extends InstanceBase {
-	async init(config) {
+	constructor(internal) {
+		super(internal)
 		this.console_debug = false
-
 		this.pollQRCTimer = undefined
+	}
 
+	async init(config) {
 		this.actions()
 		await this.configUpdated(config)
 	}
@@ -37,7 +39,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.init_tcp(this.socketPri, this.config.host, this.config.port)
 		if (this.config.redundant) {
 			if (this.config.hostSecondary) {
-				this.init_tcp(this.socketSec, this.config.hostSecondary, this.config.portSecondary)
+				this.init_tcp(this.socketSec, this.config.hostSecondary, this.config.portSecondary, true)
 			} else {
 				this.log('warn', `Redundancy enabled by Secondary Host missing`)
 			}
@@ -58,14 +60,26 @@ class QsysRemoteControl extends InstanceBase {
 				variableId: 'design_name',
 			},
 			{
-				name: 'redundant',
+				name: 'Redundant',
 				variableId: 'redundant',
 			},
 			{
-				name: 'emulator',
+				name: 'Emulator',
 				variableId: 'emulator',
 			},
 		)
+		if (this.config.redundant) {
+			this.variables.push(
+				{
+					name: 'State - Secondary',
+					variableId: 'stateSecondary',
+				},
+				{
+					name: 'Redundant - Secondary',
+					variableId: 'redundantSecondary',
+				},
+			)
+		}
 
 		if (!('variables' in this.config) || this.config.variables === '') {
 			this.setVariableDefinitions(this.variables) // This gets called in addControls if there are vars
@@ -82,7 +96,7 @@ class QsysRemoteControl extends InstanceBase {
 		})
 	}
 
-	init_tcp(socket, host, port) {
+	init_tcp(socket, host, port, secondary = false) {
 		if (socket !== undefined) {
 			socket.destroy()
 		}
@@ -131,13 +145,13 @@ class QsysRemoteControl extends InstanceBase {
 				}
 
 				if (this.config.feedback_enabled) {
-					this.processResponse(response)
+					this.processResponse(response, secondary)
 				}
 			})
 		}
 	}
 
-	processResponse(response) {
+	processResponse(response, secondary) {
 		const list = (this.response_buffer + response).split('\x00')
 		this.response_buffer = list.pop()
 		let refresh = false
@@ -153,12 +167,21 @@ class QsysRemoteControl extends InstanceBase {
 					this.log('error', obj?.error)
 				}
 			} else if (obj.method === 'EngineStatus') {
-				this.setVariableValues({
-					state: obj.params.State,
-					design_name: obj.params.DesignName,
-					redundant: obj.params.IsRedundant,
-					emulator: obj.params.IsEmulator,
-				})
+				if (secondary) {
+					this.setVariableValues({
+						stateSecondary: obj.params.State,
+						//design_name: obj.params.DesignName,
+						redundantSecondary: obj.params.IsRedundant,
+						//emulator: obj.params.IsEmulator,
+					})
+				} else {
+					this.setVariableValues({
+						state: obj.params.State,
+						design_name: obj.params.DesignName,
+						redundant: obj.params.IsRedundant,
+						emulator: obj.params.IsEmulator,
+					})
+				}
 			}
 		})
 

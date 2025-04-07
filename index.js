@@ -6,6 +6,12 @@ const queue = new PQueue({ concurrency: 1, interval: 5, intervalCap: 1 })
 const QRC_GET = 1
 const QRC_SET = 2
 
+const colours = {
+	black: combineRgb(0, 0, 0),
+	white: combineRgb(255, 255, 255),
+	red: combineRgb(255, 0, 0),
+}
+
 class QsysRemoteControl extends InstanceBase {
 	constructor(internal) {
 		super(internal)
@@ -41,7 +47,7 @@ class QsysRemoteControl extends InstanceBase {
 			if (this.config.hostSecondary) {
 				this.init_tcp(this.socketSec, this.config.hostSecondary, this.config.portSecondary, true)
 			} else {
-				this.log('warn', `Redundancy enabled by Secondary Host missing`)
+				this.log('warn', `Redundancy enabled but Secondary Host missing`)
 			}
 		}
 		this.initFeedbacks()
@@ -1385,8 +1391,8 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Feedback on boolean control value',
 				type: 'boolean',
 				defaultStyle: {
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(255, 0, 0),
+					color: colours.white,
+					bgcolor: colours.red,
 				},
 				options: [
 					{
@@ -1420,8 +1426,8 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Feedback if control value at or exceeds threshold',
 				type: 'boolean',
 				defaultStyle: {
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(255, 0, 0),
+					color: colours.white,
+					bgcolor: colours.red,
 				},
 				options: [
 					{
@@ -1484,13 +1490,13 @@ class QsysRemoteControl extends InstanceBase {
 						type: 'colorpicker',
 						label: 'Low threshold color',
 						id: 'low_bg',
-						default: combineRgb(0, 0, 0),
+						default: colours.black,
 					},
 					{
 						type: 'colorpicker',
 						label: 'High threshold color',
 						id: 'high_bg',
-						default: combineRgb(255, 0, 0),
+						default: colours.red,
 					},
 				],
 				subscribe: async (feedback, context) => await this.addControl(feedback, context),

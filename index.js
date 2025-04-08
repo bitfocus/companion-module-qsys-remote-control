@@ -1,6 +1,17 @@
 import UpgradeScripts from './upgrades.js'
 
-import { InstanceBase, Regex, combineRgb, runEntrypoint, TCPHelper, InstanceStatus } from '@companion-module/base'
+import {
+	InstanceBase,
+	Regex,
+	combineRgb,
+	runEntrypoint,
+	TCPHelper,
+	InstanceStatus,
+	// eslint-disable-next-line no-unused-vars
+	CompanionFeedbackInfo,
+	// eslint-disable-next-line no-unused-vars
+	CompanionFeedbackContext,
+} from '@companion-module/base'
 import PQueue from 'p-queue'
 const queue = new PQueue({ concurrency: 1, interval: 5, intervalCap: 1 })
 const QRC_GET = 1
@@ -20,33 +31,24 @@ class QsysRemoteControl extends InstanceBase {
 		this.moduleStatus = this.resetModuleStatus()
 	}
 
-	resetModuleStatus() {
-		return {
-			status: InstanceStatus.Connecting,
-			message: '',
-			primary: {
-				status: InstanceStatus.Connecting,
-				message: '',
-				state: null,
-				design_name: '',
-				redundant: null,
-				emulator: null,
-			},
-			secondary: {
-				status: InstanceStatus.Connecting,
-				message: '',
-				state: null,
-				design_name: '',
-				redundant: null,
-				emulator: null,
-			},
-		}
-	}
+	/**
+	 * Main initialization when it's ok to login
+	 * @param {Object} config New configuration
+	 * @access public
+	 * @since 1.0.0
+	 */
 
 	async init(config) {
 		this.actions()
 		await this.configUpdated(config)
 	}
+
+	/**
+	 * Process configuration updates
+	 * @param {Object} config New configuration
+	 * @access public
+	 * @since 1.0.0
+	 */
 
 	async configUpdated(config) {
 		queue.clear()
@@ -75,6 +77,41 @@ class QsysRemoteControl extends InstanceBase {
 		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
 	}
+
+	/**
+	 * Return new moduleStatus object
+	 * @returns {object} new moduleStatus
+	 * @access private
+	 * @since 2.3.0
+	 */
+
+	resetModuleStatus() {
+		return {
+			status: InstanceStatus.Connecting,
+			message: '',
+			primary: {
+				status: InstanceStatus.Connecting,
+				message: '',
+				state: null,
+				design_name: '',
+				redundant: null,
+				emulator: null,
+			},
+			secondary: {
+				status: InstanceStatus.Connecting,
+				message: '',
+				state: null,
+				design_name: '',
+				redundant: null,
+				emulator: null,
+			},
+		}
+	}
+
+	/**
+	 * Initialise module variables
+	 * @access private
+	 */
 
 	initVariables() {
 		this.variables.push(
@@ -130,6 +167,15 @@ class QsysRemoteControl extends InstanceBase {
 			})
 		})
 	}
+
+	/**
+	 * Initialise TCP Socket
+	 * @param {TCPHelper} socket Socket to initialise
+	 * @param {string} host Qsys host to connect to
+	 * @param {string} port Port to connect on
+	 * @param {boolean} secondary True if connecting to secondary core
+	 * @access private
+	 */
 
 	init_tcp(socket, host, port, secondary = false) {
 		if (socket !== undefined) {
@@ -194,6 +240,15 @@ class QsysRemoteControl extends InstanceBase {
 		}
 	}
 
+	/**
+	 * Check and update module status. For redundant connections, will check states of both cores before setting module status
+	 * @param {InstanceStatus} status
+	 * @param {string} message Qsys host to connect to
+	 * @param {boolean} secondary True if updating secondary core status
+	 * @access private
+	 * @since 2.3.0
+	 */
+
 	checkStatus(status, message, secondary) {
 		const newStatus = {
 			status: InstanceStatus.UnknownWarning,
@@ -213,8 +268,38 @@ class QsysRemoteControl extends InstanceBase {
 				this.moduleStatus.primary.status == InstanceStatus.Ok &&
 				this.moduleStatus.secondary.status == InstanceStatus.Ok
 			) {
-				newStatus.status = InstanceStatus.Ok
-				newStatus.message = 'Connected to both cores'
+				if (this.moduleStatus.primary.state == 'Active' && this.moduleStatus.secondary.state == 'Standby') {
+					newStatus.status = InstanceStatus.Ok
+					newStatus.message = 'Primary core active'
+				} else if (this.moduleStatus.primary.state == 'Standby' && this.moduleStatus.secondary.state == 'Active') {
+					newStatus.status = InstanceStatus.Ok
+					newStatus.message = 'Secondary core active'
+				} else if (this.moduleStatus.primary.state == 'Active' && this.moduleStatus.secondary.state == 'Active') {
+					newStatus.status = InstanceStatus.UnknownError
+					newStatus.message = 'Both cores active'
+				} else if (this.moduleStatus.primary.state == 'Standby' && this.moduleStatus.secondary.state == 'Standby') {
+					newStatus.status = InstanceStatus.UnknownError
+					newStatus.message = 'Both cores in standby'
+				} else {
+					newStatus.status = InstanceStatus.UnknownWarning
+					newStatus.message = 'Unexpected state'
+				}
+				if (this.moduleStatus.primary.design_name !== this.moduleStatus.secondary.design_name) {
+					newStatus.status = InstanceStatus.UnknownWarning
+					newStatus.message = 'Cores reporting different designs'
+				}
+				if (this.moduleStatus.primary.emulator) {
+					newStatus.status = InstanceStatus.UnknownWarning
+					newStatus.message = 'Primary core in Emulator mode'
+				}
+				if (this.moduleStatus.secondary.emulator) {
+					newStatus.status = InstanceStatus.UnknownWarning
+					newStatus.message = 'Secondary core in Emulator mode'
+				}
+				if (!this.moduleStatus.primary.redundant || !this.moduleStatus.secondary.redundant) {
+					newStatus.status = InstanceStatus.UnknownWarning
+					newStatus.message = 'Cores not configured for redundant mode'
+				}
 			} else if (
 				this.moduleStatus.primary.status == InstanceStatus.Ok ||
 				this.moduleStatus.secondary.status == InstanceStatus.Ok
@@ -237,6 +322,13 @@ class QsysRemoteControl extends InstanceBase {
 		this.moduleStatus.message = newStatus.message
 		this.updateStatus(newStatus.status, newStatus.message)
 	}
+
+	/**
+	 * Check and update module status. For redundant connections, will check states of both cores before setting module status
+	 * @param {string} response Recieved message to process
+	 * @param {boolean} secondary True if message from secondary core
+	 * @access private
+	 */
 
 	processResponse(response, secondary) {
 		const list = (this.response_buffer + response).split('\x00')
@@ -261,6 +353,7 @@ class QsysRemoteControl extends InstanceBase {
 						redundantSecondary: obj.params.IsRedundant,
 						emulatorSecondary: obj.params.IsEmulator,
 					})
+					this.checkStatus(InstanceStatus.Ok, '', true)
 				} else {
 					this.setVariableValues({
 						state: obj.params.State,
@@ -268,6 +361,7 @@ class QsysRemoteControl extends InstanceBase {
 						redundant: obj.params.IsRedundant,
 						emulator: obj.params.IsEmulator,
 					})
+					this.checkStatus(InstanceStatus.Ok, '', false)
 				}
 			}
 		})
@@ -275,7 +369,13 @@ class QsysRemoteControl extends InstanceBase {
 		if (refresh) this.checkFeedbacks()
 	}
 
-	// Return config fields for web config
+	/**
+	 * Get configuration fields
+	 * @returns {Array} response Recieved message to process
+	 * @access public
+	 * @since 1.0.0
+	 */
+
 	getConfigFields() {
 		return [
 			{
@@ -430,7 +530,12 @@ class QsysRemoteControl extends InstanceBase {
 		]
 	}
 
-	// When module gets deleted
+	/**
+	 * Call when module is destroyed
+	 * @access public
+	 * @since 1.0.0
+	 */
+
 	destroy() {
 		queue.clear()
 		if (this.socketPri !== undefined) {
@@ -456,6 +561,11 @@ class QsysRemoteControl extends InstanceBase {
 			params: params,
 		})
 	}
+
+	/**
+	 * Update action definitions
+	 * @access private
+	 */
 
 	actions() {
 		this.setActionDefinitions({
@@ -1418,6 +1528,11 @@ class QsysRemoteControl extends InstanceBase {
 		})
 	}
 
+	/**
+	 * Update feedback definitions
+	 * @access private
+	 */
+
 	initFeedbacks() {
 		this.variables = []
 		if (!this.config.feedback_enabled) {
@@ -1624,6 +1739,13 @@ class QsysRemoteControl extends InstanceBase {
 		this.setFeedbackDefinitions(feedbacks)
 	}
 
+	/**
+	 * Add message to outbound queue and send
+	 * @param {object} cmd Command object to send
+	 * @param {QRC_GET | QRC_SET} get_set Get or Set method
+	 * @access private
+	 */
+
 	async callCommandObj(cmd, get_set = QRC_SET) {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
@@ -1651,6 +1773,14 @@ class QsysRemoteControl extends InstanceBase {
 		})
 	}
 
+	/**
+	 * Call changeGroup command
+	 * @param {string} type Type of Change Group command
+	 * @param {string} id Change Group ID
+	 * @param {string | null} controls
+	 * @access private
+	 */
+
 	async changeGroup(type, id, controls = null) {
 		const obj = {
 			method: 'ChangeGroup.' + type,
@@ -1663,6 +1793,11 @@ class QsysRemoteControl extends InstanceBase {
 		}
 		await this.callCommandObj(obj)
 	}
+
+	/**
+	 * Query values of controls in this.controls
+	 * @access private
+	 */
 
 	async getControlStatuses() {
 		// It is possible to group multiple statuses; HOWEVER, if one doesn't exist, nothing will be returned...
@@ -1687,6 +1822,11 @@ class QsysRemoteControl extends InstanceBase {
 		}
 	}
 
+	/**
+	 * Initialise polling timer
+	 * @access private
+	 */
+
 	initPolling() {
 		if (!this.config.feedback_enabled) return
 
@@ -1694,6 +1834,12 @@ class QsysRemoteControl extends InstanceBase {
 			this.pollQRCTimer = setInterval(() => this.getControlStatuses().catch(() => {}), this.config.poll_interval)
 		}
 	}
+
+	/**
+	 * @param {CompanionFeedbackInfo} feedback
+	 * @param {CompanionFeedbackContext} context
+	 * @access private
+	 */
 
 	async addControl(feedback, context) {
 		const name = await context.parseVariablesInString(feedback['options']['name'])
@@ -1731,6 +1877,12 @@ class QsysRemoteControl extends InstanceBase {
 		}
 	}
 
+	/**
+	 * @param {CompanionFeedbackInfo} feedback
+	 * @param {CompanionFeedbackContext} context
+	 * @access private
+	 */
+
 	async removeControl(feedback, context) {
 		const name = await context.parseVariablesInString(feedback['options']['name'])
 
@@ -1746,6 +1898,11 @@ class QsysRemoteControl extends InstanceBase {
 			}
 		}
 	}
+	/**
+	 * Updates a controls variable values
+	 * @param {object} update
+	 * @access private
+	 */
 
 	updateControl(update) {
 		const name = update.Name

@@ -1,6 +1,6 @@
 import UpgradeScripts from './upgrades.js'
 
-import { InstanceBase, Regex, combineRgb, runEntrypoint, TCPHelper } from '@companion-module/base'
+import { InstanceBase, Regex, combineRgb, runEntrypoint, TCPHelper, InstanceStatus } from '@companion-module/base'
 import PQueue from 'p-queue'
 const queue = new PQueue({ concurrency: 1, interval: 5, intervalCap: 1 })
 const QRC_GET = 1
@@ -17,6 +17,18 @@ class QsysRemoteControl extends InstanceBase {
 		super(internal)
 		this.console_debug = false
 		this.pollQRCTimer = undefined
+		this.moduleStatus = {
+			status: InstanceStatus.Connecting,
+			message: '',
+			primary: {
+				status: InstanceStatus.Connecting,
+				message: '',
+			},
+			secondary: {
+				status: InstanceStatus.Connecting,
+				message: '',
+			},
+		}
 	}
 
 	async init(config) {
@@ -45,11 +57,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.controls = new Map()
 		this.init_tcp(this.socketPri, this.config.host, this.config.port)
 		if (this.config.redundant) {
-			if (this.config.hostSecondary) {
-				this.init_tcp(this.socketSec, this.config.hostSecondary, this.config.portSecondary, true)
-			} else {
-				this.log('warn', `Redundancy enabled but Secondary Host missing`)
-			}
+			this.init_tcp(this.socketSec, this.config.hostSecondary, this.config.portSecondary, true)
 		}
 		this.initFeedbacks()
 		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
@@ -109,10 +117,11 @@ class QsysRemoteControl extends InstanceBase {
 		}
 
 		if (host) {
+			this.checkStatus(InstanceStatus.Connecting,`Connecting to ${host}`, secondary)
 			socket = new TCPHelper(host, port)
 
 			socket.on('error', (err) => {
-				this.updateStatus('connection_failure')
+				this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
 				this.log('error', `Network error from ${host}: ${err.message}`)
 			})
 
@@ -139,7 +148,7 @@ class QsysRemoteControl extends InstanceBase {
 
 				socket.send(JSON.stringify(login) + '\x00')
 
-				this.updateStatus('ok')
+				this.checkStatus(InstanceStatus.Ok,'', secondary)
 
 				this.initVariables()
 			})
@@ -155,7 +164,48 @@ class QsysRemoteControl extends InstanceBase {
 					this.processResponse(response, secondary)
 				}
 			})
+		} else {
+			this.checkStatus(InstanceStatus.BadConfig, `No host defined for  ${secondary ? 'secondary' : 'primary'} core`, secondary)
+			this.log('warn', `No host defined for  ${secondary ? 'secondary' : 'primary'} core`)
 		}
+	}
+
+	checkStatus(status, message, secondary) {
+		const newStatus = {
+			status: InstanceStatus.UnknownWarning,
+			message: '',
+		}
+		if (secondary) {
+			if (this.moduleStatus.secondary.status == status && this.moduleStatus.secondary.message == message) return
+			this.moduleStatus.secondary.status = status
+			this.moduleStatus.secondary.message = message
+		} else {
+			if (this.moduleStatus.primary.status == status && this.moduleStatus.secondary.primary == message) return
+			this.moduleStatus.primary.status = status
+			this.moduleStatus.primary.message = message
+		}
+		if (this.config.redundant) {
+			if (this.moduleStatus.primary.status == InstanceStatus.Ok && this.moduleStatus.secondary.status == InstanceStatus.Ok) {
+				newStatus.status = InstanceStatus.Ok
+				newStatus.message = 'Connected to both cores'
+			} else if (this.moduleStatus.primary.status == InstanceStatus.Ok || this.moduleStatus.secondary.status == InstanceStatus.Ok) {
+				newStatus.status = InstanceStatus.UnknownWarning
+				newStatus.message = `Redundancy compromised`
+			} else if (this.moduleStatus.primary.status == this.moduleStatus.secondary.status) {
+				newStatus.status = this.moduleStatus.primary.status
+				newStatus.message = this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message
+			} else {
+				newStatus.status = InstanceStatus.UnknownError
+				newStatus.message = `Core connections in unexpected & inconsistent states`
+			}
+		} else {
+			newStatus.status = this.moduleStatus.primary.status
+			newStatus.message = this.moduleStatus.primary.message
+		}
+		if (this.moduleStatus.status == newStatus.status && this.moduleStatus.message == newStatus.message) return
+		this.moduleStatus.status = newStatus.status
+		this.moduleStatus.message = newStatus.message
+		this.updateStatus(newStatus.status, newStatus.message)
 	}
 
 	processResponse(response, secondary) {

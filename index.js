@@ -17,16 +17,28 @@ class QsysRemoteControl extends InstanceBase {
 		super(internal)
 		this.console_debug = false
 		this.pollQRCTimer = undefined
-		this.moduleStatus = {
+		this.moduleStatus = this.resetModuleStatus()
+	}
+
+	resetModuleStatus() {
+		return {
 			status: InstanceStatus.Connecting,
 			message: '',
 			primary: {
 				status: InstanceStatus.Connecting,
 				message: '',
+				state: null,
+				design_name: '',
+				redundant: null,
+				emulator: null,
 			},
 			secondary: {
 				status: InstanceStatus.Connecting,
 				message: '',
+				state: null,
+				design_name: '',
+				redundant: null,
+				emulator: null,
 			},
 		}
 	}
@@ -51,7 +63,7 @@ class QsysRemoteControl extends InstanceBase {
 			clearInterval(this.pollQRCTimer)
 			delete this.pollQRCTimer
 		}
-
+		this.moduleStatus = this.resetModuleStatus()
 		this.config = config
 		this.console_debug = config.verbose
 		this.controls = new Map()
@@ -90,8 +102,16 @@ class QsysRemoteControl extends InstanceBase {
 					variableId: 'stateSecondary',
 				},
 				{
+					name: 'Design Name - Secondary',
+					variableId: 'design_nameSecondary',
+				},
+				{
 					name: 'Redundant - Secondary',
 					variableId: 'redundantSecondary',
+				},
+				{
+					name: 'Emulator - Secondary',
+					variableId: 'emulatorSecondary',
 				},
 			)
 		}
@@ -117,7 +137,7 @@ class QsysRemoteControl extends InstanceBase {
 		}
 
 		if (host) {
-			this.checkStatus(InstanceStatus.Connecting,`Connecting to ${host}`, secondary)
+			this.checkStatus(InstanceStatus.Connecting, `Connecting to ${host}`, secondary)
 			socket = new TCPHelper(host, port)
 
 			socket.on('error', (err) => {
@@ -148,7 +168,7 @@ class QsysRemoteControl extends InstanceBase {
 
 				socket.send(JSON.stringify(login) + '\x00')
 
-				this.checkStatus(InstanceStatus.Ok,'', secondary)
+				this.checkStatus(InstanceStatus.Ok, '', secondary)
 
 				this.initVariables()
 			})
@@ -165,7 +185,11 @@ class QsysRemoteControl extends InstanceBase {
 				}
 			})
 		} else {
-			this.checkStatus(InstanceStatus.BadConfig, `No host defined for  ${secondary ? 'secondary' : 'primary'} core`, secondary)
+			this.checkStatus(
+				InstanceStatus.BadConfig,
+				`No host defined for  ${secondary ? 'secondary' : 'primary'} core`,
+				secondary,
+			)
 			this.log('warn', `No host defined for  ${secondary ? 'secondary' : 'primary'} core`)
 		}
 	}
@@ -185,10 +209,16 @@ class QsysRemoteControl extends InstanceBase {
 			this.moduleStatus.primary.message = message
 		}
 		if (this.config.redundant) {
-			if (this.moduleStatus.primary.status == InstanceStatus.Ok && this.moduleStatus.secondary.status == InstanceStatus.Ok) {
+			if (
+				this.moduleStatus.primary.status == InstanceStatus.Ok &&
+				this.moduleStatus.secondary.status == InstanceStatus.Ok
+			) {
 				newStatus.status = InstanceStatus.Ok
 				newStatus.message = 'Connected to both cores'
-			} else if (this.moduleStatus.primary.status == InstanceStatus.Ok || this.moduleStatus.secondary.status == InstanceStatus.Ok) {
+			} else if (
+				this.moduleStatus.primary.status == InstanceStatus.Ok ||
+				this.moduleStatus.secondary.status == InstanceStatus.Ok
+			) {
 				newStatus.status = InstanceStatus.UnknownWarning
 				newStatus.message = `Redundancy compromised`
 			} else if (this.moduleStatus.primary.status == this.moduleStatus.secondary.status) {
@@ -227,9 +257,9 @@ class QsysRemoteControl extends InstanceBase {
 				if (secondary) {
 					this.setVariableValues({
 						stateSecondary: obj.params.State,
-						//design_name: obj.params.DesignName,
+						design_nameSecondary: obj.params.DesignName,
 						redundantSecondary: obj.params.IsRedundant,
-						//emulator: obj.params.IsEmulator,
+						emulatorSecondary: obj.params.IsEmulator,
 					})
 				} else {
 					this.setVariableValues({

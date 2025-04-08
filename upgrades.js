@@ -12,6 +12,7 @@ function redundantCores(_context, props) {
 		redundant: props.config.redundant ?? false,
 		hostSecondary: props.config.hostSecondary ?? '',
 		portSecondary: props.config.portSecondary ?? `1710`,
+		verbose: props.config.verbose ?? false,
 	}
 
 	return result

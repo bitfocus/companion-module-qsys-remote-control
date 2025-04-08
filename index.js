@@ -41,6 +41,7 @@ class QsysRemoteControl extends InstanceBase {
 		}
 
 		this.config = config
+		this.console_debug = config.verbose
 		this.controls = new Map()
 		this.init_tcp(this.socketPri, this.config.host, this.config.port)
 		if (this.config.redundant) {
@@ -338,6 +339,13 @@ class QsysRemoteControl extends InstanceBase {
 				label: 'Variables',
 				width: 12,
 				default: '',
+			},
+			{
+				type: 'checkbox',
+				id: 'verbose',
+				label: 'Verbose Logs',
+				width: 6,
+				default: false,
 			},
 		]
 	}

@@ -13,7 +13,7 @@ import {
 	CompanionFeedbackContext,
 } from '@companion-module/base'
 import PQueue from 'p-queue'
-const queue = new PQueue({ concurrency: 1, interval: 5, intervalCap: 1 })
+const queue = new PQueue({ concurrency: 1 })
 const QRC_GET = 1
 const QRC_SET = 2
 
@@ -29,6 +29,12 @@ class QsysRemoteControl extends InstanceBase {
 		this.console_debug = false
 		this.pollQRCTimer = undefined
 		this.moduleStatus = this.resetModuleStatus()
+		this.socket = {
+			pri: new TCPHelper('localhost', 1710),
+			sec: new TCPHelper('localhost', 1710),
+		}
+		this.socket.pri.destroy()
+		this.socket.sec.destroy()
 	}
 
 	/**
@@ -52,26 +58,14 @@ class QsysRemoteControl extends InstanceBase {
 
 	async configUpdated(config) {
 		queue.clear()
-		if (this.socketPri !== undefined) {
-			this.socketPri.destroy()
-			delete this.socketPri
-		}
-		if (this.socketSec !== undefined) {
-			this.socketSec.destroy()
-			delete this.socketSec
-		}
-
-		if (this.pollQRCTimer !== undefined) {
-			clearInterval(this.pollQRCTimer)
-			delete this.pollQRCTimer
-		}
+		this.killTimersDestroySockets()
 		this.moduleStatus = this.resetModuleStatus()
 		this.config = config
 		this.console_debug = config.verbose
 		this.controls = new Map()
-		this.init_tcp(this.socketPri, this.config.host, this.config.port)
+		this.init_tcp(this.config.host, this.config.port)
 		if (this.config.redundant) {
-			this.init_tcp(this.socketSec, this.config.hostSecondary, this.config.portSecondary, true)
+			this.init_tcp(this.config.hostSecondary, this.config.portSecondary, true)
 		}
 		this.initFeedbacks()
 		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
@@ -96,6 +90,7 @@ class QsysRemoteControl extends InstanceBase {
 				design_name: '',
 				redundant: null,
 				emulator: null,
+				design_code: '',
 			},
 			secondary: {
 				status: InstanceStatus.Connecting,
@@ -104,6 +99,7 @@ class QsysRemoteControl extends InstanceBase {
 				design_name: '',
 				redundant: null,
 				emulator: null,
+				design_code: '',
 			},
 		}
 	}
@@ -170,74 +166,91 @@ class QsysRemoteControl extends InstanceBase {
 
 	/**
 	 * Initialise TCP Socket
-	 * @param {TCPHelper} socket Socket to initialise
 	 * @param {string} host Qsys host to connect to
 	 * @param {string} port Port to connect on
 	 * @param {boolean} secondary True if connecting to secondary core
 	 * @access private
 	 */
 
-	init_tcp(socket, host, port, secondary = false) {
-		if (socket !== undefined) {
-			socket.destroy()
+	init_tcp(host, port, secondary = false) {
+		const errorEvent = (err) => {
+			this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
+			this.log('error', `Network error from ${host}: ${err.message}`)
 		}
+		const endEvent = () => {
+			this.checkStatus(InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
+			this.log('warn', `Connection to ${host} ended`)
+		}
+		const connectEvent = async () => {
+			this.response_buffer = ''
 
-		if (host) {
-			this.checkStatus(InstanceStatus.Connecting, `Connecting to ${host}`, secondary)
-			socket = new TCPHelper(host, port)
+			const login = {
+				jsonrpc: 2.0,
+				method: 'Logon',
+				params: {},
+			}
 
-			socket.on('error', (err) => {
-				this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
-				this.log('error', `Network error from ${host}: ${err.message}`)
-			})
-
-			socket.on('connect', () => {
-				this.response_buffer = ''
-
-				const login = {
-					jsonrpc: 2.0,
-					method: 'Logon',
-					params: {},
+			if ('user' in this.config && 'pass' in this.config) {
+				login.params = {
+					User: this.config.user,
+					Password: this.config.pass,
 				}
+			}
 
-				if ('user' in this.config && 'pass' in this.config) {
-					login.params = {
-						User: this.config.user,
-						Password: this.config.pass,
-					}
-				}
+			if (this.console_debug) {
+				console.log(`Q-SYS Connected to ${host}:${port}`)
+				console.log('Q-SYS Send: ' + JSON.stringify(login))
+			}
 
-				if (this.console_debug) {
-					console.log(`Q-SYS Connected to ${host}:${port}`)
-					console.log('Q-SYS Send: ' + login)
-				}
+			await socket.send(JSON.stringify(login) + '\x00')
 
-				socket.send(JSON.stringify(login) + '\x00')
+			await this.sendCommand('StatusGet', 0)
 
-				this.checkStatus(InstanceStatus.Ok, '', secondary)
+			this.checkStatus(InstanceStatus.Ok, '', secondary)
 
-				this.initVariables()
-			})
+			this.initVariables()
+			if (this.keepAlive === undefined) {
+				this.keepAlive = setInterval(async () => {
+					await this.sendCommand('StatusGet', 0)
+				}, 1000)
+			}
+		}
+		const dataEvent = (d) => {
+			const response = d.toString()
 
-			socket.on('data', (d) => {
-				const response = d.toString()
+			if (this.console_debug) {
+				console.log(`[${new Date().toJSON()}] Message recieved from ${host}: ${response}`)
+			}
 
-				if (this.console_debug) {
-					console.log(`Message recieved from ${host}: ${response}`)
-				}
-
-				if (this.config.feedback_enabled) {
-					this.processResponse(response, secondary)
-				}
-			})
-		} else {
+			if (this.config.feedback_enabled) {
+				this.processResponse(response, secondary)
+			}
+		}
+		if (!host) {
 			this.checkStatus(
 				InstanceStatus.BadConfig,
-				`No host defined for  ${secondary ? 'secondary' : 'primary'} core`,
+				`No host defined for ${secondary ? 'secondary' : 'primary'} core`,
 				secondary,
 			)
-			this.log('warn', `No host defined for  ${secondary ? 'secondary' : 'primary'} core`)
+			this.log('warn', `No host defined for ${secondary ? 'secondary' : 'primary'} core`)
+			return
 		}
+		this.checkStatus(InstanceStatus.Connecting, `Connecting to ${host}`, secondary)
+		let socket
+		if (secondary) {
+			if (!this.socket.sec.isDestroyed) this.socket.sec.destroy()
+			this.socket.sec = new TCPHelper(host, port)
+			socket = this.socket.sec
+		} else {
+			if (!this.socket.pri.isDestroyed) this.socket.pri.destroy()
+			this.socket.pri = new TCPHelper(host, port)
+			socket = this.socket.pri
+		}
+
+		socket.on('error', errorEvent)
+		socket.on('end', endEvent)
+		socket.on('connect', connectEvent)
+		socket.on('data', dataEvent)
 	}
 
 	/**
@@ -277,28 +290,41 @@ class QsysRemoteControl extends InstanceBase {
 				} else if (this.moduleStatus.primary.state == 'Active' && this.moduleStatus.secondary.state == 'Active') {
 					newStatus.status = InstanceStatus.UnknownError
 					newStatus.message = 'Both cores active'
+					this.log('error', 'Both cores active')
 				} else if (this.moduleStatus.primary.state == 'Standby' && this.moduleStatus.secondary.state == 'Standby') {
 					newStatus.status = InstanceStatus.UnknownError
-					newStatus.message = 'Both cores in standby'
+					newStatus.message = `Both cores in standby`
+					this.log('error', 'Both cores in standby')
 				} else {
 					newStatus.status = InstanceStatus.UnknownWarning
-					newStatus.message = 'Unexpected state'
+					newStatus.message = `Unexpected state. Primary: ${this.moduleStatus.primary.state}. Secondary: ${this.moduleStatus.secondary.state}`
+					this.log(
+						'warn',
+						`Unexpected state. Primary: ${this.moduleStatus.primary.state}. Secondary: ${this.moduleStatus.secondary.state}`,
+					)
 				}
-				if (this.moduleStatus.primary.design_name !== this.moduleStatus.secondary.design_name) {
+				if (this.moduleStatus.primary.design_code !== this.moduleStatus.secondary.design_code) {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = 'Cores reporting different designs'
+					this.log(
+						'error',
+						`Cores running different designs. Primary: ${this.moduleStatus.primary.design_name}. Secondary: ${this.moduleStatus.secondary.design_name}`,
+					)
 				}
 				if (this.moduleStatus.primary.emulator) {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = 'Primary core in Emulator mode'
+					this.log('warn', 'Primary core in Emulator mode')
 				}
 				if (this.moduleStatus.secondary.emulator) {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = 'Secondary core in Emulator mode'
+					this.log('warn', 'Secondary core in Emulator mode')
 				}
 				if (!this.moduleStatus.primary.redundant || !this.moduleStatus.secondary.redundant) {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = 'Cores not configured for redundant mode'
+					this.log('error', 'Cores not configured for redundant mode')
 				}
 			} else if (
 				this.moduleStatus.primary.status == InstanceStatus.Ok ||
@@ -306,16 +332,36 @@ class QsysRemoteControl extends InstanceBase {
 			) {
 				newStatus.status = InstanceStatus.UnknownWarning
 				newStatus.message = `Redundancy compromised`
+				this.log('warn', 'Redundancy compromised')
 			} else if (this.moduleStatus.primary.status == this.moduleStatus.secondary.status) {
 				newStatus.status = this.moduleStatus.primary.status
 				newStatus.message = this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message
+				this.log(
+					'info',
+					`Core states: ` + this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message,
+				)
 			} else {
 				newStatus.status = InstanceStatus.UnknownError
 				newStatus.message = `Core connections in unexpected & inconsistent states`
+				this.log(
+					'warn',
+					`Core states: ` + this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message,
+				)
 			}
 		} else {
-			newStatus.status = this.moduleStatus.primary.status
-			newStatus.message = this.moduleStatus.primary.message
+			if (this.moduleStatus.primary.state == 'Active') {
+				newStatus.status = InstanceStatus.Ok
+				newStatus.message = 'Primary core active'
+			} else if (this.moduleStatus.primary.state == 'Standby') {
+				newStatus.status = InstanceStatus.UnknownWarning
+				newStatus.message = 'Core in standby'
+			} else if (this.moduleStatus.primary.state == 'Idle') {
+				newStatus.status = InstanceStatus.UnknownError
+				newStatus.message = 'Core in idle'
+			} else {
+				newStatus.status = this.moduleStatus.primary.status
+				newStatus.message = this.moduleStatus.primary.message
+			}
 		}
 		if (this.moduleStatus.status == newStatus.status && this.moduleStatus.message == newStatus.message) return
 		this.moduleStatus.status = newStatus.status
@@ -348,21 +394,30 @@ class QsysRemoteControl extends InstanceBase {
 			} else if (obj.method === 'EngineStatus') {
 				if (secondary) {
 					this.setVariableValues({
-						stateSecondary: obj.params.State,
-						design_nameSecondary: obj.params.DesignName,
-						redundantSecondary: obj.params.IsRedundant,
-						emulatorSecondary: obj.params.IsEmulator,
+						stateSecondary: obj.params.State.toString(),
+						design_nameSecondary: obj.params.DesignName.toString(),
+						redundantSecondary: !!obj.params.IsRedundant,
+						emulatorSecondary: !!obj.params.IsEmulator,
 					})
-					this.checkStatus(InstanceStatus.Ok, '', true)
+					this.moduleStatus.secondary.state = obj.params.State.toString()
+					this.moduleStatus.secondary.design_name = obj.params.DesignName.toString()
+					this.moduleStatus.secondary.design_code = obj.params.DesignCode.toString()
+					this.moduleStatus.secondary.redundant = !!obj.params.IsRedundant
+					this.moduleStatus.secondary.emulator = !!obj.params.IsEmulator
 				} else {
 					this.setVariableValues({
-						state: obj.params.State,
-						design_name: obj.params.DesignName,
-						redundant: obj.params.IsRedundant,
-						emulator: obj.params.IsEmulator,
+						state: obj.params.State.toString(),
+						design_name: obj.params.DesignName.toString(),
+						redundant: !!obj.params.IsRedundant,
+						emulator: !!obj.params.IsEmulator,
 					})
-					this.checkStatus(InstanceStatus.Ok, '', false)
+					this.moduleStatus.primary.state = obj.params.State.toString()
+					this.moduleStatus.primary.design_name = obj.params.DesignName.toString()
+					this.moduleStatus.primary.design_code = obj.params.DesignCode.toString()
+					this.moduleStatus.primary.redundant = !!obj.params.IsRedundant
+					this.moduleStatus.primary.emulator = !!obj.params.IsEmulator
 				}
+				this.checkStatus(InstanceStatus.Ok, obj.params.State.toString(), secondary)
 			}
 		})
 
@@ -531,6 +586,29 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
+	 * Stop and delete running timers, destroy sockets
+	 * @access private
+	 * @since 2.3.0
+	 */
+
+	killTimersDestroySockets() {
+		if (this.pollQRCTimer !== undefined) {
+			clearInterval(this.pollQRCTimer)
+			delete this.pollQRCTimer
+		}
+		if (this.keepAlive !== undefined) {
+			clearInterval(this.keepAlive)
+			delete this.keepAlive
+		}
+		if (!this.socket.pri.isDestroyed) {
+			this.socket.pri.destroy()
+		}
+		if (!this.socket.sec.isDestroyed) {
+			this.socket.sec.destroy()
+		}
+	}
+
+	/**
 	 * Call when module is destroyed
 	 * @access public
 	 * @since 1.0.0
@@ -538,22 +616,18 @@ class QsysRemoteControl extends InstanceBase {
 
 	destroy() {
 		queue.clear()
-		if (this.socketPri !== undefined) {
-			this.socketPri.destroy()
-		}
-		if (this.socketSec !== undefined) {
-			this.socketSec.destroy()
-		}
-
-		if (this.pollQRCTimer !== undefined) {
-			clearInterval(this.pollQRCTimer)
-			delete this.pollQRCTimer
-		}
-
+		this.killTimersDestroySockets()
 		if (this.controls !== undefined) {
 			this.controls = undefined
 		}
 	}
+
+	/**
+	 * Build command message and send
+	 * @param {string} command
+	 * @param {*} params
+	 * @access private
+	 */
 
 	async sendCommand(command, params) {
 		await this.callCommandObj({
@@ -1750,8 +1824,8 @@ class QsysRemoteControl extends InstanceBase {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
 		await queue.add(async () => {
-			if (this.socketPri !== undefined && this.socketPri.isConnected) {
-				const sent = await this.socketPri.send(JSON.stringify(cmd) + '\x00')
+			if (!this.socket.pri.isDestroyed && this.socket.pri.isConnected) {
+				const sent = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
 				if (sent) {
 					if (this.console_debug) {
 						console.log(`Q-SYS Sent to ${this.config.host}: ` + JSON.stringify(cmd) + '\r')
@@ -1759,15 +1833,32 @@ class QsysRemoteControl extends InstanceBase {
 				} else {
 					this.log('warn', `Q-SYS Send to ${this.config.host} Failed: ` + JSON.stringify(cmd) + '\r')
 				}
+			} else {
+				this.log(
+					'warn',
+					`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd) + '\r',
+				)
 			}
-			if (this.socketSec !== undefined && this.socketSec.isConnected) {
-				const sent = await this.socketSec.send(JSON.stringify(cmd) + '\x00')
-				if (sent) {
-					if (this.console_debug) {
-						console.log(`Q-SYS Sent to ${this.config.hostSecondary}: ` + JSON.stringify(cmd) + '\r')
+			if (this.config.redundant) {
+				if (!this.socket.sec.isDestroyed && this.socket.sec.isConnected) {
+					const sent = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
+					if (sent) {
+						if (this.console_debug) {
+							console.log(`Q-SYS Sent to ${this.config.hostSecondary}: ` + JSON.stringify(cmd) + '\r')
+						}
+					} else {
+						this.log(
+							'warn',
+							`Q-SYS Send to ${this.config.hostSecondary} Failed. Message: ` + JSON.stringify(cmd) + '\r',
+						)
 					}
 				} else {
-					this.log('warn', `Q-SYS Send to ${this.config.hostSecondary} Failed: ` + JSON.stringify(cmd) + '\r')
+					this.log(
+						'warn',
+						`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` +
+							JSON.stringify(cmd) +
+							'\r',
+					)
 				}
 			}
 		})
@@ -1831,7 +1922,9 @@ class QsysRemoteControl extends InstanceBase {
 		if (!this.config.feedback_enabled) return
 
 		if (this.pollQRCTimer === undefined) {
-			this.pollQRCTimer = setInterval(() => this.getControlStatuses().catch(() => {}), this.config.poll_interval)
+			this.pollQRCTimer = setInterval(async () => {
+				await this.getControlStatuses().catch(() => {})
+			}, parseInt(this.config.poll_interval))
 		}
 	}
 

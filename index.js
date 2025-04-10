@@ -389,7 +389,7 @@ class QsysRemoteControl extends InstanceBase {
 					obj.result.forEach((r) => this.updateControl(r))
 					refresh = true
 				} else if (obj.error !== undefined) {
-					this.log('error', obj?.error)
+					this.log('error', JSON.stringify(obj.error))
 				}
 			} else if (obj.method === 'EngineStatus') {
 				if (secondary) {
@@ -1824,41 +1824,46 @@ class QsysRemoteControl extends InstanceBase {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
 		await queue.add(async () => {
-			if (!this.socket.pri.isDestroyed && this.socket.pri.isConnected) {
-				const sent = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
-				if (sent) {
-					if (this.console_debug) {
-						console.log(`Q-SYS Sent to ${this.config.host}: ` + JSON.stringify(cmd) + '\r')
-					}
-				} else {
-					this.log('warn', `Q-SYS Send to ${this.config.host} Failed: ` + JSON.stringify(cmd) + '\r')
-				}
-			} else {
-				this.log(
-					'warn',
-					`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd) + '\r',
-				)
-			}
-			if (this.config.redundant) {
-				if (!this.socket.sec.isDestroyed && this.socket.sec.isConnected) {
-					const sent = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
+			if (this.moduleStatus.primary.state == 'Active' || cmd.method == 'StatusGet') {
+				if (this.socket.pri && !this.socket.pri.isDestroyed && this.socket.pri.isConnected) {
+					const sent = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
 					if (sent) {
 						if (this.console_debug) {
-							console.log(`Q-SYS Sent to ${this.config.hostSecondary}: ` + JSON.stringify(cmd) + '\r')
+							console.log(`Q-SYS Sent to ${this.config.host}: ` + JSON.stringify(cmd) + '\r')
 						}
 					} else {
-						this.log(
-							'warn',
-							`Q-SYS Send to ${this.config.hostSecondary} Failed. Message: ` + JSON.stringify(cmd) + '\r',
-						)
+						this.log('warn', `Q-SYS Send to ${this.config.host} Failed: ` + JSON.stringify(cmd) + '\r')
 					}
 				} else {
 					this.log(
 						'warn',
-						`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` +
-							JSON.stringify(cmd) +
-							'\r',
+						`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd) + '\r',
 					)
+				}
+			}
+
+			if (this.config.redundant) {
+				if (this.moduleStatus.secondary.state == 'Active' || cmd.method == 'StatusGet') {
+					if (this.socket.sec && !this.socket.sec.isDestroyed && this.socket.sec.isConnected) {
+						const sent = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
+						if (sent) {
+							if (this.console_debug) {
+								console.log(`Q-SYS Sent to ${this.config.hostSecondary}: ` + JSON.stringify(cmd) + '\r')
+							}
+						} else {
+							this.log(
+								'warn',
+								`Q-SYS Send to ${this.config.hostSecondary} Failed. Message: ` + JSON.stringify(cmd) + '\r',
+							)
+						}
+					} else {
+						this.log(
+							'warn',
+							`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` +
+								JSON.stringify(cmd) +
+								'\r',
+						)
+					}
 				}
 			}
 		})
@@ -1934,7 +1939,7 @@ class QsysRemoteControl extends InstanceBase {
 	 * @access private
 	 */
 
-	async addControl(feedback, context) {
+	async addControl(feedback, context = this) {
 		const name = await context.parseVariablesInString(feedback['options']['name'])
 
 		if (this.controls.has(name)) {
@@ -1954,15 +1959,15 @@ class QsysRemoteControl extends InstanceBase {
 			this.variables.push(
 				{
 					name: `${name} Value`,
-					variableId: `${name}_value`,
+					variableId: `${name.replaceAll(':', '_')}_value`,
 				},
 				{
 					name: `${name} Position`,
-					variableId: `${name}_position`,
+					variableId: `${name.replaceAll(':', '_')}_position`,
 				},
 				{
 					name: `${name} String`,
-					variableId: `${name}_string`,
+					variableId: `${name.replaceAll(':', '_')}_string`,
 				},
 			)
 
@@ -1972,11 +1977,11 @@ class QsysRemoteControl extends InstanceBase {
 
 	/**
 	 * @param {CompanionFeedbackInfo} feedback
-	 * @param {CompanionFeedbackContext} context
+	 * @param {CompanionFeedbackContext | InstanceBase} context
 	 * @access private
 	 */
 
-	async removeControl(feedback, context) {
+	async removeControl(feedback, context = this) {
 		const name = await context.parseVariablesInString(feedback['options']['name'])
 
 		if (this.controls.has(name)) {
@@ -1998,17 +2003,18 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	updateControl(update) {
-		const name = update.Name
-		const control = this.controls.get(name)
+		if (update.Name === undefined || update.Name === null) return
+		const name = update.Name.replaceAll(':', '_')
+		const control = this.controls.get(update.Name) ?? { value: null, strval: '', position: null }
 
-		control.value = update.Value
-		control.strval = update.String
-		control.position = update.Position
-
+		control.value = update.Value ?? control.value
+		control.strval = update.String ?? control.strval
+		control.position = update.Position ?? control.position
+		this.controls.set(update.Name, control)
 		this.setVariableValues({
-			[`${name}_string`]: update.String,
-			[`${name}_position`]: update.Position,
-			[`${name}_value`]: update.Value,
+			[`${name}_string`]: update.String ?? control.value,
+			[`${name}_position`]: update.Position ?? control.position,
+			[`${name}_value`]: update.Value ?? control.value,
 		})
 	}
 }

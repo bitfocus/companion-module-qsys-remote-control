@@ -23,6 +23,15 @@ const colours = {
 	red: combineRgb(255, 0, 0),
 }
 
+/**
+ * Remove illegal characters from variable Ids
+ * @param {string} id variable id to sanitize
+ * @param {'' | '.' | '-' | '_'} substitute Char to replace illegal characters
+ * @since 2.3.0
+ */
+
+const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-zA-Z0-9-_.]/gm, substitute)
+
 class QsysRemoteControl extends InstanceBase {
 	constructor(internal) {
 		super(internal)
@@ -1959,15 +1968,15 @@ class QsysRemoteControl extends InstanceBase {
 			this.variables.push(
 				{
 					name: `${name} Value`,
-					variableId: `${name.replaceAll(':', '_')}_value`,
+					variableId: `${sanitiseVariableId(name)}_value`,
 				},
 				{
 					name: `${name} Position`,
-					variableId: `${name.replaceAll(':', '_')}_position`,
+					variableId: `${sanitiseVariableId(name)}_position`,
 				},
 				{
 					name: `${name} String`,
-					variableId: `${name.replaceAll(':', '_')}_string`,
+					variableId: `${sanitiseVariableId(name)}_string`,
 				},
 			)
 
@@ -2004,7 +2013,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	updateControl(update) {
 		if (update.Name === undefined || update.Name === null) return
-		const name = update.Name.replaceAll(':', '_')
+		const name = sanitiseVariableId(update.Name)
 		const control = this.controls.get(update.Name) ?? { value: null, strval: '', position: null, ids: new Set() }
 
 		control.value = update.Value ?? control.value

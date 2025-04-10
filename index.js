@@ -2005,7 +2005,7 @@ class QsysRemoteControl extends InstanceBase {
 	updateControl(update) {
 		if (update.Name === undefined || update.Name === null) return
 		const name = update.Name.replaceAll(':', '_')
-		const control = this.controls.get(update.Name) ?? { value: null, strval: '', position: null }
+		const control = this.controls.get(update.Name) ?? { value: null, strval: '', position: null, ids: new Set() }
 
 		control.value = update.Value ?? control.value
 		control.strval = update.String ?? control.strval

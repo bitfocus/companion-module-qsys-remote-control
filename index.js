@@ -37,6 +37,7 @@ class QsysRemoteControl extends InstanceBase {
 		super(internal)
 		this.console_debug = false
 		this.pollQRCTimer = undefined
+		this.variables = []
 		this.moduleStatus = this.resetModuleStatus()
 		this.socket = {
 			pri: new TCPHelper('localhost', 1710),
@@ -54,7 +55,9 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async init(config) {
+		this.config = config
 		this.actions()
+		//await this.initVariables(config.redundant)
 		await this.configUpdated(config)
 	}
 
@@ -72,9 +75,10 @@ class QsysRemoteControl extends InstanceBase {
 		this.config = config
 		this.console_debug = config.verbose
 		this.controls = new Map()
-		this.init_tcp(this.config.host, this.config.port)
-		if (this.config.redundant) {
-			this.init_tcp(this.config.hostSecondary, this.config.portSecondary, true)
+		await this.initVariables(config.redundant)
+		this.init_tcp(config.host, config.port)
+		if (config.redundant) {
+			this.init_tcp(config.hostSecondary, config.portSecondary, true)
 		}
 		this.initFeedbacks()
 		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
@@ -115,10 +119,12 @@ class QsysRemoteControl extends InstanceBase {
 
 	/**
 	 * Initialise module variables
+	 * @param {boolean} redundant
 	 * @access private
 	 */
 
-	initVariables() {
+	async initVariables(redundant) {
+		this.variables = []
 		this.variables.push(
 			{
 				name: 'State',
@@ -137,7 +143,7 @@ class QsysRemoteControl extends InstanceBase {
 				variableId: 'emulator',
 			},
 		)
-		if (this.config.redundant) {
+		if (redundant) {
 			this.variables.push(
 				{
 					name: 'State - Secondary',
@@ -162,15 +168,14 @@ class QsysRemoteControl extends InstanceBase {
 			this.setVariableDefinitions(this.variables) // This gets called in addControls if there are vars
 			return
 		}
-
-		this.config.variables.split(',').forEach((v) => {
-			this.addControl({
+		for (const v of this.config.variables.split(',')) {
+			await this.addControl({
 				options: {
 					name: v.trim(),
 				},
 				id: 'var',
 			})
-		})
+		}
 	}
 
 	/**
@@ -191,7 +196,11 @@ class QsysRemoteControl extends InstanceBase {
 			this.log('warn', `Connection to ${host} ended`)
 		}
 		const connectEvent = async () => {
-			this.response_buffer = ''
+			if (secondary) {
+				this.response_bufferSec = ''
+			} else {
+				this.response_buffer = ''
+			}
 
 			const login = {
 				jsonrpc: 2.0,
@@ -213,14 +222,14 @@ class QsysRemoteControl extends InstanceBase {
 
 			await socket.send(JSON.stringify(login) + '\x00')
 
-			await this.sendCommand('StatusGet', 0)
+			await this.sendCommand('EngineStatus', 0)
 
 			this.checkStatus(InstanceStatus.Ok, '', secondary)
 
-			this.initVariables()
+			await this.initVariables()
 			if (this.keepAlive === undefined) {
 				this.keepAlive = setInterval(async () => {
-					await this.sendCommand('StatusGet', 0)
+					await this.sendCommand('EngineStatus', 0)
 				}, 1000)
 			}
 		}
@@ -360,7 +369,7 @@ class QsysRemoteControl extends InstanceBase {
 		} else {
 			if (this.moduleStatus.primary.state == 'Active') {
 				newStatus.status = InstanceStatus.Ok
-				newStatus.message = 'Primary core active'
+				newStatus.message = 'Core active'
 			} else if (this.moduleStatus.primary.state == 'Standby') {
 				newStatus.status = InstanceStatus.UnknownWarning
 				newStatus.message = 'Core in standby'
@@ -379,21 +388,64 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
-	 * Check and update module status. For redundant connections, will check states of both cores before setting module status
+	 * Update Engine variables and related status
+	 * @param {object} data Recieved JSON blod
+	 * @param {boolean} secondary True if message from secondary core
+	 * @access private
+	 */
+
+	updateEngineVariables(data, secondary) {
+		if (secondary) {
+			this.setVariableValues({
+				stateSecondary: data?.State.toString() ?? this.moduleStatus.secondary.state,
+				design_nameSecondary: data?.DesignName.toString() ?? this.moduleStatus.secondary.design_name,
+				redundantSecondary: !!data.IsRedundant,
+				emulatorSecondary: !!data.IsEmulator,
+			})
+			this.moduleStatus.secondary.state = data?.State.toString() ?? this.moduleStatus.secondary.state
+			this.moduleStatus.secondary.design_name = data?.DesignName.toString() ?? this.moduleStatus.secondary.design_name
+			this.moduleStatus.secondary.design_code = data?.DesignCode.toString() ?? this.moduleStatus.secondary.design_code
+			this.moduleStatus.secondary.redundant = !!data.IsRedundant
+			this.moduleStatus.secondary.emulator = !!data.IsEmulator
+		} else {
+			this.setVariableValues({
+				state: data?.State.toString() ?? this.moduleStatus.primary.state,
+				design_name: data?.DesignName.toString() ?? this.moduleStatus.primary.design_name,
+				redundant: !!data.IsRedundant,
+				emulator: !!data.IsEmulator,
+			})
+			this.moduleStatus.primary.state = data?.State.toString() ?? this.moduleStatus.primary.state
+			this.moduleStatus.primary.design_name = data?.DesignName.toString() ?? this.moduleStatus.primary.design_name
+			this.moduleStatus.primary.design_code = data?.DesignCode.toString() ?? this.moduleStatus.primary.design_code
+			this.moduleStatus.primary.redundant = !!data.IsRedundant
+			this.moduleStatus.primary.emulator = !!data.IsEmulator
+		}
+		this.checkStatus(InstanceStatus.Ok, data.State.toString(), secondary)
+	}
+
+	/**
+	 * Process recieved data
 	 * @param {string} response Recieved message to process
 	 * @param {boolean} secondary True if message from secondary core
 	 * @access private
 	 */
 
 	processResponse(response, secondary) {
-		const list = (this.response_buffer + response).split('\x00')
-		this.response_buffer = list.pop()
+		let list = []
+		if (secondary) {
+			list = (this.response_bufferSec + response).split('\x00')
+			this.response_bufferSec = list.pop()
+		} else {
+			list = (this.response_buffer + response).split('\x00')
+			this.response_buffer = list.pop()
+		}
+
 		let refresh = false
 
 		list.forEach((jsonstr) => {
 			const obj = JSON.parse(jsonstr)
 
-			if (obj.id !== undefined && obj.id == QRC_GET) {
+			if (obj?.id == QRC_GET) {
 				if (Array.isArray(obj?.result)) {
 					obj.result.forEach((r) => this.updateControl(r))
 					refresh = true
@@ -401,32 +453,11 @@ class QsysRemoteControl extends InstanceBase {
 					this.log('error', JSON.stringify(obj.error))
 				}
 			} else if (obj.method === 'EngineStatus') {
-				if (secondary) {
-					this.setVariableValues({
-						stateSecondary: obj.params.State.toString(),
-						design_nameSecondary: obj.params.DesignName.toString(),
-						redundantSecondary: !!obj.params.IsRedundant,
-						emulatorSecondary: !!obj.params.IsEmulator,
-					})
-					this.moduleStatus.secondary.state = obj.params.State.toString()
-					this.moduleStatus.secondary.design_name = obj.params.DesignName.toString()
-					this.moduleStatus.secondary.design_code = obj.params.DesignCode.toString()
-					this.moduleStatus.secondary.redundant = !!obj.params.IsRedundant
-					this.moduleStatus.secondary.emulator = !!obj.params.IsEmulator
-				} else {
-					this.setVariableValues({
-						state: obj.params.State.toString(),
-						design_name: obj.params.DesignName.toString(),
-						redundant: !!obj.params.IsRedundant,
-						emulator: !!obj.params.IsEmulator,
-					})
-					this.moduleStatus.primary.state = obj.params.State.toString()
-					this.moduleStatus.primary.design_name = obj.params.DesignName.toString()
-					this.moduleStatus.primary.design_code = obj.params.DesignCode.toString()
-					this.moduleStatus.primary.redundant = !!obj.params.IsRedundant
-					this.moduleStatus.primary.emulator = !!obj.params.IsEmulator
+				this.updateEngineVariables(obj.params, secondary)
+			} else if (obj?.id == QRC_SET && typeof obj?.result === 'object') {
+				if (Object.keys(obj.result).includes('Platform')) {
+					this.updateEngineVariables(obj.result, secondary)
 				}
-				this.checkStatus(InstanceStatus.Ok, obj.params.State.toString(), secondary)
 			}
 		})
 
@@ -1617,7 +1648,6 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	initFeedbacks() {
-		this.variables = []
 		if (!this.config.feedback_enabled) {
 			this.setFeedbackDefinitions({})
 			return
@@ -1833,7 +1863,7 @@ class QsysRemoteControl extends InstanceBase {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
 		await queue.add(async () => {
-			if (this.moduleStatus.primary.state == 'Active' || cmd.method == 'StatusGet') {
+			if (this.moduleStatus.primary.state == 'Active' || cmd.method == 'StatusGet' || cmd.method == 'EngineStatus') {
 				if (this.socket.pri && !this.socket.pri.isDestroyed && this.socket.pri.isConnected) {
 					const sent = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
 					if (sent) {
@@ -1852,7 +1882,11 @@ class QsysRemoteControl extends InstanceBase {
 			}
 
 			if (this.config.redundant) {
-				if (this.moduleStatus.secondary.state == 'Active' || cmd.method == 'StatusGet') {
+				if (
+					this.moduleStatus.secondary.state == 'Active' ||
+					cmd.method == 'StatusGet' ||
+					cmd.method == 'EngineStatus'
+				) {
 					if (this.socket.sec && !this.socket.sec.isDestroyed && this.socket.sec.isConnected) {
 						const sent = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
 						if (sent) {

@@ -222,14 +222,14 @@ class QsysRemoteControl extends InstanceBase {
 
 			await socket.send(JSON.stringify(login) + '\x00')
 
-			await this.sendCommand('EngineStatus', 0)
+			await this.sendCommand('StatusGet', 0)
 
 			this.checkStatus(InstanceStatus.Ok, '', secondary)
 
-			await this.initVariables()
+			//await this.initVariables()
 			if (this.keepAlive === undefined) {
 				this.keepAlive = setInterval(async () => {
-					await this.sendCommand('EngineStatus', 0)
+					await this.sendCommand('NoOp', {})
 				}, 1000)
 			}
 		}
@@ -1855,6 +1855,62 @@ class QsysRemoteControl extends InstanceBase {
 	/**
 	 * Add message to outbound queue and send
 	 * @param {object} cmd Command object to send
+	 * @returns {boolean} If cmd.method is OK to send to core that isn't active
+	 * @access private
+	 */
+
+	validMethodsToStandbyCore(cmd) {
+		const validMethods = ['StatusGet', 'NoOp', 'Logon'] //Add methods here that are OK to send to core that is in Standby or Idle
+		return validMethods.includes(cmd?.method)
+	}
+
+	/**
+	 * Check if the core is active
+	 * @param {boolean} secondary If you are asking if the Secondary core is Active
+	 * @access private
+	 */
+
+	isCoreActive(secondary = false) {
+		if (secondary) {
+			return this.moduleStatus.secondary.state == 'Active'
+		}
+		return this.moduleStatus.primary.state == 'Active'
+	}
+
+	/**
+	 * Check if socket is ok to send data
+	 * @param {boolean} secondary If you are asking if the Secondary core is Active
+	 * @access private
+	 */
+
+	isSocketOkToSend(secondary = false) {
+		if (secondary) {
+			return this.socket.sec && !this.socket.sec.isDestroyed && this.socket.sec.isConnected
+		}
+		return this.socket.pri && !this.socket.pri.isDestroyed && this.socket.pri.isConnected
+	}
+
+	/**
+	 * Log message send result
+	 * @param {boolean} sent return from socket.send
+	 * @param {object} cmd Command object sent
+	 * @param {string} host Host message was sent to
+	 * @access private
+	 */
+
+	logSentMessage(sent, cmd, host = this.config.host) {
+		if (sent) {
+			if (this.console_debug) {
+				console.log(`Q-SYS Sent to ${host}: ` + JSON.stringify(cmd) + '\r')
+			}
+		} else {
+			this.log('warn', `Q-SYS Send to ${host} Failed: ` + JSON.stringify(cmd) + '\r')
+		}
+	}
+
+	/**
+	 * Add message to outbound queue and send
+	 * @param {object} cmd Command object to send
 	 * @param {QRC_GET | QRC_SET} get_set Get or Set method
 	 * @access private
 	 */
@@ -1863,48 +1919,26 @@ class QsysRemoteControl extends InstanceBase {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
 		await queue.add(async () => {
-			if (this.moduleStatus.primary.state == 'Active' || cmd.method == 'StatusGet' || cmd.method == 'EngineStatus') {
-				if (this.socket.pri && !this.socket.pri.isDestroyed && this.socket.pri.isConnected) {
-					const sent = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
-					if (sent) {
-						if (this.console_debug) {
-							console.log(`Q-SYS Sent to ${this.config.host}: ` + JSON.stringify(cmd) + '\r')
-						}
-					} else {
-						this.log('warn', `Q-SYS Send to ${this.config.host} Failed: ` + JSON.stringify(cmd) + '\r')
-					}
+			if (this.isCoreActive() || this.validMethodsToStandbyCore(cmd)) {
+				if (this.isSocketOkToSend()) {
+					this.logSentMessage(await this.socket.pri.send(JSON.stringify(cmd) + '\x00'), cmd)
 				} else {
-					this.log(
-						'warn',
-						`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd) + '\r',
-					)
+					this.log('warn', `Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd))
 				}
 			}
 
 			if (this.config.redundant) {
-				if (
-					this.moduleStatus.secondary.state == 'Active' ||
-					cmd.method == 'StatusGet' ||
-					cmd.method == 'EngineStatus'
-				) {
-					if (this.socket.sec && !this.socket.sec.isDestroyed && this.socket.sec.isConnected) {
-						const sent = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
-						if (sent) {
-							if (this.console_debug) {
-								console.log(`Q-SYS Sent to ${this.config.hostSecondary}: ` + JSON.stringify(cmd) + '\r')
-							}
-						} else {
-							this.log(
-								'warn',
-								`Q-SYS Send to ${this.config.hostSecondary} Failed. Message: ` + JSON.stringify(cmd) + '\r',
-							)
-						}
+				if (this.isCoreActive(true) || this.validMethodsToStandbyCore(cmd)) {
+					if (this.isSocketOkToSend(true)) {
+						this.logSentMessage(
+							await this.socket.sec.send(JSON.stringify(cmd) + '\x00'),
+							cmd,
+							this.config.hostSecondary,
+						)
 					} else {
 						this.log(
 							'warn',
-							`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` +
-								JSON.stringify(cmd) +
-								'\r',
+							`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` + JSON.stringify(cmd),
 						)
 					}
 				}

@@ -1639,6 +1639,56 @@ class QsysRemoteControl extends InstanceBase {
 					})
 				},
 			},
+			page_submit_message: {
+				name: 'PA.PageSubmit - Message',
+				options: [
+					{
+						type: 'textinput',
+						id: 'zones',
+						label: 'Zone Number(s):',
+						tooltip: 'Comma-seperated for multiple zones',
+						regex: Regex.SOMETHING,
+						required: true,
+						default: '',
+						useVariables: { local: true },
+					},
+					{
+						type: 'number',
+						id: 'priority',
+						label: 'Priority:',
+						tooltip: '1 is highest',
+						min: 1,
+						required: true,
+						default: '',
+					},
+					{
+						type: 'textinput',
+						id: 'preamble',
+						label: 'Preamble:',
+						tooltip: 'File name of the preamble',
+						default: '',
+						useVariables: { local: true },
+					},
+					{
+						type: 'textinput',
+						id: 'message',
+						label: 'Message:',
+						tooltip: 'File name of the message',
+						default: '',
+						useVariables: { local: true },
+					},
+				],
+				callback: async (evt, context) => {
+					await this.sendCommand('PA.PageSubmit', {
+						Mode: 'message',
+						Zones: (await context.parseVariablesInString(evt.options.zones)).split(',').map(Number),
+						Priority: evt.options.priority,
+						Preamble: await context.parseVariablesInString(evt.options.preamble),
+						Message: await context.parseVariablesInString(evt.options.message),
+						Start: true,
+					})
+				},
+			},
 		})
 	}
 

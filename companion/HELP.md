@@ -3,36 +3,39 @@
 This module will connect to Q-SYS Remote Control.
 
 **Available commands for Q-SYS Remote Control**
-* Control.Set
-* Component.Set
 * ChangeGroup.AddControl
 * ChangeGroup.AddComponentControl
 * ChangeGroup.Remove
 * ChangeGroup.Destroy
 * ChangeGroup.Invalidate
 * ChangeGroup.Clear
-* Mixer.SetCrossPointGain
+* Component.Set
+* Control.Set
+* LoopPlayer.Cancel
+* LoopPlayer.Start
+* LoopPlayer.Stop
 * Mixer.SetCrossPointDelay
+* Mixer.SetCrossPointGain
 * Mixer.SetCrossPointMute
 * Mixer.SetCrossPointSolo
+* Mixer.SetCueGain
+* Mixer.SetCueMute
+* Mixer.SetInputCueAfl
+* Mixer.SetInputCueEnable
 * Mixer.SetInputGain
 * Mixer.SetInputMute
 * Mixer.SetInputSolo
 * Mixer.SetOutputGain
 * Mixer.SetOutputMute
-* Mixer.SetCueMute
-* Mixer.SetCueGain
-* Mixer.SetInputCueEnable
-* Mixer.SetInputCueAfl
-* LoopPlayer.Start
-* LoopPlayer.Stop
-* LoopPlayer.Cancel
+* PA.PageSubmit - Message
+
+
 
 **Variables and Feedbacks**
 * EngineStatus
 * Named control values
 
-**Not Implementet**
+**Not Implemented**
 * StatusGet
 * Control.Get
 * Component.Get

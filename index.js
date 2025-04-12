@@ -702,12 +702,21 @@ class QsysRemoteControl extends InstanceBase {
 					},
 				],
 				callback: async (evt, context) => {
-					const value = await context.parseVariablesInString(evt.options.value)
-
 					await this.sendCommand('Control.Set', {
 						Name: await context.parseVariablesInString(evt.options.name),
-						Value: value,
+						Value: await context.parseVariablesInString(evt.options.value),
 					})
+				},
+				learn: async (evt, context) => {
+					const name = await context.parseVariablesInString(evt.options.name)
+					const control = this.controls.get(name)
+					if (control?.value) {
+						return {
+							...evt.options,
+							value: control.value.toString(),
+						}
+					}
+					return undefined
 				},
 			},
 			control_toggle: {
@@ -765,7 +774,7 @@ class QsysRemoteControl extends InstanceBase {
 						useVariables: { local: true },
 					},
 				],
-				callback: async (evt, context) =>
+				callback: async (evt, context) => {
 					await this.sendCommand('Component.Set', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Controls: [
@@ -775,7 +784,8 @@ class QsysRemoteControl extends InstanceBase {
 								Ramp: await context.parseVariablesInString(evt.options.ramp),
 							},
 						],
-					}),
+					})
+				},
 			},
 			changeGroup_addControl: {
 				name: 'ChangeGroup.AddControl',
@@ -1731,11 +1741,10 @@ class QsysRemoteControl extends InstanceBase {
 				subscribe: async (feedback, context) => await this.addControl(feedback, context),
 				unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 				callback: async (feedback, context) => {
-					const opt = feedback.options
-					const control = this.controls.get(await context.parseVariablesInString(opt.name))
+					const control = this.controls.get(await context.parseVariablesInString(feedback.options.name))
 					if (!control.value) return
 
-					switch (opt.type) {
+					switch (feedback.options.type) {
 						case 'string':
 							return {
 								text: control.strval,

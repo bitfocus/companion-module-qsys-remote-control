@@ -39,9 +39,14 @@ class QsysRemoteControl extends InstanceBase {
 		this.pollQRCTimer = undefined
 		this.variables = []
 		this.moduleStatus = this.resetModuleStatus()
+		this.controls = new Map()
 		this.socket = {
 			pri: new TCPHelper('localhost', 1710),
 			sec: new TCPHelper('localhost', 1710),
+			buffer: {
+				pri: '',
+				sec: '',
+			},
 		}
 		this.socket.pri.destroy()
 		this.socket.sec.destroy()
@@ -197,9 +202,9 @@ class QsysRemoteControl extends InstanceBase {
 		}
 		const connectEvent = async () => {
 			if (secondary) {
-				this.response_bufferSec = ''
+				this.socket.buffer.sec = ''
 			} else {
-				this.response_buffer = ''
+				this.socket.buffer.pri = ''
 			}
 
 			const login = {
@@ -433,11 +438,11 @@ class QsysRemoteControl extends InstanceBase {
 	processResponse(response, secondary) {
 		let list = []
 		if (secondary) {
-			list = (this.response_bufferSec + response).split('\x00')
-			this.response_bufferSec = list.pop()
+			list = (this.socket.buffer.sec + response).split('\x00')
+			this.socket.buffer.sec = list.pop()
 		} else {
-			list = (this.response_buffer + response).split('\x00')
-			this.response_buffer = list.pop()
+			list = (this.socket.buffer.pri + response).split('\x00')
+			this.socket.buffer.pri = list.pop()
 		}
 
 		let refresh = false

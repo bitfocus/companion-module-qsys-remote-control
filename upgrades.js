@@ -18,6 +18,25 @@ function redundantCores(_context, props) {
 	return result
 }
 
+function relativeControlSet(_context, props) {
+	const result = {
+		updatedActions: [],
+		updatedConfig: null,
+		updatedFeedbacks: [],
+	}
+
+	for (const action of props.actions) {
+		switch (action.actionId) {
+			case 'control_set':
+				action.options.relative ??= false
+				result.updatedActions.push(action)
+				break
+		}
+	}
+
+	return result
+}
+
 export default [
 	CreateConvertToBooleanFeedbackUpgradeScript({
 		'control-boolean': {
@@ -30,4 +49,5 @@ export default [
 		},
 	}),
 	redundantCores,
+	relativeControlSet,
 ]

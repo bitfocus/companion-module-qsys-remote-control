@@ -738,11 +738,27 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 						useVariables: { local: true },
 					},
+					{
+						type: 'checkbox',
+						id: 'relative',
+						label: 'Relative',
+						default: false,
+						tooltip: `Relative actions only work with numerical values. Resultant value = current value + new value`,
+					},
 				],
 				callback: async (evt, context) => {
+					const name = await context.parseVariablesInString(evt.options.name)
+					let value = await context.parseVariablesInString(evt.options.value)
+					if (evt.options.relative) {
+						value = Number(value) + Number(this.controls.get(name)?.value)
+						if (isNaN(value)) {
+							this.log('warn', `Result value is a NaN, can not perform action ${evt.actionId}:${evt.id}`)
+							return
+						}
+					}
 					await this.sendCommand('Control.Set', {
-						Name: await context.parseVariablesInString(evt.options.name),
-						Value: await context.parseVariablesInString(evt.options.value),
+						Name: name,
+						Value: value,
 					})
 				},
 				learn: async (evt, context) => {
@@ -751,6 +767,7 @@ class QsysRemoteControl extends InstanceBase {
 					if (control?.value !== undefined) {
 						return {
 							...evt.options,
+							relative: false,
 							value: control.value.toString(),
 						}
 					}

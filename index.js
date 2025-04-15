@@ -76,6 +76,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	async configUpdated(config) {
 		queue.clear()
+		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
 		this.killTimersDestroySockets()
 		this.moduleStatus = this.resetModuleStatus()
@@ -103,6 +104,8 @@ class QsysRemoteControl extends InstanceBase {
 		return {
 			status: InstanceStatus.Connecting,
 			message: '',
+			logLevel: 'debug',
+			logMessage: '',
 			primary: {
 				status: InstanceStatus.Connecting,
 				message: '',
@@ -279,6 +282,20 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
+	 * Debounce status update to prevent warnings during init of redundant systems
+	 * @access private
+	 */
+
+	debouncedStatusUpdate = debounce(
+		() => {
+			if (this.moduleStatus.logMessage !== '') this.log(this.moduleStatus.logLevel, this.moduleStatus.logMessage)
+			this.updateStatus(this.moduleStatus.status, this.moduleStatus.message)
+		},
+		1000,
+		{ leading: false, maxWait: 2000, trailing: true },
+	)
+
+	/**
 	 * Check and update module status. For redundant connections, will check states of both cores before setting module status
 	 * @param {InstanceStatus} status
 	 * @param {string} message Qsys host to connect to
@@ -291,6 +308,8 @@ class QsysRemoteControl extends InstanceBase {
 		const newStatus = {
 			status: InstanceStatus.UnknownWarning,
 			message: '',
+			logLevel: 'debug',
+			logMessage: '',
 		}
 		if (secondary) {
 			if (this.moduleStatus.secondary.status == status && this.moduleStatus.secondary.message == message) return
@@ -315,41 +334,42 @@ class QsysRemoteControl extends InstanceBase {
 				} else if (this.moduleStatus.primary.state == 'Active' && this.moduleStatus.secondary.state == 'Active') {
 					newStatus.status = InstanceStatus.UnknownError
 					newStatus.message = 'Both cores active'
-					this.log('error', 'Both cores active')
+					newStatus.logLevel = 'error'
+					newStatus.logMessage = 'Both cores active'
 				} else if (this.moduleStatus.primary.state == 'Standby' && this.moduleStatus.secondary.state == 'Standby') {
 					newStatus.status = InstanceStatus.UnknownError
 					newStatus.message = `Both cores in standby`
-					this.log('error', 'Both cores in standby')
+					newStatus.logLevel = 'error'
+					newStatus.logMessage = 'Both cores in standby'
 				} else {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = `Unexpected state. Primary: ${this.moduleStatus.primary.state}. Secondary: ${this.moduleStatus.secondary.state}`
-					this.log(
-						'warn',
-						`Unexpected state. Primary: ${this.moduleStatus.primary.state}. Secondary: ${this.moduleStatus.secondary.state}`,
-					)
+					newStatus.logLevel = 'warn'
+					newStatus.logMessage = `Unexpected state. Primary: ${this.moduleStatus.primary.state}. Secondary: ${this.moduleStatus.secondary.state}`
 				}
 				if (this.moduleStatus.primary.design_code !== this.moduleStatus.secondary.design_code) {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = 'Cores reporting different designs'
-					this.log(
-						'error',
-						`Cores running different designs. Primary: ${this.moduleStatus.primary.design_name}. Secondary: ${this.moduleStatus.secondary.design_name}`,
-					)
+					newStatus.logLevel = 'error'
+					newStatus.logMessage = `Cores running different designs. Primary: ${this.moduleStatus.primary.design_name}. Secondary: ${this.moduleStatus.secondary.design_name}`
 				}
 				if (this.moduleStatus.primary.emulator) {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = 'Primary core in Emulator mode'
-					this.log('warn', 'Primary core in Emulator mode')
+					newStatus.logLevel = 'warn'
+					newStatus.logMessage = 'Primary core in Emulator mode'
 				}
 				if (this.moduleStatus.secondary.emulator) {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = 'Secondary core in Emulator mode'
-					this.log('warn', 'Secondary core in Emulator mode')
+					newStatus.logLevel = 'warn'
+					newStatus.logMessage = 'Secondary core in Emulator mode'
 				}
 				if (!this.moduleStatus.primary.redundant || !this.moduleStatus.secondary.redundant) {
 					newStatus.status = InstanceStatus.UnknownWarning
 					newStatus.message = 'Cores not configured for redundant mode'
-					this.log('error', 'Cores not configured for redundant mode')
+					newStatus.logLevel = 'error'
+					newStatus.logMessage = 'Cores not configured for redundant mode'
 				}
 			} else if (
 				this.moduleStatus.primary.status == InstanceStatus.Ok ||
@@ -357,21 +377,20 @@ class QsysRemoteControl extends InstanceBase {
 			) {
 				newStatus.status = InstanceStatus.UnknownWarning
 				newStatus.message = `Redundancy compromised`
-				this.log('warn', 'Redundancy compromised')
+				newStatus.logLevel = 'warn'
+				newStatus.logMessage = 'Redundancy compromised'
 			} else if (this.moduleStatus.primary.status == this.moduleStatus.secondary.status) {
 				newStatus.status = this.moduleStatus.primary.status
 				newStatus.message = this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message
-				this.log(
-					'info',
-					`Core states: ` + this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message,
-				)
+				newStatus.logLevel = 'info'
+				newStatus.logMessage =
+					`Core states: ` + this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message
 			} else {
 				newStatus.status = InstanceStatus.UnknownError
 				newStatus.message = `Core connections in unexpected & inconsistent states`
-				this.log(
-					'warn',
-					`Core states: ` + this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message,
-				)
+				newStatus.logLevel = 'warn'
+				newStatus.logMessage =
+					`Core states: ` + this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message
 			}
 		} else {
 			if (this.moduleStatus.primary.state == 'Active') {
@@ -391,7 +410,9 @@ class QsysRemoteControl extends InstanceBase {
 		if (this.moduleStatus.status == newStatus.status && this.moduleStatus.message == newStatus.message) return
 		this.moduleStatus.status = newStatus.status
 		this.moduleStatus.message = newStatus.message
-		this.updateStatus(newStatus.status, newStatus.message)
+		this.moduleStatus.logLevel = newStatus.logLevel
+		this.moduleStatus.logMessage = newStatus.logMessage
+		this.debouncedStatusUpdate()
 	}
 
 	/**
@@ -671,10 +692,11 @@ class QsysRemoteControl extends InstanceBase {
 
 	destroy() {
 		queue.clear()
+		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
 		this.killTimersDestroySockets()
 		if (this.controls !== undefined) {
-			this.controls = undefined
+			delete this.controls
 		}
 	}
 

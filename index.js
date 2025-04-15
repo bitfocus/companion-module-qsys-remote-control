@@ -22,6 +22,7 @@ const colours = {
 	black: combineRgb(0, 0, 0),
 	white: combineRgb(255, 255, 255),
 	red: combineRgb(255, 0, 0),
+	green: combineRgb(0, 204, 0),
 }
 
 /**
@@ -432,6 +433,7 @@ class QsysRemoteControl extends InstanceBase {
 		engineVars.redundant = !!this.moduleStatus.primary.redundant
 		engineVars.emulator = !!this.moduleStatus.primary.emulator
 		this.setVariableValues(engineVars)
+		this.checkFeedbacks('core-state')
 	}
 
 	/**
@@ -1959,6 +1961,48 @@ class QsysRemoteControl extends InstanceBase {
 					return {
 						bgcolor: combineRgb(r, g, b),
 					}
+				},
+			},
+			'core-state': {
+				name: 'Core state',
+				type: 'boolean',
+				defaultStyle: {
+					color: colours.black,
+					bgcolor: colours.green,
+				},
+				options: [
+					{
+						type: 'dropdown',
+						id: 'core',
+						label: 'Core',
+						choices: [
+							{ id: 'pri', label: 'Primary' },
+							{ id: 'sec', label: 'Secondary' },
+						],
+						default: 'pri',
+						isVisible: (_options, isVisibleData) => {
+							return isVisibleData.redundant
+						},
+						isVisibleData: { redundant: this.config.redundant },
+					},
+					{
+						type: 'dropdown',
+						id: 'state',
+						label: 'State',
+						choices: [
+							{ id: 'Active', label: 'Active' },
+							{ id: 'Standby', label: 'Standby' },
+							{ id: 'Idle', label: 'Idle' },
+						],
+						default: 'Active',
+					},
+				],
+				callback: async (feedback, _context) => {
+					let core = this.moduleStatus.primary
+					if (this.config.redundant && feedback.options.core === 'sec') {
+						core = this.moduleStatus.secondary
+					}
+					return core.state === feedback.options.state
 				},
 			},
 		}

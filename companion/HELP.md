@@ -32,7 +32,7 @@ This module will connect to Q-SYS Remote Control.
 
 **Variables and Feedbacks**
 
-- EngineStatus
+- Engine Status
 - Named control values
 
 **Not Implemented**

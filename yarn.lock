@@ -22,9 +22,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@companion-module/tools@npm:^2.2.2":
-  version: 2.2.2
-  resolution: "@companion-module/tools@npm:2.2.2"
+"@companion-module/tools@npm:^2.3.0":
+  version: 2.3.0
+  resolution: "@companion-module/tools@npm:2.3.0"
   dependencies:
     "@eslint/js": "npm:^9.19.0"
     eslint-config-prettier: "npm:^10.0.1"
@@ -53,7 +53,7 @@ __metadata:
     companion-generate-manifest: scripts/generate-manifest.js
     companion-module-build: scripts/build.js
     companion-module-check: scripts/check.js
-  checksum: 10c0/6018233ec2f04f0099e4eb14773ad1dff0d8b0cae772fcda8943fe4e19ffbf80ea9a35100616507d70b52baef3b6b8a52f53c073ab5809ca3a9ada5b0050e32f
+  checksum: 10c0/49baa2415a62e9763d8d185d3d944a68cbfb5e41f2d382a0d8e0cd69902ccc4a80a92783a0ab95c9b5fbc0ca4464c028423bb5fc3347149cd1bae1ab6bf4b10c
   languageName: node
   linkType: hard
 
@@ -1835,7 +1835,7 @@ __metadata:
   resolution: "qsys-remote-control@workspace:."
   dependencies:
     "@companion-module/base": "npm:~1.11.3"
-    "@companion-module/tools": "npm:^2.2.2"
+    "@companion-module/tools": "npm:^2.3.0"
     eslint: "npm:^9.24.0"
     p-queue: "npm:~8.1.0"
     prettier: "npm:~3.5.3"

@@ -1494,6 +1494,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lodash@npm:^4.17.21":
+  version: 4.17.21
+  resolution: "lodash@npm:4.17.21"
+  checksum: 10c0/d8cbea072bb08655bb4c989da418994b073a608dffa608b09ac04b43a791b12aeae7cd7ad919aa4c925f33b48490b5cfe6c1f71d827956071dae2e7bb3a6b74c
+  languageName: node
+  linkType: hard
+
 "merge-stream@npm:^2.0.0":
   version: 2.0.0
   resolution: "merge-stream@npm:2.0.0"
@@ -1837,6 +1844,7 @@ __metadata:
     "@companion-module/base": "npm:~1.11.3"
     "@companion-module/tools": "npm:^2.3.0"
     eslint: "npm:^9.24.0"
+    lodash: "npm:^4.17.21"
     p-queue: "npm:~8.1.0"
     prettier: "npm:~3.5.3"
   languageName: unknown

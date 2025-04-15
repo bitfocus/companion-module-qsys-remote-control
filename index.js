@@ -12,6 +12,7 @@ import {
 	// eslint-disable-next-line no-unused-vars
 	CompanionFeedbackContext,
 } from '@companion-module/base'
+import { debounce } from 'lodash'
 import PQueue from 'p-queue'
 const queue = new PQueue({ concurrency: 1 })
 const QRC_GET = 1
@@ -75,6 +76,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	async configUpdated(config) {
 		queue.clear()
+		this.debouncedVariableDefUpdate.cancel()
 		this.killTimersDestroySockets()
 		this.moduleStatus = this.resetModuleStatus()
 		this.config = config
@@ -661,6 +663,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	destroy() {
 		queue.clear()
+		this.debouncedVariableDefUpdate.cancel()
 		this.killTimersDestroySockets()
 		if (this.controls !== undefined) {
 			this.controls = undefined
@@ -2075,6 +2078,18 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
+	 * Update the variable definitions
+	 */
+
+	debouncedVariableDefUpdate = debounce(
+		() => {
+			this.setVariableDefinitions(this.variables)
+		},
+		1000,
+		{ leading: false, maxWait: 5000, trailing: true },
+	)
+
+	/**
 	 * @param {CompanionFeedbackInfo} feedback
 	 * @param {CompanionFeedbackContext} context
 	 * @access private
@@ -2112,7 +2127,7 @@ class QsysRemoteControl extends InstanceBase {
 				},
 			)
 
-			this.setVariableDefinitions(this.variables)
+			this.debouncedVariableDefUpdate()
 		}
 	}
 

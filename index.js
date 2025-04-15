@@ -395,6 +395,25 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
+	 * Set the engine variable values
+	 */
+
+	setEngineVariableValues() {
+		let engineVars = []
+		if (this.config.redundant) {
+			engineVars.stateSecondary = this.moduleStatus.secondary.state
+			engineVars.design_nameSecondary = this.moduleStatus.secondary.design_name
+			engineVars.redundantSecondary = !!this.moduleStatus.secondary.redundant
+			engineVars.emulatorSecondary = !!this.moduleStatus.secondary.emulator
+		}
+		engineVars.state = this.moduleStatus.primary.state
+		engineVars.design_name = this.moduleStatus.primary.design_name
+		engineVars.redundant = !!this.moduleStatus.primary.redundant
+		engineVars.emulator = !!this.moduleStatus.primary.emulator
+		this.setVariableValues(engineVars)
+	}
+
+	/**
 	 * Update Engine variables and related status
 	 * @param {object} data Recieved JSON blod
 	 * @param {boolean} secondary True if message from secondary core
@@ -403,30 +422,19 @@ class QsysRemoteControl extends InstanceBase {
 
 	updateEngineVariables(data, secondary) {
 		if (secondary) {
-			this.setVariableValues({
-				stateSecondary: data?.State.toString() ?? this.moduleStatus.secondary.state,
-				design_nameSecondary: data?.DesignName.toString() ?? this.moduleStatus.secondary.design_name,
-				redundantSecondary: !!data.IsRedundant,
-				emulatorSecondary: !!data.IsEmulator,
-			})
 			this.moduleStatus.secondary.state = data?.State.toString() ?? this.moduleStatus.secondary.state
 			this.moduleStatus.secondary.design_name = data?.DesignName.toString() ?? this.moduleStatus.secondary.design_name
 			this.moduleStatus.secondary.design_code = data?.DesignCode.toString() ?? this.moduleStatus.secondary.design_code
 			this.moduleStatus.secondary.redundant = !!data.IsRedundant
 			this.moduleStatus.secondary.emulator = !!data.IsEmulator
 		} else {
-			this.setVariableValues({
-				state: data?.State.toString() ?? this.moduleStatus.primary.state,
-				design_name: data?.DesignName.toString() ?? this.moduleStatus.primary.design_name,
-				redundant: !!data.IsRedundant,
-				emulator: !!data.IsEmulator,
-			})
 			this.moduleStatus.primary.state = data?.State.toString() ?? this.moduleStatus.primary.state
 			this.moduleStatus.primary.design_name = data?.DesignName.toString() ?? this.moduleStatus.primary.design_name
 			this.moduleStatus.primary.design_code = data?.DesignCode.toString() ?? this.moduleStatus.primary.design_code
 			this.moduleStatus.primary.redundant = !!data.IsRedundant
 			this.moduleStatus.primary.emulator = !!data.IsEmulator
 		}
+		this.setEngineVariableValues()
 		this.checkStatus(InstanceStatus.Ok, data.State.toString(), secondary)
 	}
 
@@ -718,7 +726,7 @@ class QsysRemoteControl extends InstanceBase {
 				learn: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
 					const control = this.controls.get(name)
-					if (control?.value) {
+					if (control?.value !== undefined) {
 						return {
 							...evt.options,
 							value: control.value.toString(),
@@ -2084,6 +2092,7 @@ class QsysRemoteControl extends InstanceBase {
 	debouncedVariableDefUpdate = debounce(
 		() => {
 			this.setVariableDefinitions(this.variables)
+			this.setEngineVariableValues()
 		},
 		1000,
 		{ leading: false, maxWait: 5000, trailing: true },

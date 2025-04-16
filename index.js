@@ -1103,17 +1103,18 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCrossPointMute', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
-						Value: evt.options.value,
+						Value: value,
 					})
 				},
 			},
@@ -1147,17 +1148,18 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCrossPointSolo', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
-						Value: evt.options.value,
+						Value: value,
 					})
 				},
 			},
@@ -1229,16 +1231,17 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputMute', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Value: evt.options.value,
+						Value: value,
 					})
 				},
 			},
@@ -1265,16 +1268,17 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputSolo', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Value: evt.options.value,
+						Value: value,
 					})
 				},
 			},
@@ -1346,16 +1350,17 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetOutputMute', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
-						Value: evt.options.value,
+						Value: value,
 					})
 				},
 			},
@@ -1382,16 +1387,17 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCueMute', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Cues: await context.parseVariablesInString(evt.options.cues),
-						Value: evt.options.value,
+						Value: value,
 					})
 				},
 			},
@@ -1470,17 +1476,18 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputCueEnable', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Cues: await context.parseVariablesInString(evt.options.cues),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Value: evt.options.value,
+						Value: value,
 					})
 				},
 			},
@@ -1514,17 +1521,18 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Value',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputCueAfl', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Cues: await context.parseVariablesInString(evt.options.cues),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Value: evt.options.value,
+						Value: value,
 					})
 				},
 			},
@@ -1576,12 +1584,13 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Loop',
 						default: 'true',
 						choices: [
-							{ id: 'true', label: 'true' },
-							{ id: 'false', label: 'false' },
+							{ id: 'true', label: 'True' },
+							{ id: 'false', label: 'False' },
 						],
 					},
 				],
 				callback: async (evt, context) => {
+					const loop = evt.options.loop === 'true'
 					await this.sendCommand('LoopPlayer.Start', {
 						Files: [
 							{
@@ -1592,7 +1601,7 @@ class QsysRemoteControl extends InstanceBase {
 						],
 						Name: await context.parseVariablesInString(evt.options.name), // Had to add name to the options array.
 						StartTime: evt.options.startTime,
-						Loop: evt.options.loop,
+						Loop: loop,
 						Log: true,
 					})
 				},

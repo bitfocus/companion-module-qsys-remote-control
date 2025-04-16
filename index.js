@@ -848,7 +848,15 @@ class QsysRemoteControl extends InstanceBase {
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
-					let control = this.controls.get(name)
+					const control = this.controls.get(name)
+					if (control === undefined) {
+						if (!this.config.feedback_enabled) {
+							this.log('warn', `Control ${name} unavailable. Feedbacks must be enabled`)
+						} else {
+							this.log('warn', `Control ${name} unavailable. Check named control name`)
+						}
+						return
+					}
 					// set our internal state in anticipation of success, allowing two presses
 					// of the button faster than the polling interval to correctly toggle the state
 					await this.sendCommand('Control.Set', {

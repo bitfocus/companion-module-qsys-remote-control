@@ -774,6 +774,10 @@ class QsysRemoteControl extends InstanceBase {
 						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
 					},
 				],
+				subscribe: async (action, context) => {
+					if (action.options.relative) await this.addControl(action, context)
+				},
+				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
 					let value = await context.parseVariablesInString(evt.options.value)
@@ -828,6 +832,8 @@ class QsysRemoteControl extends InstanceBase {
 						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
 					},
 				],
+				subscribe: async (action, context) => await this.addControl(action, context),
+				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
 					let control = this.controls.get(name)

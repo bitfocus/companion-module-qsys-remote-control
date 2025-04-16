@@ -849,7 +849,7 @@ class QsysRemoteControl extends InstanceBase {
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
 					const control = this.controls.get(name)
-					if (control === undefined) {
+					if (control === undefined || control.value == null) {
 						if (!this.config.feedback_enabled) {
 							this.log('warn', `Control ${name} unavailable. Feedbacks must be enabled`)
 						} else {

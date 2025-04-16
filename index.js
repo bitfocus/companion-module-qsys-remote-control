@@ -326,9 +326,13 @@ class QsysRemoteControl extends InstanceBase {
 				if (this.moduleStatus.primary.state == 'Active' && this.moduleStatus.secondary.state == 'Standby') {
 					newStatus.status = InstanceStatus.Ok
 					newStatus.message = 'Primary core active'
+					newStatus.logLevel = 'info'
+					newStatus.logMessage = ''
 				} else if (this.moduleStatus.primary.state == 'Standby' && this.moduleStatus.secondary.state == 'Active') {
 					newStatus.status = InstanceStatus.Ok
 					newStatus.message = 'Secondary core active'
+					newStatus.logLevel = 'info'
+					newStatus.logMessage = ''
 				} else if (this.moduleStatus.primary.state == 'Active' && this.moduleStatus.secondary.state == 'Active') {
 					newStatus.status = InstanceStatus.UnknownError
 					newStatus.message = 'Both cores active'
@@ -394,15 +398,23 @@ class QsysRemoteControl extends InstanceBase {
 			if (this.moduleStatus.primary.state == 'Active') {
 				newStatus.status = InstanceStatus.Ok
 				newStatus.message = 'Core active'
+				newStatus.logLevel = 'info'
+				newStatus.logMessage = ''
 			} else if (this.moduleStatus.primary.state == 'Standby') {
 				newStatus.status = InstanceStatus.UnknownWarning
-				newStatus.message = 'Core in standby'
+				newStatus.message = 'Core state standby'
+				newStatus.logLevel = 'warn'
+				newStatus.logMessage = 'Core state standby'
 			} else if (this.moduleStatus.primary.state == 'Idle') {
 				newStatus.status = InstanceStatus.UnknownError
-				newStatus.message = 'Core in idle'
+				newStatus.message = 'Core state idle'
+				newStatus.logLevel = 'warn'
+				newStatus.logMessage = 'Core state Idle'
 			} else {
 				newStatus.status = this.moduleStatus.primary.status
 				newStatus.message = this.moduleStatus.primary.message
+				newStatus.logLevel = 'info'
+				newStatus.logMessage = this.moduleStatus.primary.message
 			}
 		}
 		if (this.moduleStatus.status == newStatus.status && this.moduleStatus.message == newStatus.message) return

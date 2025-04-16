@@ -493,16 +493,16 @@ class QsysRemoteControl extends InstanceBase {
 			const obj = JSON.parse(jsonstr)
 
 			if (obj?.id == QRC_GET) {
-				if (this.config.feedback_enabled) {
-					if (Array.isArray(obj?.result)) {
-						obj.result.forEach((r) => this.updateControl(r))
-						refresh = true
-					} else if (obj.error !== undefined) {
-						this.log('error', JSON.stringify(obj.error))
-					}
+				if (Array.isArray(obj?.result)) {
+					obj.result.forEach((r) => this.updateControl(r))
+					refresh = true
+				} else if (obj.error !== undefined) {
+					this.log('error', JSON.stringify(obj.error))
 				}
 			} else if (obj.method === 'EngineStatus') {
 				this.updateEngineVariables(obj.params, secondary)
+			} else if (obj.method === 'LoopPlayer.Error') {
+				this.log('warn', `Loop Player Error ${JSON.stringify(obj?.params)}`)
 			} else if (obj?.id == QRC_SET && typeof obj?.result === 'object') {
 				if (Object.keys(obj.result).includes('Platform')) {
 					this.updateEngineVariables(obj.result, secondary)

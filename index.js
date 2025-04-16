@@ -514,7 +514,7 @@ class QsysRemoteControl extends InstanceBase {
 			{
 				type: 'checkbox',
 				id: 'redundant',
-				label: 'Redunant Cores?',
+				label: 'Redundant Cores?',
 				width: 6,
 				default: false,
 			},

@@ -11,6 +11,10 @@
 		{
 			"name": "Andreas H. Thomsen",
 			"email": "mc-hauge@hotmail.com"
+		},
+		{
+			"name": "Phillip Ivan Pietruschka",
+			"email": ""
 		}
 	],
 	"legacyIds": [],
@@ -22,5 +26,5 @@
 	},
 	"manufacturer": "Q-SYS",
 	"products": ["Remote Control", "QRC", "Q-Sys"],
-	"keywords": ["Remote", "Control"]
+	"keywords": ["Remote", "Control", "QSC"]
 }

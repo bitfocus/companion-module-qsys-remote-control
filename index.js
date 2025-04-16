@@ -250,10 +250,7 @@ class QsysRemoteControl extends InstanceBase {
 			if (this.console_debug) {
 				console.log(`[${new Date().toJSON()}] Message recieved from ${host}: ${response}`)
 			}
-
-			if (this.config.feedback_enabled) {
-				this.processResponse(response, secondary)
-			}
+			this.processResponse(response, secondary)
 		}
 		if (!host) {
 			this.checkStatus(
@@ -484,11 +481,13 @@ class QsysRemoteControl extends InstanceBase {
 			const obj = JSON.parse(jsonstr)
 
 			if (obj?.id == QRC_GET) {
-				if (Array.isArray(obj?.result)) {
-					obj.result.forEach((r) => this.updateControl(r))
-					refresh = true
-				} else if (obj.error !== undefined) {
-					this.log('error', JSON.stringify(obj.error))
+				if (this.config.feedback_enabled) {
+					if (Array.isArray(obj?.result)) {
+						obj.result.forEach((r) => this.updateControl(r))
+						refresh = true
+					} else if (obj.error !== undefined) {
+						this.log('error', JSON.stringify(obj.error))
+					}
 				}
 			} else if (obj.method === 'EngineStatus') {
 				this.updateEngineVariables(obj.params, secondary)

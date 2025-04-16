@@ -1634,6 +1634,7 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Output',
 						default: '1',
 						useVariables: { local: true },
+						tooltip: ` The Loop Player output number for playback`,
 					},
 					{
 						// Had to add name to the options array. Referenced in callback but not present in options def
@@ -1649,7 +1650,7 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Start Time',
 						default: 0,
 						regex: Regex.NUMBER,
-						tooltip: `The time of day, in seconds, to start the job.`,
+						tooltip: `The time of day, in seconds, to start the job`,
 						min: 0,
 					},
 					{
@@ -1674,12 +1675,17 @@ class QsysRemoteControl extends InstanceBase {
 				],
 				callback: async (evt, context) => {
 					const loop = evt.options.loop === 'true'
+					const output = Number.parseInt(await context.parseVariablesInString(evt.options.output))
+					if (isNaN(output)) {
+						this.log(`warn`, `Output is a NaN cannot complete ${evt.actionId}:${evt.id}`)
+						return
+					}
 					await this.sendCommand('LoopPlayer.Start', {
 						Files: [
 							{
 								Name: await context.parseVariablesInString(evt.options.file_name),
 								Mode: evt.options.mode,
-								Output: await context.parseVariablesInString(evt.options.output),
+								Output: output,
 							},
 						],
 						Name: await context.parseVariablesInString(evt.options.name), // Had to add name to the options array.

@@ -1649,6 +1649,17 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Start Time',
 						default: 0,
 						regex: Regex.NUMBER,
+						tooltip: `The time of day, in seconds, to start the job.`,
+						min: 0,
+					},
+					{
+						type: 'number',
+						id: 'seek',
+						label: 'Seek Time',
+						default: 0,
+						regex: Regex.NUMBER,
+						tooltip: `The time, in seconds, to seek into each file before playback.`,
+						min: 0,
 					},
 					{
 						type: 'dropdown',
@@ -1672,9 +1683,11 @@ class QsysRemoteControl extends InstanceBase {
 							},
 						],
 						Name: await context.parseVariablesInString(evt.options.name), // Had to add name to the options array.
-						StartTime: evt.options.startTime,
+						StartTime: Math.round(evt.options.startTime),
+						Seek: Math.round(evt.options.seek),
 						Loop: loop,
 						Log: true,
+						RefID: `${evt.actionId}:${evt.id}`,
 					})
 				},
 			},

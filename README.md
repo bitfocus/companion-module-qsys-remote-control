@@ -40,16 +40,15 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 
 **V2.2.0**
 
-- Parse variables from `textinput` options in actions & feedbacks
-- Support sequential actions
-- Add message queue
-- Update dependencies
-- Use Node 22
-- Use Yarn 4
-- Bug fixes
-- - Declare consts in `control-fade` feedback callback
-- - Add `name` option to `loopPlayer_start` action def. Previously referenced in callback without option def.
-- Lint
+- Feat: Parse variables from `textinput` options in actions & feedbacks
+- Improvement: Support sequential actions
+- Improvement: Add message queue
+- Fix: Declare consts in `control-fade` feedback callback
+- Fix: Add `name` option to `loopPlayer_start` action def. Previously referenced in callback without option def
+- Chore: Update dependencies
+- Chore: Use Node 22
+- Chore: Use Yarn 4
+- Chore: Lint
 
 **V2.3.0**
 
@@ -60,6 +59,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `Control-state` feedback
 - Improvement: Send keep alive `NoOp` messages
 - Improvement: `Control.toggle` subscribe and unsubscribe callbacks
+- Improvement: `Control.set` subscribe (when `relative` == `true`) and unsubscribe callbacks
 - Improvement: Dont define control variables if feedbacks are disabled
 - Improvement: Debounce variable definition updates after `addControl()` calls
 - Improvement: Hide related config fields when feedbacks are disabled

@@ -64,7 +64,6 @@ class QsysRemoteControl extends InstanceBase {
 	async init(config) {
 		this.config = config
 		this.actions()
-		//await this.initVariables(config.redundant)
 		await this.configUpdated(config)
 	}
 
@@ -89,6 +88,7 @@ class QsysRemoteControl extends InstanceBase {
 		if (config.redundant) {
 			this.init_tcp(config.hostSecondary, config.portSecondary, true)
 		}
+		this.actions()
 		this.initFeedbacks()
 		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
@@ -746,17 +746,35 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Relative',
 						default: false,
 						tooltip: `Relative actions only work with numerical values. Resultant value = current value + new value`,
+						isVisible: (options, isVisibleData) => {
+							return isVisibleData.feedbacks || options.relative
+						},
+						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
+					},
+					{
+						type: 'static-text',
+						id: 'filler1',
+						label: 'Warning',
+						width: 6,
+						value: 'Relative actions require feedbacks to be enabled!',
+						isVisible: (options, isVisibleData) => {
+							return !isVisibleData.feedbacks && options.relative
+						},
+						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
 					},
 				],
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
 					let value = await context.parseVariablesInString(evt.options.value)
-					if (evt.options.relative) {
+					if (evt.options.relative && this.config.feedbacks) {
 						value = Number(value) + Number(this.controls.get(name)?.value)
 						if (isNaN(value)) {
 							this.log('warn', `Result value is a NaN, can not perform action ${evt.actionId}:${evt.id}`)
 							return
 						}
+					} else if (evt.options.relative && !this.config.feedbacks) {
+						this.log('warn', `Relative ${evt.actionId} actions require Feedbacks to be enabled in the module config`)
+						return
 					}
 					await this.sendCommand('Control.Set', {
 						Name: name,
@@ -786,6 +804,17 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 						tooltip: 'Only applies to controls with an on/off state.',
 						useVariables: { local: true },
+					},
+					{
+						type: 'static-text',
+						id: 'filler1',
+						label: 'Warning',
+						width: 6,
+						value: 'Toggle actions require feedbacks to be enabled!',
+						isVisible: (_options, isVisibleData) => {
+							return !isVisibleData.feedbacks
+						},
+						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
 					},
 				],
 				callback: async (evt, context) => {
@@ -1858,9 +1887,13 @@ class QsysRemoteControl extends InstanceBase {
 				unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 				callback: async (feedback, context) => {
 					const opt = feedback.options
-					const control = this.controls.get(await context.parseVariablesInString(opt.name))
-
-					return (opt.value === 'true' && control.value) || (opt.value === 'false' && !control.value)
+					const name = await context.parseVariablesInString(opt.name)
+					const control = this.controls.get(name)
+					if (control === undefined) {
+						this.log('warn', `Control ${name} from ${feedback.id} not found`)
+						return false
+					}
+					return (opt.value === 'true' && !!control.value) || (opt.value === 'false' && !control.value)
 				},
 			},
 			'control-threshold': {

@@ -29,6 +29,8 @@ This module will connect to Q-SYS Remote Control.
 - Mixer.SetOutputGain
 - Mixer.SetOutputMute
 - PA.PageSubmit - Message
+- Snapshot.Load
+- Snapshop.Save
 
 **Variables and Feedbacks**
 

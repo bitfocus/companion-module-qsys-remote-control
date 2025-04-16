@@ -1743,20 +1743,23 @@ class QsysRemoteControl extends InstanceBase {
 						type: 'number',
 						id: 'bank',
 						label: 'Bank:',
-						default: '',
+						default: 1,
 						tooltip: 'Specific bank number to recall from the snapshot',
+						min: 1,
 					},
 					{
 						type: 'number',
 						id: 'ramp',
 						label: 'Ramp',
 						tooltip: 'Time in seconds to ramp to banked snapshot',
+						min: 0,
+						default: 0,
 					},
 				],
 				callback: async (evt, context) => {
 					await this.sendCommand('Snapshot.Load', {
 						Name: await context.parseVariablesInString(evt.options.name),
-						Bank: evt.options.bank,
+						Bank: Math.floor(evt.options.bank),
 						Ramp: evt.options.ramp,
 					})
 				},
@@ -1775,14 +1778,15 @@ class QsysRemoteControl extends InstanceBase {
 						type: 'number',
 						id: 'bank',
 						label: 'Bank:',
-						default: '',
+						default: 1,
 						tooltip: 'Specific bank number to save to within the snapshot',
+						min: 1,
 					},
 				],
 				callback: async (evt, context) => {
 					await this.sendCommand('Snapshot.Save', {
 						Name: await context.parseVariablesInString(evt.options.name),
-						Bank: evt.options.bank,
+						Bank: Math.floor(evt.options.bank),
 					})
 				},
 			},

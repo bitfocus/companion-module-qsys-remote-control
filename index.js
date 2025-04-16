@@ -1832,249 +1832,247 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	initFeedbacks() {
+		const feedbacks = {}
+		feedbacks['core-state'] = {
+			name: 'Core state',
+			type: 'boolean',
+			defaultStyle: {
+				color: colours.black,
+				bgcolor: colours.green,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					id: 'core',
+					label: 'Core',
+					choices: [
+						{ id: 'pri', label: 'Primary' },
+						{ id: 'sec', label: 'Secondary' },
+					],
+					default: 'pri',
+					isVisible: (_options, isVisibleData) => {
+						return isVisibleData.redundant
+					},
+					isVisibleData: { redundant: this.config.redundant },
+				},
+				{
+					type: 'dropdown',
+					id: 'state',
+					label: 'State',
+					choices: [
+						{ id: 'Active', label: 'Active' },
+						{ id: 'Standby', label: 'Standby' },
+						{ id: 'Idle', label: 'Idle' },
+					],
+					default: 'Active',
+				},
+			],
+			callback: async (feedback, _context) => {
+				let core = this.moduleStatus.primary
+				if (this.config.redundant && feedback.options.core === 'sec') {
+					core = this.moduleStatus.secondary
+				}
+				return core.state === feedback.options.state
+			},
+		}
 		if (!this.config.feedback_enabled) {
-			this.setFeedbackDefinitions({})
+			this.setFeedbackDefinitions(feedbacks)
 			return
 		}
+		feedbacks['control-string'] = {
+			name: 'Change text to reflect control value',
+			description: 'Will return current state of a control as a string',
+			type: 'advanced',
+			options: [
+				{
+					type: 'textinput',
+					id: 'name',
+					label: 'Name:',
+					default: '',
+					useVariables: { local: true },
+				},
+				{
+					type: 'dropdown',
+					id: 'type',
+					label: 'Type',
+					choices: [
+						{ id: 'string', label: 'String' },
+						{ id: 'value', label: 'Value' },
+						{ id: 'position', label: 'Position' },
+					],
+					default: 'value',
+				},
+			],
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const control = this.controls.get(await context.parseVariablesInString(feedback.options.name))
+				if (!control.value) return
 
-		const feedbacks = {
-			'control-string': {
-				name: 'Change text to reflect control value',
-				description: 'Will return current state of a control as a string',
-				type: 'advanced',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'type',
-						label: 'Type',
-						choices: [
-							{ id: 'string', label: 'String' },
-							{ id: 'value', label: 'Value' },
-							{ id: 'position', label: 'Position' },
-						],
-						default: 'value',
-					},
-				],
-				subscribe: async (feedback, context) => await this.addControl(feedback, context),
-				unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
-				callback: async (feedback, context) => {
-					const control = this.controls.get(await context.parseVariablesInString(feedback.options.name))
-					if (!control.value) return
-
-					switch (feedback.options.type) {
-						case 'string':
-							return {
-								text: control.strval,
-							}
-						case 'value':
-							return {
-								text: control.value.toString(),
-							}
-						case 'position':
-							return {
-								text: control.position.toString(),
-							}
-						default:
-							break
-					}
-				},
-			},
-			'control-boolean': {
-				name: 'Feedback on boolean control value',
-				type: 'boolean',
-				defaultStyle: {
-					color: colours.white,
-					bgcolor: colours.red,
-				},
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Control value',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-						default: 'true',
-					},
-				],
-				subscribe: async (feedback, context) => await this.addControl(feedback, context),
-				unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
-				callback: async (feedback, context) => {
-					const opt = feedback.options
-					const name = await context.parseVariablesInString(opt.name)
-					const control = this.controls.get(name)
-					if (control === undefined) {
-						this.log('warn', `Control ${name} from ${feedback.id} not found`)
-						return false
-					}
-					return (opt.value === 'true' && !!control.value) || (opt.value === 'false' && !control.value)
-				},
-			},
-			'control-threshold': {
-				name: 'Feedback if control value at or exceeds threshold',
-				type: 'boolean',
-				defaultStyle: {
-					color: colours.white,
-					bgcolor: colours.red,
-				},
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'threshold',
-						label: 'Threshold value',
-						default: '',
-						min: -10000,
-						max: 10000,
-						range: false,
-					},
-				],
-				subscribe: async (feedback, context) => await this.addControl(feedback, context),
-				unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
-				callback: async (feedback, context) => {
-					const opt = feedback.options
-					const control = this.controls.get(await context.parseVariablesInString(opt.name))
-
-					return control.value >= opt.threshold
-				},
-			},
-			'control-fade': {
-				name: 'Fade color over control value range',
-				description: 'Fade color over control value range',
-				type: 'advanced',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'low_threshold',
-						label: 'Low threshold value',
-						default: '',
-						min: -10000,
-						max: 10000,
-						range: false,
-					},
-					{
-						type: 'number',
-						id: 'high_threshold',
-						label: 'High threshold value',
-						default: '',
-						min: -10000,
-						max: 10000,
-						range: false,
-					},
-					{
-						type: 'colorpicker',
-						label: 'Low threshold color',
-						id: 'low_bg',
-						default: colours.black,
-					},
-					{
-						type: 'colorpicker',
-						label: 'High threshold color',
-						id: 'high_bg',
-						default: colours.red,
-					},
-				],
-				subscribe: async (feedback, context) => await this.addControl(feedback, context),
-				unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
-				callback: async (feedback, context) => {
-					const opt = feedback.options
-					const control = this.controls.get(await context.parseVariablesInString(opt.name))
-					const numToRGB = (num) => {
+				switch (feedback.options.type) {
+					case 'string':
 						return {
-							r: (num & 0xff0000) >> 16,
-							g: (num & 0x00ff00) >> 8,
-							b: num & 0x0000ff,
+							text: control.strval,
 						}
-					}
-
-					if (control.value > opt.high_threshold || control.value < opt.low_threshold) {
-						return
-					}
-
-					const range = opt.high_threshold - opt.low_threshold
-					const ratio = (control.value - opt.low_threshold) / range
-
-					const hi_rgb = numToRGB(opt.high_bg)
-					const lo_rgb = numToRGB(opt.low_bg)
-
-					const r = Math.round((hi_rgb.r - lo_rgb.r) * ratio) + lo_rgb.r
-					const g = Math.round((hi_rgb.g - lo_rgb.g) * ratio) + lo_rgb.g
-					const b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b
-
-					return {
-						bgcolor: combineRgb(r, g, b),
-					}
-				},
+					case 'value':
+						return {
+							text: control.value.toString(),
+						}
+					case 'position':
+						return {
+							text: control.position.toString(),
+						}
+					default:
+						break
+				}
 			},
-			'core-state': {
-				name: 'Core state',
-				type: 'boolean',
-				defaultStyle: {
-					color: colours.black,
-					bgcolor: colours.green,
+		}
+		feedbacks['control-boolean'] = {
+			name: 'Feedback on boolean control value',
+			type: 'boolean',
+			defaultStyle: {
+				color: colours.white,
+				bgcolor: colours.red,
+			},
+			options: [
+				{
+					type: 'textinput',
+					id: 'name',
+					label: 'Name:',
+					default: '',
+					useVariables: { local: true },
 				},
-				options: [
-					{
-						type: 'dropdown',
-						id: 'core',
-						label: 'Core',
-						choices: [
-							{ id: 'pri', label: 'Primary' },
-							{ id: 'sec', label: 'Secondary' },
-						],
-						default: 'pri',
-						isVisible: (_options, isVisibleData) => {
-							return isVisibleData.redundant
-						},
-						isVisibleData: { redundant: this.config.redundant },
-					},
-					{
-						type: 'dropdown',
-						id: 'state',
-						label: 'State',
-						choices: [
-							{ id: 'Active', label: 'Active' },
-							{ id: 'Standby', label: 'Standby' },
-							{ id: 'Idle', label: 'Idle' },
-						],
-						default: 'Active',
-					},
-				],
-				callback: async (feedback, _context) => {
-					let core = this.moduleStatus.primary
-					if (this.config.redundant && feedback.options.core === 'sec') {
-						core = this.moduleStatus.secondary
+				{
+					type: 'dropdown',
+					id: 'value',
+					label: 'Control value',
+					choices: [
+						{ id: 'true', label: 'True' },
+						{ id: 'false', label: 'False' },
+					],
+					default: 'true',
+				},
+			],
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const opt = feedback.options
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					return false
+				}
+				return (opt.value === 'true' && !!control.value) || (opt.value === 'false' && !control.value)
+			},
+		}
+		feedbacks['control-threshold'] = {
+			name: 'Feedback if control value at or exceeds threshold',
+			type: 'boolean',
+			defaultStyle: {
+				color: colours.white,
+				bgcolor: colours.red,
+			},
+			options: [
+				{
+					type: 'textinput',
+					id: 'name',
+					label: 'Name:',
+					default: '',
+					useVariables: { local: true },
+				},
+				{
+					type: 'number',
+					id: 'threshold',
+					label: 'Threshold value',
+					default: '',
+					min: -10000,
+					max: 10000,
+					range: false,
+				},
+			],
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const opt = feedback.options
+				const control = this.controls.get(await context.parseVariablesInString(opt.name))
+
+				return control.value >= opt.threshold
+			},
+		}
+		feedbacks['control-fade'] = {
+			name: 'Fade color over control value range',
+			description: 'Fade color over control value range',
+			type: 'advanced',
+			options: [
+				{
+					type: 'textinput',
+					id: 'name',
+					label: 'Name:',
+					default: '',
+					useVariables: { local: true },
+				},
+				{
+					type: 'number',
+					id: 'low_threshold',
+					label: 'Low threshold value',
+					default: '',
+					min: -10000,
+					max: 10000,
+					range: false,
+				},
+				{
+					type: 'number',
+					id: 'high_threshold',
+					label: 'High threshold value',
+					default: '',
+					min: -10000,
+					max: 10000,
+					range: false,
+				},
+				{
+					type: 'colorpicker',
+					label: 'Low threshold color',
+					id: 'low_bg',
+					default: colours.black,
+				},
+				{
+					type: 'colorpicker',
+					label: 'High threshold color',
+					id: 'high_bg',
+					default: colours.red,
+				},
+			],
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const opt = feedback.options
+				const control = this.controls.get(await context.parseVariablesInString(opt.name))
+				const numToRGB = (num) => {
+					return {
+						r: (num & 0xff0000) >> 16,
+						g: (num & 0x00ff00) >> 8,
+						b: num & 0x0000ff,
 					}
-					return core.state === feedback.options.state
-				},
+				}
+
+				if (control.value > opt.high_threshold || control.value < opt.low_threshold) {
+					return
+				}
+
+				const range = opt.high_threshold - opt.low_threshold
+				const ratio = (control.value - opt.low_threshold) / range
+
+				const hi_rgb = numToRGB(opt.high_bg)
+				const lo_rgb = numToRGB(opt.low_bg)
+
+				const r = Math.round((hi_rgb.r - lo_rgb.r) * ratio) + lo_rgb.r
+				const g = Math.round((hi_rgb.g - lo_rgb.g) * ratio) + lo_rgb.g
+				const b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b
+
+				return {
+					bgcolor: combineRgb(r, g, b),
+				}
 			},
 		}
 

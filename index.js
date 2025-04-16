@@ -175,7 +175,7 @@ class QsysRemoteControl extends InstanceBase {
 			)
 		}
 
-		if (!('variables' in this.config) || this.config.variables === '') {
+		if (!('variables' in this.config) || this.config.variables === '' || !this.config.feedback_enabled) {
 			this.setVariableDefinitions(this.variables) // This gets called in addControls if there are vars
 			return
 		}
@@ -596,7 +596,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			{
 				type: 'static-text',
-				id: 'info',
+				id: 'info1',
 				label: 'Login Information',
 				width: 12,
 				value: 'If you have login enabled, specify the creditials below.',
@@ -617,7 +617,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			{
 				type: 'static-text',
-				id: 'info',
+				id: 'info2',
 				label: 'Feedback and Variables',
 				width: 12,
 				value:
@@ -639,6 +639,9 @@ class QsysRemoteControl extends InstanceBase {
 				label: 'Bundle Feedbacks?',
 				width: 6,
 				default: false,
+				isVisible: (options) => {
+					return options.feedback_enabled
+				},
 			},
 			{
 				type: 'number',
@@ -648,14 +651,20 @@ class QsysRemoteControl extends InstanceBase {
 				max: 60000,
 				width: 6,
 				default: 100,
+				isVisible: (options) => {
+					return options.feedback_enabled
+				},
 			},
 			{
 				type: 'static-text',
-				id: 'info',
+				id: 'info3',
 				label: 'Control Variables',
 				width: 12,
 				value:
 					'Specify a list of named controls to add as Companion variables. Separated by commas. Any feedbacks used are automatically added to the variable list.',
+				isVisible: (options) => {
+					return options.feedback_enabled
+				},
 			},
 			{
 				type: 'textinput',
@@ -663,6 +672,9 @@ class QsysRemoteControl extends InstanceBase {
 				label: 'Variables',
 				width: 12,
 				default: '',
+				isVisible: (options) => {
+					return options.feedback_enabled
+				},
 			},
 			{
 				type: 'checkbox',

@@ -796,6 +796,7 @@ class QsysRemoteControl extends InstanceBase {
 					if (evt.options.relative && this.config.feedbacks) {
 						const control = this.controls.get(name)
 						if (control == undefined || control.value == null) {
+							await this.addControl(evt, context)
 							this.log('warn', `Do not have existing value of ${name}, cannot perform action ${evt.actionId}:${evt.id}`)
 							return
 						}

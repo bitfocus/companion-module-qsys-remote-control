@@ -794,9 +794,14 @@ class QsysRemoteControl extends InstanceBase {
 					const name = await context.parseVariablesInString(evt.options.name)
 					let value = await context.parseVariablesInString(evt.options.value)
 					if (evt.options.relative && this.config.feedbacks) {
-						value = Number(value) + Number(this.controls.get(name)?.value)
+						const control = this.controls.get(name)
+						if (control == undefined || control.value == null) {
+							this.log('warn', `Do not have existing value of ${name}, cannot perform action ${evt.actionId}:${evt.id}`)
+							return
+						}
+						value = Number(value) + Number(control?.value)
 						if (isNaN(value)) {
-							this.log('warn', `Result value is a NaN, can not perform action ${evt.actionId}:${evt.id}`)
+							this.log('warn', `Result value is a NaN, cannot perform action ${evt.actionId}:${evt.id}`)
 							return
 						}
 					} else if (evt.options.relative && !this.config.feedbacks) {

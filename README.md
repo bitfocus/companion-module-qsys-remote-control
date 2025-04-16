@@ -1,6 +1,6 @@
 # companion-module-qsys-remote-control
 
-See HELP.md and LICENSE
+See [HELP.md](./companion/HELP.md) and [LICENSE](./LICENSE)
 
 Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/QRC_Overview.htm
 
@@ -47,10 +47,23 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Use Node 22
 - Use Yarn 4
 - Bug fixes
-- - Declare consts in `control-fade` callback
+- - Declare consts in `control-fade` feedback callback
 - - Add `name` option to `loopPlayer_start` action def. Previously referenced in callback without option def.
 - Lint
 
 **V2.3.0**
 
-- Connect to & control redundant Qsys Cores
+- Feat: Connect to & control redundant Qsys Cores, with appropriate variables, logging and status updates
+- Feat: `PA.PageSubmit` action
+- Feat: `Relative` action option for `Control.Set` only available when feedbacks are enabled
+- Feat: `Control.Set` add `learn` callback
+- Feat: `Control-state` feedback
+- Improvement: Send keep alive `NoOp` messages
+- Improvement: `Control.toggle` subscribe and unsubscribe callbacks
+- Improvement: Dont define control variables if feedbacks are disabled
+- Improvement: Debounce variable definition updates after `addControl()` calls
+- Improvement: Hide related config fields when feedbacks are disabled
+- Improvement: Add static-text warning to `Control.toggle` when feedbacks are disabled
+- Improvement: Add static-text warning to `Control.set` when feedbacks are disabled and `relative` is enabled
+- Fix: Send boolean values as bools rather than strings (`Mixer.SetCrossPointMute`, `Mixer.SetCrossPointSolo`, `Mixer.SetInputMute`, `Mixer.SetInputSolo`, `Mixer.SetOutputMute`, `Mixer.SetCueMute`, `Mixer.SetInputCueEnable`, `Mixer.SetInputCueAfl`, `LoopPlayer.Start`)
+- Fix: `Feedback on boolean control value` when value is `true`

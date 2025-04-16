@@ -811,7 +811,7 @@ class QsysRemoteControl extends InstanceBase {
 				learn: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
 					const control = this.controls.get(name)
-					if (control?.value !== undefined) {
+					if (control != undefined && control.value != null) {
 						return {
 							...evt.options,
 							relative: false,

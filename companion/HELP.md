@@ -11,6 +11,7 @@ This module will connect to Q-SYS Remote Control.
 - ChangeGroup.Invalidate
 - ChangeGroup.Clear
 - Component.Set
+- Control.Get
 - Control.Set
 - Control.Toggle
 - LoopPlayer.Cancel
@@ -41,7 +42,6 @@ This module will connect to Q-SYS Remote Control.
 
 **Not Implemented**
 
-- Control.Get
 - Component.Get
 - Component.GetComponents
 - ChangeGroup.AutoPoll

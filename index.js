@@ -858,6 +858,13 @@ class QsysRemoteControl extends InstanceBase {
 							relative: false,
 							value: control.value.toString(),
 						}
+					} else {
+						const cmd = {
+							method: 'Control.Get',
+							params: [name],
+						}
+
+						await this.callCommandObj(cmd, QRC_GET)
 					}
 					return undefined
 				},
@@ -908,6 +915,31 @@ class QsysRemoteControl extends InstanceBase {
 						control.value = !control.value
 						if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
 					}
+				},
+			},
+			control_get: {
+				name: 'Control.Get',
+				options: [
+					{
+						type: 'textinput',
+						id: 'name',
+						label: 'Name:',
+						default: '',
+						tooltip: 'Only applies to controls with an on/off state.',
+						useVariables: { local: true },
+					},
+				],
+				subscribe: async (action, context) => await this.addControl(action, context),
+				unsubscribe: async (action, context) => await this.removeControl(action, context),
+				callback: async (evt, context) => {
+					const name = await context.parseVariablesInString(evt.options.name)
+					if (!this.controls.get(name)) this.addControl(evt, context)
+					const cmd = {
+						method: 'Control.Get',
+						params: [name],
+					}
+
+					await this.callCommandObj(cmd, QRC_GET)
 				},
 			},
 			component_set: {
@@ -2314,7 +2346,7 @@ class QsysRemoteControl extends InstanceBase {
 		// It is possible to group multiple statuses; HOWEVER, if one doesn't exist, nothing will be returned...
 		// thus, we send one at a time
 		if (!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
-			this.controls.forEach(async (x, k) => {
+			this.controls.forEach(async (_x, k) => {
 				const cmd = {
 					method: 'Control.Get',
 					params: [k],

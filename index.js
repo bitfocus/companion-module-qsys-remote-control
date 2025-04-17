@@ -820,6 +820,7 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Name:',
 						default: '',
 						useVariables: { local: true },
+						regex: Regex.SOMETHING,
 					},
 					{
 						type: 'textinput',
@@ -892,6 +893,7 @@ class QsysRemoteControl extends InstanceBase {
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
+					if (name == '') return
 					let value = await context.parseVariablesInString(evt.options.value)
 					const control = this.controls.get(name)
 					if (evt.options.relative && this.config.feedbacks) {
@@ -929,6 +931,7 @@ class QsysRemoteControl extends InstanceBase {
 				},
 				learn: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
+					if (name == '') return undefined
 					const control = this.controls.get(name)
 					if (control != undefined && control.value != null) {
 						let type = 'string'
@@ -961,6 +964,7 @@ class QsysRemoteControl extends InstanceBase {
 						default: '',
 						tooltip: 'Only applies to controls with an on/off state.',
 						useVariables: { local: true },
+						regex: Regex.SOMETHING,
 					},
 					{
 						type: 'static-text',
@@ -978,6 +982,7 @@ class QsysRemoteControl extends InstanceBase {
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
+					if (name == '') return
 					const control = this.controls.get(name)
 					if (control === undefined || control.value == null) {
 						if (!this.config.feedback_enabled) {
@@ -1008,12 +1013,14 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Name:',
 						default: '',
 						useVariables: { local: true },
+						regex: Regex.SOMETHING,
 					},
 				],
 				subscribe: async (action, context) => await this.addControl(action, context),
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
+					if (name == '') return
 					if (!this.controls.get(name)) this.addControl(evt, context)
 					const cmd = {
 						method: 'Control.Get',

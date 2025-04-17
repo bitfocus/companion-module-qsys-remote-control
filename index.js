@@ -844,9 +844,9 @@ class QsysRemoteControl extends InstanceBase {
 						Name: name,
 						Value: value,
 					})
-					if (sent) {
+					if (sent && control !== undefined) {
 						control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
-						this.setVariableValues({ [`${name}_value`]: control.value })
+						if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
 					}
 				},
 				learn: async (evt, context) => {
@@ -906,7 +906,7 @@ class QsysRemoteControl extends InstanceBase {
 					// of the button faster than the polling interval to correctly toggle the state
 					if (sent) {
 						control.value = !control.value
-						this.setVariableValues({ [`${name}_value`]: control.value })
+						if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
 					}
 				},
 			},

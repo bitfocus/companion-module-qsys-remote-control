@@ -1762,12 +1762,16 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Output',
 						default: '1',
 						useVariables: { local: true },
+						tooltip: `Comma seperated list of outputs to cancel. Ie. 1, 2, 3, 4`,
 					},
 				],
 				callback: async (evt, context) => {
+					const outputs = (await context.parseVariablesInString(evt.options.output))
+						.split(',')
+						.map((out) => Number.parseInt(out))
 					await this.sendCommand('LoopPlayer.Stop', {
 						Name: await context.parseVariablesInString(evt.options.name),
-						Outputs: await context.parseVariablesInString(evt.options.output),
+						Outputs: outputs,
 						Log: true,
 					})
 				},
@@ -1788,12 +1792,16 @@ class QsysRemoteControl extends InstanceBase {
 						label: 'Output',
 						default: '1',
 						useVariables: { local: true },
+						tooltip: `Comma seperated list of outputs to cancel. Ie. 1, 2, 3, 4`,
 					},
 				],
 				callback: async (evt, context) => {
+					const outputs = (await context.parseVariablesInString(evt.options.output))
+						.split(',')
+						.map((out) => Number.parseInt(out))
 					await this.sendCommand('LoopPlayer.Cancel', {
 						Name: await context.parseVariablesInString(evt.options.name),
-						Outputs: await context.parseVariablesInString(evt.options.output),
+						Outputs: outputs,
 						Log: true,
 					})
 				},

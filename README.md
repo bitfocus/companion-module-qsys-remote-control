@@ -57,20 +57,21 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `StatusGet` action
 - Feat: `Relative` action option for `Control.Set` only available when feedbacks are enabled, with `Min` and `Max` range limits
 - Feat: `Seek` and `RefID` action options for `LoopPlayer.Start`
-- Feat: `Control.set` add `learn` callback
+- Feat: `Control.Set` add `learn` callback
 - Feat: `Control-state` feedback
 - Feat: `Verbose Logs` config option
 - Feat: `StatusGet` action
 - Improvement: Send keep alive `NoOp` messages
-- Improvement: `Control.toggle` subscribe and unsubscribe callbacks
-- Improvement: `Control.set` subscribe (when `relative` == `true`) and unsubscribe callbacks
+- Improvement: `Control.Toggle` subscribe and unsubscribe callbacks
+- Improvement: `Control.Set` subscribe (when `relative` == `true`) and unsubscribe callbacks
 - Improvement: After `Control.toggle` & `Control.set` actions update internal controls map value and value variable
 - Improvement: Dont define control variables if feedbacks are disabled
 - Improvement: Debounce variable definition updates after `addControl()` calls
 - Improvement: Hide related config fields when feedbacks are disabled
-- Improvement: Add static-text warning to `Control.toggle` when feedbacks are disabled
-- Improvement: Add static-text warning to `Control.set` when feedbacks are disabled and `relative` is enabled
-- Fix: Send boolean values as bools rather than strings (`Mixer.SetCrossPointMute`, `Mixer.SetCrossPointSolo`, `Mixer.SetInputMute`, `Mixer.SetInputSolo`, `Mixer.SetOutputMute`, `Mixer.SetCueMute`, `Mixer.SetInputCueEnable`, `Mixer.SetInputCueAfl`, `LoopPlayer.Start`)
+- Improvement: Add static-text warning to `Control.Toggle` when feedbacks are disabled
+- Improvement: Add static-text warning to `Control.Set` when feedbacks are disabled and `relative` is enabled
 - Improvement: Auto set `RefID` during `LoopPlayer.Start` API call if empty.
 - Improvement: Log `LoopPlayer.Error` messages
+- Fix: Send boolean values as bools rather than strings (`Mixer.SetCrossPointMute`, `Mixer.SetCrossPointSolo`, `Mixer.SetInputMute`, `Mixer.SetInputSolo`, `Mixer.SetOutputMute`, `Mixer.SetCueMute`, `Mixer.SetInputCueEnable`, `Mixer.SetInputCueAfl`, `LoopPlayer.Start`)
 - Fix: `Feedback on boolean control value` when value is `true`
+- Fix: `LoopPlayer.Stop` & `LoopPlayer.Cancel` Send `Outputs` as array of numbers 

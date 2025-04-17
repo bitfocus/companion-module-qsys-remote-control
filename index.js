@@ -874,7 +874,7 @@ class QsysRemoteControl extends InstanceBase {
 						choices: [
 							{ id: 'boolean', label: 'Boolean' },
 							{ id: 'float', label: 'Float' },
-							{ id: 'int', label: 'Interger' },
+							{ id: 'int', label: 'Integer' },
 							{ id: 'string', label: 'String' },
 						],
 						default: 'string',

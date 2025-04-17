@@ -1833,7 +1833,7 @@ class QsysRemoteControl extends InstanceBase {
 					const loop = evt.options.loop === 'true'
 					const output = Number.parseInt(await context.parseVariablesInString(evt.options.output))
 					let refID = await context.parseVariablesInString(evt.options.refID)
-					refID = refID == '' ? `${evt.actionId}:${evt.id}` : refID
+					refID = refID == '' ? `${this.label}:${evt.actionId}:${evt.id}` : refID
 					if (isNaN(output)) {
 						this.log(`warn`, `Output is a NaN cannot complete ${evt.actionId}:${evt.id}`)
 						return

@@ -8,6 +8,10 @@ import {
 	TCPHelper,
 	InstanceStatus,
 	// eslint-disable-next-line no-unused-vars
+	CompanionActionInfo,
+	// eslint-disable-next-line no-unused-vars
+	CompanionActionContext,
+	// eslint-disable-next-line no-unused-vars
 	CompanionFeedbackInfo,
 	// eslint-disable-next-line no-unused-vars
 	CompanionFeedbackContext,
@@ -26,6 +30,35 @@ const colours = {
 }
 
 /**
+ * Perform type conversion on value
+ * @param {string} value
+ * @param {'string' | 'boolean' | 'float' | 'int'} type
+ * @returns {string | number | boolean | undefined}
+ * @since 2.3.0
+ */
+
+const convertValueType = (value, type) => {
+	switch (type) {
+		case 'int':
+			value = Number.parseInt(value)
+			if (Number.isNaN(value)) return undefined
+			break
+		case 'float':
+			value = Number.parseFloat(value)
+			if (Number.isNaN(value)) return undefined
+			break
+		case 'boolean':
+			value = Boolean(value)
+			break
+		case `string`:
+		default:
+			value = String(value)
+			break
+	}
+	return value
+}
+
+/**
  * Remove illegal characters from variable Ids
  * @param {string} id variable id to sanitize
  * @param {'' | '.' | '-' | '_'} substitute Char to replace illegal characters
@@ -34,6 +67,13 @@ const colours = {
 
 const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-zA-Z0-9-_.]/gm, substitute)
 
+/**
+ * Build valid array of outputs
+ * @param {CompanionActionInfo} evt
+ * @param {CompanionActionContext} context
+ * @returns {Promise<number[] | undefined>}
+ * @since 2.3.0
+ */
 const buildFilteredOutputArray = async (evt, context) => {
 	let filteredOutputs = []
 	const outputs = (await context.parseVariablesInString(evt.options.output))
@@ -827,6 +867,19 @@ class QsysRemoteControl extends InstanceBase {
 						},
 						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
 					},
+					{
+						type: 'dropdown',
+						id: 'type',
+						label: 'Type',
+						choices: [
+							{ id: 'string', label: 'String' },
+							{ id: 'boolean', label: 'Boolean' },
+							{ id: 'int', label: 'Interger' },
+							{ id: 'float', label: 'Float' },
+						],
+						default: 'string',
+						tooltip: `Type conversion according to standard ECMAscript rules`,
+					},
 				],
 				subscribe: async (action, context) => {
 					if (action.options.relative) await this.addControl(action, context)
@@ -855,23 +908,32 @@ class QsysRemoteControl extends InstanceBase {
 						this.log('warn', `Relative ${evt.actionId} actions require Feedbacks to be enabled in the module config`)
 						return
 					}
-					const sent = await this.sendCommand('Control.Set', {
-						Name: name,
-						Value: value,
-					})
-					if (sent && control !== undefined) {
-						control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
-						if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
+					value = convertValueType(value, evt.options.type)
+					if (value !== undefined) {
+						const sent = await this.sendCommand('Control.Set', {
+							Name: name,
+							Value: value,
+						})
+						if (sent && control !== undefined) {
+							control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
+							if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
+						}
+					} else {
+						this.log('warn', `Invalid value (NaN) could not complete ${evt.actionId}:${evt.id}`)
 					}
 				},
 				learn: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
 					const control = this.controls.get(name)
 					if (control != undefined && control.value != null) {
+						let type = 'string'
+						if (typeof control.value == 'boolean') type = 'boolean'
+						if (typeof control.value == 'number') type = 'float'
 						return {
 							...evt.options,
 							relative: false,
 							value: control.value.toString(),
+							type: type,
 						}
 					} else {
 						const cmd = {

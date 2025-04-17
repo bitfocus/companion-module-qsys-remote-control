@@ -57,6 +57,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `StatusGet` action
 - Feat: `Control.Get` action
 - Feat: `Relative` action option for `Control.Set` only available when feedbacks are enabled, with `Min` and `Max` range limits
+- Feat: `Type` action option for `Control.Set` to set the data type of `Value` in the message
 - Feat: `Seek` and `RefID` action options for `LoopPlayer.Start`
 - Feat: `Control.Set` add `learn` callback
 - Feat: `Control-state` feedback

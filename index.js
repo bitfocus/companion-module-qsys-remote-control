@@ -48,12 +48,17 @@ const convertValueType = (value, type) => {
 			if (Number.isNaN(value)) return undefined
 			break
 		case 'boolean':
-			value = Boolean(value)
+			if (value.toLowerCase().trim() == 'false' || value.trim() == '0') {
+				value = false
+			} else if (value.toLowerCase().trim() == 'true' || value.trim() == '1') {
+				value = true
+			} else {
+				value = Boolean(value)
+			}
 			break
 		case `string`:
 		default:
 			value = String(value)
-			break
 	}
 	return value
 }
@@ -1002,7 +1007,6 @@ class QsysRemoteControl extends InstanceBase {
 						id: 'name',
 						label: 'Name:',
 						default: '',
-						tooltip: 'Only applies to controls with an on/off state.',
 						useVariables: { local: true },
 					},
 				],

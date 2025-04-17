@@ -31,6 +31,7 @@ This module will connect to Q-SYS Remote Control.
 - PA.PageSubmit - Message
 - Snapshot.Load
 - Snapshop.Save
+- StatusGet
 
 **Variables and Feedbacks**
 
@@ -39,7 +40,6 @@ This module will connect to Q-SYS Remote Control.
 
 **Not Implemented**
 
-- StatusGet
 - Control.Get
 - Component.Get
 - Component.GetComponents

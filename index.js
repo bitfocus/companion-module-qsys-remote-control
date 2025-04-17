@@ -505,6 +505,10 @@ class QsysRemoteControl extends InstanceBase {
 				this.log('warn', `Loop Player Error ${JSON.stringify(obj?.params)}`)
 			} else if (obj?.id == QRC_SET && typeof obj?.result === 'object') {
 				if (Object.keys(obj.result).includes('Platform')) {
+					this.log(
+						`info`,
+						`StatusGet Response from ${secondary ? this.config.hostSecondary : this.config.host}: ${JSON.stringify(obj.result)}`,
+					)
 					this.updateEngineVariables(obj.result, secondary)
 				}
 			}
@@ -1894,6 +1898,13 @@ class QsysRemoteControl extends InstanceBase {
 						Message: await context.parseVariablesInString(evt.options.message),
 						Start: true,
 					})
+				},
+			},
+			statusGet: {
+				name: 'StatusGet',
+				options: [],
+				callback: async (_evt, _context) => {
+					await this.sendCommand('StatusGet', 0)
 				},
 			},
 		})

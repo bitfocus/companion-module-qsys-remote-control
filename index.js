@@ -1698,10 +1698,20 @@ class QsysRemoteControl extends InstanceBase {
 							{ id: 'false', label: 'False' },
 						],
 					},
+					{
+						type: 'textinput',
+						id: 'refID',
+						label: 'Reference ID',
+						default: '',
+						useVariables: { local: true },
+						tooltip: `Reference ID returned in error messages. Auto-populated if left blank`,
+					},
 				],
 				callback: async (evt, context) => {
 					const loop = evt.options.loop === 'true'
 					const output = Number.parseInt(await context.parseVariablesInString(evt.options.output))
+					let refID = await context.parseVariablesInString(evt.options.refID)
+					refID = refID == '' ? `${evt.actionId}:${evt.id}` : refID
 					if (isNaN(output)) {
 						this.log(`warn`, `Output is a NaN cannot complete ${evt.actionId}:${evt.id}`)
 						return
@@ -1719,7 +1729,7 @@ class QsysRemoteControl extends InstanceBase {
 						Seek: Math.round(evt.options.seek),
 						Loop: loop,
 						Log: true,
-						RefID: `${evt.actionId}:${evt.id}`,
+						RefID: refID,
 					})
 				},
 			},

@@ -55,7 +55,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: Connect to & control redundant Qsys Cores, with appropriate variables, logging and status updates
 - Feat: `PA.PageSubmit` action
 - Feat: `Relative` action option for `Control.Set` only available when feedbacks are enabled, with `Min` and `Max` range limits
-- Feat: `Seek` action option for `LoopPlayer.Start`
+- Feat: `Seek` and `RefID` action options for `LoopPlayer.Start`
 - Feat: `Control.Set` add `learn` callback
 - Feat: `Control-state` feedback
 - Feat: `Verbose Logs` config option
@@ -68,6 +68,6 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Improvement: Add static-text warning to `Control.toggle` when feedbacks are disabled
 - Improvement: Add static-text warning to `Control.set` when feedbacks are disabled and `relative` is enabled
 - Fix: Send boolean values as bools rather than strings (`Mixer.SetCrossPointMute`, `Mixer.SetCrossPointSolo`, `Mixer.SetInputMute`, `Mixer.SetInputSolo`, `Mixer.SetOutputMute`, `Mixer.SetCueMute`, `Mixer.SetInputCueEnable`, `Mixer.SetInputCueAfl`, `LoopPlayer.Start`)
-- Improvement: Set `RefID` during `LoopPlayer.Start` API call.
+- Improvement: Auto set `RefID` during `LoopPlayer.Start` API call if empty.
 - Improvement: Log `LoopPlayer.Error` messages
 - Fix: `Feedback on boolean control value` when value is `true`

@@ -50,6 +50,7 @@ function loopPlayerStartSeek(_context, props) {
 		switch (action.actionId) {
 			case 'loopPlayer_start':
 				action.options.seek ??= 0
+				action.options.refID ??= ''
 				result.updatedActions.push(action)
 				break
 		}

@@ -872,10 +872,10 @@ class QsysRemoteControl extends InstanceBase {
 						id: 'type',
 						label: 'Type',
 						choices: [
-							{ id: 'string', label: 'String' },
 							{ id: 'boolean', label: 'Boolean' },
-							{ id: 'int', label: 'Interger' },
 							{ id: 'float', label: 'Float' },
+							{ id: 'int', label: 'Interger' },
+							{ id: 'string', label: 'String' },
 						],
 						default: 'string',
 						tooltip: `Type conversion according to standard ECMAscript rules`,

@@ -775,6 +775,28 @@ class QsysRemoteControl extends InstanceBase {
 						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
 					},
 					{
+						type: 'textinput',
+						id: 'min',
+						label: 'Minimum:',
+						default: '',
+						useVariables: { local: true },
+						tooltip: 'Relative action will be constrained to this lower limit',
+						isVisible: (options) => {
+							return options.relative
+						},
+					},
+					{
+						type: 'textinput',
+						id: 'max',
+						label: 'Maximum:',
+						default: '',
+						useVariables: { local: true },
+						tooltip: 'Relative action will be constrained to this upper limit',
+						isVisible: (options) => {
+							return options.relative
+						},
+					},
+					{
 						type: 'static-text',
 						id: 'filler1',
 						label: 'Warning',
@@ -795,6 +817,8 @@ class QsysRemoteControl extends InstanceBase {
 					let value = await context.parseVariablesInString(evt.options.value)
 					if (evt.options.relative && this.config.feedbacks) {
 						const control = this.controls.get(name)
+						const min = Number.parseFloat(await context.parseVariablesInString(evt.options.min))
+						const max = Number.parseFloat(await context.parseVariablesInString(evt.options.max))
 						if (control == undefined || control.value == null) {
 							await this.addControl(evt, context)
 							this.log('warn', `Do not have existing value of ${name}, cannot perform action ${evt.actionId}:${evt.id}`)
@@ -805,6 +829,8 @@ class QsysRemoteControl extends InstanceBase {
 							this.log('warn', `Result value is a NaN, cannot perform action ${evt.actionId}:${evt.id}`)
 							return
 						}
+						if (!isNaN(min)) value = value < min ? min : value
+						if (!isNaN(max)) value = value > max ? max : value
 					} else if (evt.options.relative && !this.config.feedbacks) {
 						this.log('warn', `Relative ${evt.actionId} actions require Feedbacks to be enabled in the module config`)
 						return

@@ -29,6 +29,8 @@ function relativeControlSet(_context, props) {
 		switch (action.actionId) {
 			case 'control_set':
 				action.options.relative ??= false
+				action.options.min ??= ''
+				action.options.max ??= ''
 				result.updatedActions.push(action)
 				break
 		}

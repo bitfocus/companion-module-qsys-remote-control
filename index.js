@@ -752,7 +752,7 @@ class QsysRemoteControl extends InstanceBase {
 	actions() {
 		this.setActionDefinitions({
 			control_set: {
-				name: 'Control.set',
+				name: 'Control.Set',
 				options: [
 					{
 						type: 'textinput',
@@ -863,7 +863,7 @@ class QsysRemoteControl extends InstanceBase {
 				},
 			},
 			control_toggle: {
-				name: 'Control.toggle',
+				name: 'Control.Toggle',
 				options: [
 					{
 						type: 'textinput',

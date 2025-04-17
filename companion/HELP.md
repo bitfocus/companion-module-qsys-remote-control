@@ -12,6 +12,7 @@ This module will connect to Q-SYS Remote Control.
 - ChangeGroup.Clear
 - Component.Set
 - Control.Set
+- Control.Toggle
 - LoopPlayer.Cancel
 - LoopPlayer.Start
 - LoopPlayer.Stop

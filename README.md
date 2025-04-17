@@ -54,14 +54,17 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 
 - Feat: Connect to & control redundant Qsys Cores, with appropriate variables, logging and status updates
 - Feat: `PA.PageSubmit` action
+- Feat: `StatusGet` action
 - Feat: `Relative` action option for `Control.Set` only available when feedbacks are enabled, with `Min` and `Max` range limits
 - Feat: `Seek` and `RefID` action options for `LoopPlayer.Start`
-- Feat: `Control.Set` add `learn` callback
+- Feat: `Control.set` add `learn` callback
 - Feat: `Control-state` feedback
 - Feat: `Verbose Logs` config option
+- Feat: `StatusGet` action
 - Improvement: Send keep alive `NoOp` messages
 - Improvement: `Control.toggle` subscribe and unsubscribe callbacks
 - Improvement: `Control.set` subscribe (when `relative` == `true`) and unsubscribe callbacks
+- Improvement: After `Control.toggle` & `Control.set` actions update internal controls map value and value variable
 - Improvement: Dont define control variables if feedbacks are disabled
 - Improvement: Debounce variable definition updates after `addControl()` calls
 - Improvement: Hide related config fields when feedbacks are disabled

@@ -34,6 +34,21 @@ const colours = {
 
 const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-zA-Z0-9-_.]/gm, substitute)
 
+const buildFilteredOutputArray = async (evt, context) => {
+	let filteredOutputs = []
+	const outputs = (await context.parseVariablesInString(evt.options.output))
+		.split(',')
+		.map((out) => Number.parseInt(out))
+	outputs.forEach((out) => {
+		if (!isNaN(out) && out > 0 && !filteredOutputs.includes(out)) filteredOutputs.push(out)
+	})
+	if (filteredOutputs.length == 0) {
+		this.log('warn', `No valid outputs for ${evt.actionId}:${evt.id}`)
+		return undefined
+	}
+	return filteredOutputs
+}
+
 class QsysRemoteControl extends InstanceBase {
 	constructor(internal) {
 		super(internal)
@@ -1798,14 +1813,14 @@ class QsysRemoteControl extends InstanceBase {
 					},
 				],
 				callback: async (evt, context) => {
-					const outputs = (await context.parseVariablesInString(evt.options.output))
-						.split(',')
-						.map((out) => Number.parseInt(out))
-					await this.sendCommand('LoopPlayer.Stop', {
-						Name: await context.parseVariablesInString(evt.options.name),
-						Outputs: outputs,
-						Log: true,
-					})
+					const filteredOutputs = buildFilteredOutputArray(evt, context)
+					if (filteredOutputs.length > 0) {
+						await this.sendCommand('LoopPlayer.Stop', {
+							Name: await context.parseVariablesInString(evt.options.name),
+							Outputs: filteredOutputs,
+							Log: true,
+						})
+					}
 				},
 			},
 			loopPlayer_cancel: {
@@ -1828,14 +1843,14 @@ class QsysRemoteControl extends InstanceBase {
 					},
 				],
 				callback: async (evt, context) => {
-					const outputs = (await context.parseVariablesInString(evt.options.output))
-						.split(',')
-						.map((out) => Number.parseInt(out))
-					await this.sendCommand('LoopPlayer.Cancel', {
-						Name: await context.parseVariablesInString(evt.options.name),
-						Outputs: outputs,
-						Log: true,
-					})
+					const filteredOutputs = buildFilteredOutputArray(evt, context)
+					if (filteredOutputs.length > 0) {
+						await this.sendCommand('LoopPlayer.Cancel', {
+							Name: await context.parseVariablesInString(evt.options.name),
+							Outputs: filteredOutputs,
+							Log: true,
+						})
+					}
 				},
 			},
 			snapshot_load: {

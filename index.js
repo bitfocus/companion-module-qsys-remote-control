@@ -733,11 +733,12 @@ class QsysRemoteControl extends InstanceBase {
 	 * Build command message and send
 	 * @param {string} command
 	 * @param {*} params
+	 * @return {Promise<boolean>}
 	 * @access private
 	 */
 
 	async sendCommand(command, params) {
-		await this.callCommandObj({
+		return await this.callCommandObj({
 			method: command,
 			params: params,
 		})
@@ -819,8 +820,8 @@ class QsysRemoteControl extends InstanceBase {
 				callback: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
 					let value = await context.parseVariablesInString(evt.options.value)
+					const control = this.controls.get(name)
 					if (evt.options.relative && this.config.feedbacks) {
-						const control = this.controls.get(name)
 						const min = Number.parseFloat(await context.parseVariablesInString(evt.options.min))
 						const max = Number.parseFloat(await context.parseVariablesInString(evt.options.max))
 						if (control == undefined || control.value == null) {
@@ -839,10 +840,14 @@ class QsysRemoteControl extends InstanceBase {
 						this.log('warn', `Relative ${evt.actionId} actions require Feedbacks to be enabled in the module config`)
 						return
 					}
-					await this.sendCommand('Control.Set', {
+					const sent = await this.sendCommand('Control.Set', {
 						Name: name,
 						Value: value,
 					})
+					if (sent) {
+						control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
+						this.setVariableValues({ [`${name}_value`]: control.value })
+					}
 				},
 				learn: async (evt, context) => {
 					const name = await context.parseVariablesInString(evt.options.name)
@@ -893,12 +898,16 @@ class QsysRemoteControl extends InstanceBase {
 						}
 						return
 					}
-					// set our internal state in anticipation of success, allowing two presses
-					// of the button faster than the polling interval to correctly toggle the state
-					await this.sendCommand('Control.Set', {
+					const sent = await this.sendCommand('Control.Set', {
 						Name: name,
 						Value: !control.value,
 					})
+					// set our internal state in anticipation of success, allowing two presses
+					// of the button faster than the polling interval to correctly toggle the state
+					if (sent) {
+						control.value = !control.value
+						this.setVariableValues({ [`${name}_value`]: control.value })
+					}
 				},
 			},
 			component_set: {
@@ -2207,6 +2216,7 @@ class QsysRemoteControl extends InstanceBase {
 	 * @param {object} cmd Command object sent
 	 * @param {string} host Host message was sent to
 	 * @access private
+
 	 */
 
 	logSentMessage(sent, cmd, host = this.config.host) {
@@ -2223,38 +2233,47 @@ class QsysRemoteControl extends InstanceBase {
 	 * Add message to outbound queue and send
 	 * @param {object} cmd Command object to send
 	 * @param {QRC_GET | QRC_SET} get_set Get or Set method
+	 * @return {Promise<boolean>}
 	 * @access private
 	 */
 
 	async callCommandObj(cmd, get_set = QRC_SET) {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
-		await queue.add(async () => {
-			if (this.isCoreActive() || this.validMethodsToStandbyCore(cmd)) {
-				if (this.isSocketOkToSend()) {
-					this.logSentMessage(await this.socket.pri.send(JSON.stringify(cmd) + '\x00'), cmd)
-				} else {
-					this.log('warn', `Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd))
-				}
-			}
-
-			if (this.config.redundant) {
-				if (this.isCoreActive(true) || this.validMethodsToStandbyCore(cmd)) {
-					if (this.isSocketOkToSend(true)) {
-						this.logSentMessage(
-							await this.socket.sec.send(JSON.stringify(cmd) + '\x00'),
-							cmd,
-							this.config.hostSecondary,
-						)
+		return await queue
+			.add(async () => {
+				let sentPri = false
+				let sentSec = false
+				if (this.isCoreActive() || this.validMethodsToStandbyCore(cmd)) {
+					if (this.isSocketOkToSend()) {
+						sentPri = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
+						this.logSentMessage(sentPri, cmd)
 					} else {
 						this.log(
 							'warn',
-							`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` + JSON.stringify(cmd),
+							`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd),
 						)
 					}
 				}
-			}
-		})
+
+				if (this.config.redundant) {
+					if (this.isCoreActive(true) || this.validMethodsToStandbyCore(cmd)) {
+						if (this.isSocketOkToSend(true)) {
+							sentSec = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
+							this.logSentMessage(sentSec, cmd, this.config.hostSecondary)
+						} else {
+							this.log(
+								'warn',
+								`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` + JSON.stringify(cmd),
+							)
+						}
+					}
+				}
+				return sentPri || sentSec
+			})
+			.catch(() => {
+				return false
+			})
 	}
 
 	/**

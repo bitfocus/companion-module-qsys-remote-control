@@ -8,14 +8,18 @@ import {
 	TCPHelper,
 	InstanceStatus,
 	// eslint-disable-next-line no-unused-vars
-	CompanionActionInfo,
-	// eslint-disable-next-line no-unused-vars
-	CompanionActionContext,
-	// eslint-disable-next-line no-unused-vars
 	CompanionFeedbackInfo,
 	// eslint-disable-next-line no-unused-vars
 	CompanionFeedbackContext,
 } from '@companion-module/base'
+import {
+	calcRelativeValue,
+	convertValueType,
+	sanitiseVariableId,
+	buildFilteredOutputArray,
+	resetModuleStatus,
+	validMethodsToStandbyCore,
+} from './utils.js'
 import { debounce } from 'lodash'
 import PQueue from 'p-queue'
 const queue = new PQueue({ concurrency: 1 })
@@ -29,78 +33,13 @@ const colours = {
 	green: combineRgb(0, 204, 0),
 }
 
-/**
- * Perform type conversion on value
- * @param {string} value
- * @param {'string' | 'boolean' | 'float' | 'int'} type
- * @returns {string | number | boolean | undefined}
- * @since 2.3.0
- */
-
-const convertValueType = (value, type) => {
-	switch (type) {
-		case 'int':
-			value = Number.parseInt(value)
-			if (Number.isNaN(value)) return undefined
-			break
-		case 'float':
-			value = Number.parseFloat(value)
-			if (Number.isNaN(value)) return undefined
-			break
-		case 'boolean':
-			if (value.toLowerCase().trim() == 'false' || value.trim() == '0') {
-				value = false
-			} else if (value.toLowerCase().trim() == 'true' || value.trim() == '1') {
-				value = true
-			} else {
-				value = Boolean(value)
-			}
-			break
-		case `string`:
-		default:
-			value = String(value)
-	}
-	return value
-}
-
-/**
- * Remove illegal characters from variable Ids
- * @param {string} id variable id to sanitize
- * @param {'' | '.' | '-' | '_'} substitute Char to replace illegal characters
- * @since 2.3.0
- */
-
-const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-zA-Z0-9-_.]/gm, substitute)
-
-/**
- * Build valid array of outputs
- * @param {CompanionActionInfo} evt
- * @param {CompanionActionContext} context
- * @returns {Promise<number[] | undefined>}
- * @since 2.3.0
- */
-const buildFilteredOutputArray = async (evt, context) => {
-	let filteredOutputs = []
-	const outputs = (await context.parseVariablesInString(evt.options.output))
-		.split(',')
-		.map((out) => Number.parseInt(out))
-	outputs.forEach((out) => {
-		if (!isNaN(out) && out > 0 && !filteredOutputs.includes(out)) filteredOutputs.push(out)
-	})
-	if (filteredOutputs.length == 0) {
-		this.log('warn', `No valid outputs for ${evt.actionId}:${evt.id}`)
-		return undefined
-	}
-	return filteredOutputs
-}
-
 class QsysRemoteControl extends InstanceBase {
 	constructor(internal) {
 		super(internal)
 		this.console_debug = false
 		this.pollQRCTimer = undefined
 		this.variables = []
-		this.moduleStatus = this.resetModuleStatus()
+		this.moduleStatus = resetModuleStatus()
 		this.controls = new Map()
 		this.socket = {
 			pri: new TCPHelper('localhost', 1710),
@@ -139,7 +78,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
 		this.killTimersDestroySockets()
-		this.moduleStatus = this.resetModuleStatus()
+		this.moduleStatus = resetModuleStatus()
 		this.config = config
 		this.console_debug = config.verbose
 		this.controls = new Map()
@@ -152,40 +91,6 @@ class QsysRemoteControl extends InstanceBase {
 		this.initFeedbacks()
 		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
-	}
-
-	/**
-	 * Return new moduleStatus object
-	 * @returns {object} new moduleStatus
-	 * @access private
-	 * @since 2.3.0
-	 */
-
-	resetModuleStatus() {
-		return {
-			status: InstanceStatus.Connecting,
-			message: '',
-			logLevel: 'debug',
-			logMessage: '',
-			primary: {
-				status: InstanceStatus.Connecting,
-				message: '',
-				state: null,
-				design_name: '',
-				redundant: null,
-				emulator: null,
-				design_code: '',
-			},
-			secondary: {
-				status: InstanceStatus.Connecting,
-				message: '',
-				state: null,
-				design_name: '',
-				redundant: null,
-				emulator: null,
-				design_code: '',
-			},
-		}
 	}
 
 	/**
@@ -830,13 +735,25 @@ class QsysRemoteControl extends InstanceBase {
 						useVariables: { local: true },
 					},
 					{
+						type: 'dropdown',
+						id: 'type',
+						label: 'Type',
+						choices: [
+							{ id: 'boolean', label: 'Boolean' },
+							{ id: 'number', label: 'Number' },
+							{ id: 'string', label: 'String' },
+						],
+						default: 'string',
+						tooltip: `Data type to be sent`,
+					},
+					{
 						type: 'checkbox',
 						id: 'relative',
 						label: 'Relative',
 						default: false,
 						tooltip: `Relative actions only work with numerical values. Resultant value = current value + new value`,
 						isVisible: (options, isVisibleData) => {
-							return isVisibleData.feedbacks || options.relative
+							return (isVisibleData.feedbacks || options.relative) && options.type == 'number'
 						},
 						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
 					},
@@ -848,7 +765,7 @@ class QsysRemoteControl extends InstanceBase {
 						useVariables: { local: true },
 						tooltip: 'Relative action will be constrained to this lower limit',
 						isVisible: (options) => {
-							return options.relative
+							return options.relative && options.type == 'number'
 						},
 					},
 					{
@@ -859,7 +776,7 @@ class QsysRemoteControl extends InstanceBase {
 						useVariables: { local: true },
 						tooltip: 'Relative action will be constrained to this upper limit',
 						isVisible: (options) => {
-							return options.relative
+							return options.relative && options.type == 'number'
 						},
 					},
 					{
@@ -874,17 +791,14 @@ class QsysRemoteControl extends InstanceBase {
 						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
 					},
 					{
-						type: 'dropdown',
-						id: 'type',
-						label: 'Type',
-						choices: [
-							{ id: 'boolean', label: 'Boolean' },
-							{ id: 'float', label: 'Float' },
-							{ id: 'int', label: 'Integer' },
-							{ id: 'string', label: 'String' },
-						],
-						default: 'string',
-						tooltip: `Type conversion according to standard ECMAscript rules`,
+						type: 'static-text',
+						id: 'filler2',
+						label: 'Warning',
+						width: 6,
+						value: 'Relative actions require Number Type',
+						isVisible: (options) => {
+							return options.relative && options.type !== 'number'
+						},
 					},
 				],
 				subscribe: async (action, context) => {
@@ -896,21 +810,9 @@ class QsysRemoteControl extends InstanceBase {
 					if (name == '') return
 					let value = await context.parseVariablesInString(evt.options.value)
 					const control = this.controls.get(name)
-					if (evt.options.relative && this.config.feedbacks) {
-						const min = Number.parseFloat(await context.parseVariablesInString(evt.options.min))
-						const max = Number.parseFloat(await context.parseVariablesInString(evt.options.max))
-						if (control == undefined || control.value == null) {
-							await this.addControl(evt, context)
-							this.log('warn', `Do not have existing value of ${name}, cannot perform action ${evt.actionId}:${evt.id}`)
-							return
-						}
-						value = Number(value) + Number(control?.value)
-						if (isNaN(value)) {
-							this.log('warn', `Result value is a NaN, cannot perform action ${evt.actionId}:${evt.id}`)
-							return
-						}
-						if (!isNaN(min)) value = value < min ? min : value
-						if (!isNaN(max)) value = value > max ? max : value
+					if (evt.options.relative && this.config.feedbacks && evt.options.type == 'number') {
+						value = await calcRelativeValue(value, name, evt, context)
+						if (value === undefined) return
 					} else if (evt.options.relative && !this.config.feedbacks) {
 						this.log('warn', `Relative ${evt.actionId} actions require Feedbacks to be enabled in the module config`)
 						return
@@ -2301,18 +2203,6 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
-	 * Add message to outbound queue and send
-	 * @param {object} cmd Command object to send
-	 * @returns {boolean} If cmd.method is OK to send to core that isn't active
-	 * @access private
-	 */
-
-	validMethodsToStandbyCore(cmd) {
-		const validMethods = ['StatusGet', 'NoOp', 'Logon'] //Add methods here that are OK to send to core that is in Standby or Idle
-		return validMethods.includes(cmd?.method)
-	}
-
-	/**
 	 * Check if the core is active
 	 * @param {boolean} secondary If you are asking if the Secondary core is Active
 	 * @access private
@@ -2372,7 +2262,7 @@ class QsysRemoteControl extends InstanceBase {
 			.add(async () => {
 				let sentPri = false
 				let sentSec = false
-				if (this.isCoreActive() || this.validMethodsToStandbyCore(cmd)) {
+				if (this.isCoreActive() || validMethodsToStandbyCore(cmd)) {
 					if (this.isSocketOkToSend()) {
 						sentPri = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
 						this.logSentMessage(sentPri, cmd)
@@ -2385,7 +2275,7 @@ class QsysRemoteControl extends InstanceBase {
 				}
 
 				if (this.config.redundant) {
-					if (this.isCoreActive(true) || this.validMethodsToStandbyCore(cmd)) {
+					if (this.isCoreActive(true) || validMethodsToStandbyCore(cmd)) {
 						if (this.isSocketOkToSend(true)) {
 							sentSec = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
 							this.logSentMessage(sentSec, cmd, this.config.hostSecondary)

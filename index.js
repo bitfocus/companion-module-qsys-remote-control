@@ -79,7 +79,7 @@ class QsysRemoteControl extends InstanceBase {
 		queue.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
-		this.namesToGet = new Set()
+		this.namesToGet.clear()
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		this.config = config
@@ -527,6 +527,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	destroy() {
 		queue.clear()
+		this.namesToGet.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
 		this.killTimersDestroySockets()
@@ -2242,7 +2243,7 @@ class QsysRemoteControl extends InstanceBase {
 				} else {
 					await this.getControl(this.namesToGet.keys())
 				}
-				this.namesToGet = new Set()
+				this.namesToGet.clear()
 			}
 		},
 		1000,

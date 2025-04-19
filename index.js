@@ -2180,7 +2180,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	/**
 	 * Get named control value
-	 * @param {string} name
+	 * @param {string | string[]} name
 	 * @returns {Promise<boolean>} True if message send was successful
 	 * @access private
 	 */
@@ -2188,7 +2188,7 @@ class QsysRemoteControl extends InstanceBase {
 	async getControl(name) {
 		const cmd = {
 			method: 'Control.Get',
-			params: [name],
+			params: Array.isArray(name) ? name : [name],
 		}
 
 		return await this.callCommandObj(cmd, QRC_GET)
@@ -2204,21 +2204,10 @@ class QsysRemoteControl extends InstanceBase {
 		// thus, we send one at a time
 		if (!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
 			this.controls.forEach(async (_x, k) => {
-				const cmd = {
-					method: 'Control.Get',
-					params: [k],
-				}
-
-				await this.callCommandObj(cmd, QRC_GET)
+				await this.getControl(k)
 			})
 		} else {
-			await this.callCommandObj(
-				{
-					method: 'Control.Get',
-					params: [...this.controls.keys()],
-				},
-				QRC_GET,
-			)
+			await this.getControl(this.controls.keys())
 		}
 	}
 
@@ -2246,13 +2235,13 @@ class QsysRemoteControl extends InstanceBase {
 			this.setVariableDefinitions(this.variables)
 			this.setEngineVariableValues()
 			if (this.namesToGet.size > 0) {
-				await this.callCommandObj(
-					{
-						method: 'Control.Get',
-						params: [...this.namesToGet.keys()],
-					},
-					QRC_GET,
-				)
+				if (!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
+					this.namesToGet.forEach(async (_x, k) => {
+						await this.getControl(k)
+					})
+				} else {
+					await this.getControl(this.namesToGet.keys())
+				}
 				this.namesToGet = new Set()
 			}
 		},
@@ -2339,9 +2328,9 @@ class QsysRemoteControl extends InstanceBase {
 		control.position = update.Position ?? control.position
 		this.controls.set(update.Name, control)
 		this.setVariableValues({
-			[`${name}_string`]: update.String ?? control.value,
-			[`${name}_position`]: update.Position ?? control.position,
-			[`${name}_value`]: update.Value ?? control.value,
+			[`${name}_string`]: control.strval,
+			[`${name}_position`]: control.position,
+			[`${name}_value`]: control.value,
 		})
 	}
 }

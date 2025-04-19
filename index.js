@@ -662,10 +662,13 @@ class QsysRemoteControl extends InstanceBase {
 					if (name == '') return
 					let value = await context.parseVariablesInString(evt.options.value)
 					const control = this.controls.get(name)
-					if (evt.options.relative && this.config.feedbacks && evt.options.type == 'number') {
-						value = await calcRelativeValue(value, name, evt, context)
-						if (value === undefined) return
-					} else if (evt.options.relative && !this.config.feedbacks) {
+					if (evt.options.relative && this.config.feedback_enabled && evt.options.type == 'number') {
+						value = await calcRelativeValue(value, name, evt, context, this.controls, this)
+						if (value === undefined) {
+							await this.addControl(evt, context)
+							return
+						}
+					} else if (evt.options.relative && !this.config.feedback_enabled) {
 						this.log('warn', `Relative ${evt.actionId} actions require Feedbacks to be enabled in the module config`)
 						return
 					}
@@ -1644,7 +1647,7 @@ class QsysRemoteControl extends InstanceBase {
 					},
 				],
 				callback: async (evt, context) => {
-					const filteredOutputs = buildFilteredOutputArray(evt, context)
+					const filteredOutputs = buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
 						await this.sendCommand('LoopPlayer.Stop', {
 							Name: await context.parseVariablesInString(evt.options.name),
@@ -1674,7 +1677,7 @@ class QsysRemoteControl extends InstanceBase {
 					},
 				],
 				callback: async (evt, context) => {
-					const filteredOutputs = buildFilteredOutputArray(evt, context)
+					const filteredOutputs = buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
 						await this.sendCommand('LoopPlayer.Cancel', {
 							Name: await context.parseVariablesInString(evt.options.name),
@@ -2181,7 +2184,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	/**
 	 * Get named control value
-	 * @param {string | string[]} name
+	 * @param {string | MapIterator<any>} name
 	 * @returns {Promise<boolean>} True if message send was successful
 	 * @access private
 	 */
@@ -2189,7 +2192,7 @@ class QsysRemoteControl extends InstanceBase {
 	async getControl(name) {
 		const cmd = {
 			method: 'Control.Get',
-			params: Array.isArray(name) ? name : [name],
+			params: typeof name == 'object' ? [...name] : [name],
 		}
 
 		return await this.callCommandObj(cmd, QRC_GET)

@@ -7,6 +7,8 @@ import {
 	CompanionFeedbackInfo,
 	// eslint-disable-next-line no-unused-vars
 	CompanionFeedbackContext,
+	// eslint-disable-next-line no-unused-vars
+	InstanceBase,
 	InstanceStatus,
 } from '@companion-module/base'
 
@@ -16,22 +18,23 @@ import {
  * @param {string} name
  * @param {CompanionActionInfo} evt
  * @param {CompanionActionContext} context
+ * @param {Map} controls
+ * @param {InstanceBase} self
  * @returns {Promise<number | undefined>}
  * @since 2.3.0
  */
 
-export const calcRelativeValue = async (value, name, evt, context) => {
-	const control = this.controls.get(name)
+export const calcRelativeValue = async (value, name, evt, context, controls, self) => {
+	const control = controls.get(name)
 	const min = Number.parseFloat(await context.parseVariablesInString(evt.options.min))
 	const max = Number.parseFloat(await context.parseVariablesInString(evt.options.max))
 	if (control == undefined || control.value == null) {
-		await this.addControl(evt, context)
-		this.log('warn', `Do not have existing value of ${name}, cannot perform action ${evt.actionId}:${evt.id}`)
+		self.log('warn', `Do not have existing value of ${name}, cannot perform action ${evt.actionId}:${evt.id}`)
 		return undefined
 	}
 	value = Number(value) + Number(control.value)
 	if (isNaN(value)) {
-		this.log('warn', `Result value is a NaN, cannot perform action ${evt.actionId}:${evt.id}`)
+		self.log('warn', `Result value is a NaN, cannot perform action ${evt.actionId}:${evt.id}`)
 		return undefined
 	}
 	if (!isNaN(min)) value = value < min ? min : value
@@ -81,9 +84,10 @@ export const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-z
  * @param {CompanionActionInfo} evt
  * @param {CompanionActionContext} context
  * @returns {Promise<number[] | undefined>}
+ *  * @param {InstanceBase} self
  * @since 2.3.0
  */
-export const buildFilteredOutputArray = async (evt, context) => {
+export const buildFilteredOutputArray = async (evt, context, self) => {
 	let filteredOutputs = []
 	const outputs = (await context.parseVariablesInString(evt.options.output))
 		.split(',')
@@ -92,7 +96,7 @@ export const buildFilteredOutputArray = async (evt, context) => {
 		if (!isNaN(out) && out > 0 && !filteredOutputs.includes(out)) filteredOutputs.push(out)
 	})
 	if (filteredOutputs.length == 0) {
-		this.log('warn', `No valid outputs for ${evt.actionId}:${evt.id}`)
+		self.log('warn', `No valid outputs for ${evt.actionId}:${evt.id}`)
 		return undefined
 	}
 	return filteredOutputs

@@ -2,7 +2,6 @@ import UpgradeScripts from './upgrades.js'
 
 import {
 	InstanceBase,
-	Regex,
 	combineRgb,
 	runEntrypoint,
 	TCPHelper,
@@ -13,6 +12,7 @@ import {
 	CompanionFeedbackContext,
 } from '@companion-module/base'
 import { configFields } from './config.js'
+import { options } from './options.js'
 import {
 	buildFilteredOutputArray,
 	calcRelativeValue,
@@ -562,99 +562,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.setActionDefinitions({
 			control_set: {
 				name: 'Control.Set',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-						regex: Regex.SOMETHING,
-					},
-					{
-						type: 'textinput',
-						id: 'value',
-						label: 'Value:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'type',
-						label: 'Type',
-						choices: [
-							{ id: 'boolean', label: 'Boolean' },
-							{ id: 'number', label: 'Number' },
-							{ id: 'string', label: 'String' },
-						],
-						default: 'string',
-						tooltip: `Data type to be sent`,
-					},
-					{
-						type: 'textinput',
-						id: 'ramp',
-						label: 'Ramp:',
-						default: '',
-						useVariables: { local: true },
-						isVisible: (options) => {
-							return options.type == 'number'
-						},
-					},
-					{
-						type: 'checkbox',
-						id: 'relative',
-						label: 'Relative',
-						default: false,
-						tooltip: `Relative actions only work with numerical values. Resultant value = current value + new value`,
-						isVisible: (options, isVisibleData) => {
-							return (isVisibleData.feedbacks || options.relative) && options.type == 'number'
-						},
-						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
-					},
-					{
-						type: 'textinput',
-						id: 'min',
-						label: 'Minimum:',
-						default: '',
-						useVariables: { local: true },
-						tooltip: 'Relative action will be constrained to this lower limit',
-						isVisible: (options) => {
-							return options.relative && options.type == 'number'
-						},
-					},
-					{
-						type: 'textinput',
-						id: 'max',
-						label: 'Maximum:',
-						default: '',
-						useVariables: { local: true },
-						tooltip: 'Relative action will be constrained to this upper limit',
-						isVisible: (options) => {
-							return options.relative && options.type == 'number'
-						},
-					},
-					{
-						type: 'static-text',
-						id: 'filler1',
-						label: 'Warning',
-						width: 6,
-						value: 'Relative actions require feedbacks to be enabled!',
-						isVisible: (options, isVisibleData) => {
-							return !isVisibleData.feedbacks && options.relative
-						},
-						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
-					},
-					{
-						type: 'static-text',
-						id: 'filler2',
-						label: 'Warning',
-						width: 6,
-						value: 'Relative actions require Number Type',
-						isVisible: (options) => {
-							return options.relative && options.type !== 'number'
-						},
-					},
-				],
+				options: options.actions.controlSet(this.config),
 				subscribe: async (action, context) => {
 					if (action.options.relative) await this.addControl(action, context)
 				},
@@ -715,28 +623,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			control_toggle: {
 				name: 'Control.Toggle',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						tooltip: 'Only applies to controls with an on/off state.',
-						useVariables: { local: true },
-						regex: Regex.SOMETHING,
-					},
-					{
-						type: 'static-text',
-						id: 'filler1',
-						label: 'Warning',
-						width: 6,
-						value: 'Toggle actions require feedbacks to be enabled!',
-						isVisible: (_options, isVisibleData) => {
-							return !isVisibleData.feedbacks
-						},
-						isVisibleData: { feedbacks: !!this.config.feedback_enabled },
-					},
-				],
+				options: options.actions.controlToggle(this.config),
 				subscribe: async (action, context) => await this.addControl(action, context),
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
@@ -767,16 +654,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			control_get: {
 				name: 'Control.Get',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-						regex: Regex.SOMETHING,
-					},
-				],
+				options: options.actions.controlGet(),
 				subscribe: async (action, context) => await this.addControl(action, context),
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
@@ -793,36 +671,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			component_set: {
 				name: 'Component.Set',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'control_name',
-						label: 'Control Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'value',
-						label: 'Value:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'ramp',
-						label: 'Ramp:',
-						default: '',
-						useVariables: { local: true },
-					},
-				],
+				options: options.actions.componentSet(),
 				callback: async (evt, context) => {
 					let ramp = Number.parseFloat(await context.parseVariablesInString(evt.options.ramp))
 					if (Number.isNaN(ramp) || ramp < 0) ramp = 0
@@ -840,22 +689,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			changeGroup_addControl: {
 				name: 'ChangeGroup.AddControl',
-				options: [
-					{
-						type: 'textinput',
-						id: 'id',
-						label: 'Group Id:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'controls',
-						label: 'Controls:',
-						default: '',
-						useVariables: { local: true },
-					},
-				],
+				options: options.actions.changeGroup_addControl(),
 				callback: async (evt, context) => {
 					await this.changeGroup(
 						'AddControl',
@@ -866,22 +700,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			changeGroup_addComponentControl: {
 				name: 'ChangeGroup.AddComponentControl',
-				options: [
-					{
-						type: 'textinput',
-						id: 'id',
-						label: 'Group Id:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'controls',
-						label: 'Controls:',
-						default: '',
-						useVariables: { local: true },
-					},
-				],
+				options: options.actions.changeGroup_addComponentControl(),
 				callback: async (evt, context) => {
 					await this.changeGroup(
 						'AddComponentControl',
@@ -892,22 +711,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			changeGroup_remove: {
 				name: 'ChangeGroup.Remove',
-				options: [
-					{
-						type: 'textinput',
-						id: 'id',
-						label: 'Group Id:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'controls',
-						label: 'Controls:',
-						default: '',
-						useVariables: { local: true },
-					},
-				],
+				options: options.actions.changeGroup_remove(),
 				callback: async (evt, context) => {
 					await this.changeGroup(
 						'Remove',
@@ -918,92 +722,28 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			changeGroup_destroy: {
 				name: 'ChangeGroup.Destroy',
-				options: [
-					{
-						type: 'textinput',
-						id: 'id',
-						label: 'Group Id:',
-						default: '',
-						useVariables: { local: true },
-					},
-				],
+				options: options.actions.changeGroup_destroy(),
 				callback: async (evt, context) => {
 					await this.changeGroup('Destroy', await context.parseVariablesInString(evt.options.id))
 				},
 			},
 			changeGroup_invalidate: {
 				name: 'ChangeGroup.Invalidate',
-				options: [
-					{
-						type: 'textinput',
-						id: 'id',
-						label: 'Group Id:',
-						default: '',
-						useVariables: { local: true },
-					},
-				],
+				options: options.actions.changeGroup_invalidate(),
 				callback: async (evt, context) => {
 					await this.changeGroup('Invalidate', await context.parseVariablesInString(evt.options.id))
 				},
 			},
 			changeGroup_clear: {
 				name: 'ChangeGroup.Clear',
-				options: [
-					{
-						type: 'textinput',
-						id: 'id',
-						label: 'Group Id:',
-						default: '',
-						useVariables: { local: true },
-					},
-				],
+				options: options.actions.changeGroup_clear(),
 				callback: async (evt, context) => {
 					await this.changeGroup('Clear', await context.parseVariablesInString(evt.options.id))
 				},
 			},
 			mixer_setCrossPointGain: {
 				name: 'Mixer.SetCrossPointGain',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'outputs',
-						label: 'Outputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'value',
-						label: 'Value',
-						default: 0,
-						min: -100,
-						max: 20,
-						regex: Regex.NUMBER,
-					},
-					{
-						type: 'number',
-						id: 'ramp',
-						label: 'Ramp',
-						default: 0,
-						min: 0,
-						max: 100,
-						regex: Regex.NUMBER,
-					},
-				],
+				options: options.actions.mixer_setCrossPointGain(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCrossPointGain', {
 						Name: await context.parseVariablesInString(evt.options.name),
@@ -1016,47 +756,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setCrossPointDelay: {
 				name: 'Mixer.SetCrossPointDelay',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'outputs',
-						label: 'Outputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'value',
-						label: 'Value',
-						default: 0,
-						min: 0,
-						max: 60,
-						regex: Regex.NUMBER,
-					},
-					{
-						type: 'number',
-						id: 'ramp',
-						label: 'Ramp',
-						default: 0,
-						min: 0,
-						max: 100,
-						regex: Regex.NUMBER,
-					},
-				],
+				options: options.actions.mixer_setCrossPointDelay(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCrossPointDelay', {
 						Name: await context.parseVariablesInString(evt.options.name),
@@ -1069,39 +769,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setCrossPointMute: {
 				name: 'Mixer.SetCrossPointMute',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'outputs',
-						label: 'Outputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Value',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-				],
+				options: options.actions.mixer_setCrossPointMute(),
 				callback: async (evt, context) => {
 					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCrossPointMute', {
@@ -1114,39 +782,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setCrossPointSolo: {
 				name: 'Mixer.SetCrossPointSolo',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'outputs',
-						label: 'Outputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Value',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-				],
+				options: options.actions.mixer_setCrossPointSolo(),
 				callback: async (evt, context) => {
 					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCrossPointSolo', {
@@ -1159,40 +795,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setInputGain: {
 				name: 'Mixer.SetInputGain',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'value',
-						label: 'Value',
-						default: 0,
-						min: -100,
-						max: 20,
-						regex: Regex.NUMBER,
-					},
-					{
-						type: 'number',
-						id: 'ramp',
-						label: 'Ramp',
-						default: 0,
-						min: 0,
-						max: 100,
-						regex: Regex.NUMBER,
-					},
-				],
+				options: options.actions.mixer_setInputGain(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetInputGain', {
 						Name: await context.parseVariablesInString(evt.options.name),
@@ -1204,32 +807,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setInputMute: {
 				name: 'Mixer.SetInputMute',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Value',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-				],
+				options: options.actions.mixer_setInputMute(),
 				callback: async (evt, context) => {
 					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputMute', {
@@ -1241,32 +819,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setInputSolo: {
 				name: 'Mixer.SetInputSolo',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Value',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-				],
+				options: options.actions.mixer_setInputSolo(),
 				callback: async (evt, context) => {
 					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputSolo', {
@@ -1278,40 +831,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setOutputGain: {
 				name: 'Mixer.SetOutputGain',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'outputs',
-						label: 'Outputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'value',
-						label: 'Value',
-						default: 0,
-						min: -100,
-						max: 20,
-						regex: Regex.NUMBER,
-					},
-					{
-						type: 'number',
-						id: 'ramp',
-						label: 'Ramp',
-						default: 0,
-						min: 0,
-						max: 100,
-						regex: Regex.NUMBER,
-					},
-				],
+				options: options.actions.mixer_setOutputGain(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetOutputGain', {
 						Name: await context.parseVariablesInString(evt.options.name),
@@ -1323,32 +843,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setOutputMute: {
 				name: 'Mixer.SetOutputMute',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'outputs',
-						label: 'Outputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Value',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-				],
+				options: options.actions.mixer_setOutputMute(),
 				callback: async (evt, context) => {
 					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetOutputMute', {
@@ -1360,32 +855,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setCueMute: {
 				name: 'Mixer.SetCueMute',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'cues',
-						label: 'Cues',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Value',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-				],
+				options: options.actions.mixer_setCueMute(),
 				callback: async (evt, context) => {
 					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCueMute', {
@@ -1397,40 +867,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setCueGain: {
 				name: 'Mixer.SetCueGain',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'cues',
-						label: 'Cues',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'value',
-						label: 'Value',
-						default: 0,
-						min: -100,
-						max: 20,
-						regex: Regex.NUMBER,
-					},
-					{
-						type: 'number',
-						id: 'ramp',
-						label: 'Ramp',
-						default: 0,
-						min: 0,
-						max: 100,
-						regex: Regex.NUMBER,
-					},
-				],
+				options: options.actions.mixer_setCueGain(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCueGain', {
 						Name: await context.parseVariablesInString(evt.options.name),
@@ -1442,39 +879,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setInputCueEnable: {
 				name: 'Mixer.SetInputCueEnable',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'cues',
-						label: 'Cues',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Value',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-				],
+				options: options.actions.mixer_setInputCueEnable(),
 				callback: async (evt, context) => {
 					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputCueEnable', {
@@ -1487,39 +892,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			mixer_setInputCueAfl: {
 				name: 'Mixer.SetInputCueAfl',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'cues',
-						label: 'Cues',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'inputs',
-						label: 'Inputs',
-						default: '1',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'value',
-						label: 'Value',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-				],
+				options: options.actions.mixer_setInputCueAfl(),
 				callback: async (evt, context) => {
 					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputCueAfl', {
@@ -1532,77 +905,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			loopPlayer_start: {
 				name: 'LoopPlayer.Start',
-				options: [
-					{
-						type: 'textinput',
-						id: 'file_name',
-						label: 'File Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'dropdown',
-						id: 'channel',
-						label: 'Channel',
-						default: 'stereo',
-						choices: [
-							{ id: 'mono', label: 'Mono' },
-							{ id: 'stereo', label: 'Stereo' },
-						],
-					},
-					{
-						type: 'textinput',
-						id: 'output',
-						label: 'Output',
-						default: '1',
-						useVariables: { local: true },
-						tooltip: ` The Loop Player output number for playback`,
-					},
-					{
-						// Had to add name to the options array. Referenced in callback but not present in options def
-						type: 'textinput',
-						id: 'name',
-						label: 'Name',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'startTime',
-						label: 'Start Time',
-						default: 0,
-						regex: Regex.NUMBER,
-						tooltip: `The time of day, in seconds, to start the job`,
-						min: 0,
-					},
-					{
-						type: 'number',
-						id: 'seek',
-						label: 'Seek Time',
-						default: 0,
-						regex: Regex.NUMBER,
-						tooltip: `The time, in seconds, to seek into each file before playback.`,
-						min: 0,
-					},
-					{
-						type: 'dropdown',
-						id: 'loop',
-						label: 'Loop',
-						default: 'true',
-						choices: [
-							{ id: 'true', label: 'True' },
-							{ id: 'false', label: 'False' },
-						],
-					},
-					{
-						type: 'textinput',
-						id: 'refID',
-						label: 'Reference ID',
-						default: '',
-						useVariables: { local: true },
-						tooltip: `Reference ID returned in error messages. Auto-populated if left blank`,
-					},
-				],
+				options: options.actions.loopPlayer_start(),
 				callback: async (evt, context) => {
 					const loop = evt.options.loop === 'true'
 					const output = Number.parseInt(await context.parseVariablesInString(evt.options.output))
@@ -1631,23 +934,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			loopPlayer_stop: {
 				name: 'LoopPlayer.Stop',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'output',
-						label: 'Output',
-						default: '1',
-						useVariables: { local: true },
-						tooltip: `Comma seperated list of outputs to cancel. Ie. 1, 2, 3, 4`,
-					},
-				],
+				options: options.actions.loopPlayer_stop(),
 				callback: async (evt, context) => {
 					const filteredOutputs = buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
@@ -1661,23 +948,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			loopPlayer_cancel: {
 				name: 'LoopPlayer.Cancel',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'output',
-						label: 'Output',
-						default: '1',
-						useVariables: { local: true },
-						tooltip: `Comma seperated list of outputs to cancel. Ie. 1, 2, 3, 4`,
-					},
-				],
+				options: options.actions.loopPlayer_cancel(),
 				callback: async (evt, context) => {
 					const filteredOutputs = buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
@@ -1691,31 +962,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			snapshot_load: {
 				name: 'Snapshot.Load',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'bank',
-						label: 'Bank:',
-						default: 1,
-						tooltip: 'Specific bank number to recall from the snapshot',
-						min: 1,
-					},
-					{
-						type: 'number',
-						id: 'ramp',
-						label: 'Ramp',
-						tooltip: 'Time in seconds to ramp to banked snapshot',
-						min: 0,
-						default: 0,
-					},
-				],
+				options: options.actions.snapshot_load(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Snapshot.Load', {
 						Name: await context.parseVariablesInString(evt.options.name),
@@ -1726,23 +973,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			snapshot_save: {
 				name: 'Snapshot.Save',
-				options: [
-					{
-						type: 'textinput',
-						id: 'name',
-						label: 'Name:',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'bank',
-						label: 'Bank:',
-						default: 1,
-						tooltip: 'Specific bank number to save to within the snapshot',
-						min: 1,
-					},
-				],
+				options: options.actions.snapshot_save(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Snapshot.Save', {
 						Name: await context.parseVariablesInString(evt.options.name),
@@ -1752,43 +983,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			page_submit_message: {
 				name: 'PA.PageSubmit - Message',
-				options: [
-					{
-						type: 'textinput',
-						id: 'zones',
-						label: 'Zone Number(s):',
-						tooltip: 'Comma-seperated for multiple zones',
-						regex: Regex.SOMETHING,
-						required: true,
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'number',
-						id: 'priority',
-						label: 'Priority:',
-						tooltip: '1 is highest',
-						min: 1,
-						required: true,
-						default: '',
-					},
-					{
-						type: 'textinput',
-						id: 'preamble',
-						label: 'Preamble:',
-						tooltip: 'File name of the preamble',
-						default: '',
-						useVariables: { local: true },
-					},
-					{
-						type: 'textinput',
-						id: 'message',
-						label: 'Message:',
-						tooltip: 'File name of the message',
-						default: '',
-						useVariables: { local: true },
-					},
-				],
+				options: options.actions.page_submit_message(),
 				callback: async (evt, context) => {
 					await this.sendCommand('PA.PageSubmit', {
 						Mode: 'message',
@@ -1802,15 +997,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			statusGet: {
 				name: 'StatusGet',
-				options: [
-					{
-						type: 'static-text',
-						id: 'info',
-						label: '',
-						width: 6,
-						value: 'Manually update Engine variables. Full response written to logs',
-					},
-				],
+				options: options.actions.statusGet(),
 				callback: async (_evt, _context) => {
 					await this.sendCommand('StatusGet', 0)
 				},
@@ -1832,33 +1019,7 @@ class QsysRemoteControl extends InstanceBase {
 				color: colours.black,
 				bgcolor: colours.green,
 			},
-			options: [
-				{
-					type: 'dropdown',
-					id: 'core',
-					label: 'Core',
-					choices: [
-						{ id: 'pri', label: 'Primary' },
-						{ id: 'sec', label: 'Secondary' },
-					],
-					default: 'pri',
-					isVisible: (_options, isVisibleData) => {
-						return isVisibleData.redundant
-					},
-					isVisibleData: { redundant: this.config.redundant },
-				},
-				{
-					type: 'dropdown',
-					id: 'state',
-					label: 'State',
-					choices: [
-						{ id: 'Active', label: 'Active' },
-						{ id: 'Standby', label: 'Standby' },
-						{ id: 'Idle', label: 'Idle' },
-					],
-					default: 'Active',
-				},
-			],
+			options: options.feedbacks.coreState(this.config.redundant),
 			callback: async (feedback, _context) => {
 				let core = this.moduleStatus.primary
 				if (this.config.redundant && feedback.options.core === 'sec') {
@@ -1875,26 +1036,7 @@ class QsysRemoteControl extends InstanceBase {
 			name: 'Change text to reflect control value',
 			description: 'Will return current state of a control as a string',
 			type: 'advanced',
-			options: [
-				{
-					type: 'textinput',
-					id: 'name',
-					label: 'Name:',
-					default: '',
-					useVariables: { local: true },
-				},
-				{
-					type: 'dropdown',
-					id: 'type',
-					label: 'Type',
-					choices: [
-						{ id: 'string', label: 'String' },
-						{ id: 'value', label: 'Value' },
-						{ id: 'position', label: 'Position' },
-					],
-					default: 'value',
-				},
-			],
+			options: options.feedbacks.controlString(),
 			subscribe: async (feedback, context) => await this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, context) => {
@@ -1926,25 +1068,7 @@ class QsysRemoteControl extends InstanceBase {
 				color: colours.white,
 				bgcolor: colours.red,
 			},
-			options: [
-				{
-					type: 'textinput',
-					id: 'name',
-					label: 'Name:',
-					default: '',
-					useVariables: { local: true },
-				},
-				{
-					type: 'dropdown',
-					id: 'value',
-					label: 'Control value',
-					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
-					],
-					default: 'true',
-				},
-			],
+			options: options.feedbacks.controlBoolean(),
 			subscribe: async (feedback, context) => await this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, context) => {
@@ -1965,24 +1089,7 @@ class QsysRemoteControl extends InstanceBase {
 				color: colours.white,
 				bgcolor: colours.red,
 			},
-			options: [
-				{
-					type: 'textinput',
-					id: 'name',
-					label: 'Name:',
-					default: '',
-					useVariables: { local: true },
-				},
-				{
-					type: 'number',
-					id: 'threshold',
-					label: 'Threshold value',
-					default: '',
-					min: -10000,
-					max: 10000,
-					range: false,
-				},
-			],
+			options: options.feedbacks.controlThreshold(),
 			subscribe: async (feedback, context) => await this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, context) => {
@@ -1996,45 +1103,7 @@ class QsysRemoteControl extends InstanceBase {
 			name: 'Fade color over control value range',
 			description: 'Fade color over control value range',
 			type: 'advanced',
-			options: [
-				{
-					type: 'textinput',
-					id: 'name',
-					label: 'Name:',
-					default: '',
-					useVariables: { local: true },
-				},
-				{
-					type: 'number',
-					id: 'low_threshold',
-					label: 'Low threshold value',
-					default: '',
-					min: -10000,
-					max: 10000,
-					range: false,
-				},
-				{
-					type: 'number',
-					id: 'high_threshold',
-					label: 'High threshold value',
-					default: '',
-					min: -10000,
-					max: 10000,
-					range: false,
-				},
-				{
-					type: 'colorpicker',
-					label: 'Low threshold color',
-					id: 'low_bg',
-					default: colours.black,
-				},
-				{
-					type: 'colorpicker',
-					label: 'High threshold color',
-					id: 'high_bg',
-					default: colours.red,
-				},
-			],
+			options: options.feedbacks.controlFade(colours),
 			subscribe: async (feedback, context) => await this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, context) => {

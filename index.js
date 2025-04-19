@@ -410,7 +410,6 @@ class QsysRemoteControl extends InstanceBase {
 		engineVars.redundant = !!this.moduleStatus.primary.redundant
 		engineVars.emulator = !!this.moduleStatus.primary.emulator
 		this.setVariableValues(engineVars)
-		this.checkFeedbacks('core-state')
 	}
 
 	/**
@@ -434,6 +433,7 @@ class QsysRemoteControl extends InstanceBase {
 			this.moduleStatus.primary.redundant = !!data.IsRedundant
 			this.moduleStatus.primary.emulator = !!data.IsEmulator
 		}
+		this.checkFeedbacks('core-state')
 		this.setEngineVariableValues()
 		this.checkStatus(InstanceStatus.Ok, data.State.toString(), secondary)
 	}

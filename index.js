@@ -818,13 +818,15 @@ class QsysRemoteControl extends InstanceBase {
 					},
 				],
 				callback: async (evt, context) => {
+					let ramp = Number.parseFloat(await context.parseVariablesInString(evt.options.ramp))
+					if (Number.isNaN(ramp) || ramp < 0) ramp = 0
 					await this.sendCommand('Component.Set', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Controls: [
 							{
 								Name: await context.parseVariablesInString(evt.options.control_name),
 								Value: await context.parseVariablesInString(evt.options.value),
-								Ramp: await context.parseVariablesInString(evt.options.ramp),
+								Ramp: ramp,
 							},
 						],
 					})

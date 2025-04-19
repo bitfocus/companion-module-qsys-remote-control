@@ -76,4 +76,5 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Improvement: Log `LoopPlayer.Error` messages
 - Fix: Send boolean values as bools rather than strings (`Mixer.SetCrossPointMute`, `Mixer.SetCrossPointSolo`, `Mixer.SetInputMute`, `Mixer.SetInputSolo`, `Mixer.SetOutputMute`, `Mixer.SetCueMute`, `Mixer.SetInputCueEnable`, `Mixer.SetInputCueAfl`, `LoopPlayer.Start`)
 - Fix: `Feedback on boolean control value` when value is `true`
-- Fix: `LoopPlayer.Stop` & `LoopPlayer.Cancel` Send `Outputs` as array of numbers 
+- Fix: `LoopPlayer.Stop` & `LoopPlayer.Cancel` Send `Outputs` as array of numbers
+- Fix: `Component.Set` `Ramp` option sent as number

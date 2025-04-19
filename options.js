@@ -18,18 +18,54 @@ const groupID = {
 	regex: Regex.SOMETHING,
 }
 
+const controls = {
+	type: 'textinput',
+	id: 'controls',
+	label: 'Controls:',
+	default: '',
+	useVariables: { local: true },
+}
+
+const valueString = {
+	type: 'textinput',
+	id: 'value',
+	label: 'Value:',
+	default: '',
+	useVariables: { local: true },
+}
+
+const mixerInputs = {
+	type: 'textinput',
+	id: 'inputs',
+	label: 'Inputs',
+	default: '1',
+	useVariables: { local: true },
+	tooltip: `User Mixer IO String Syntax`,
+}
+const mixerOutputs = {
+	type: 'textinput',
+	id: 'outputs',
+	label: 'Outputs',
+	default: '1',
+	useVariables: { local: true },
+	tooltip: `User Mixer IO String Syntax`,
+}
+
+const mixerCues = {
+	type: 'textinput',
+	id: 'cues',
+	label: 'Cues',
+	default: '1',
+	useVariables: { local: true },
+	tooltip: `User Mixer IO String Syntax`,
+}
+
 export const options = {
 	actions: {
 		controlSet: (config) => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'value',
-					label: 'Value:',
-					default: '',
-					useVariables: { local: true },
-				},
+				valueString,
 				{
 					type: 'dropdown',
 					id: 'type',
@@ -140,13 +176,7 @@ export const options = {
 					default: '',
 					useVariables: { local: true },
 				},
-				{
-					type: 'textinput',
-					id: 'value',
-					label: 'Value:',
-					default: '',
-					useVariables: { local: true },
-				},
+				valueString,
 				{
 					type: 'textinput',
 					id: 'ramp',
@@ -157,40 +187,13 @@ export const options = {
 			]
 		},
 		changeGroup_addControl: () => {
-			return [
-				groupID,
-				{
-					type: 'textinput',
-					id: 'controls',
-					label: 'Controls:',
-					default: '',
-					useVariables: { local: true },
-				},
-			]
+			return [groupID, controls]
 		},
 		changeGroup_addComponentControl: () => {
-			return [
-				groupID,
-				{
-					type: 'textinput',
-					id: 'controls',
-					label: 'Controls:',
-					default: '',
-					useVariables: { local: true },
-				},
-			]
+			return [groupID, controls]
 		},
 		changeGroup_remove: () => {
-			return [
-				groupID,
-				{
-					type: 'textinput',
-					id: 'controls',
-					label: 'Controls:',
-					default: '',
-					useVariables: { local: true },
-				},
-			]
+			return [groupID, controls]
 		},
 		changeGroup_destroy: () => {
 			return [groupID]
@@ -204,20 +207,8 @@ export const options = {
 		mixer_setCrossPointGain: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
-				{
-					type: 'textinput',
-					id: 'outputs',
-					label: 'Outputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerInputs,
+				mixerOutputs,
 				{
 					type: 'number',
 					id: 'value',
@@ -241,20 +232,8 @@ export const options = {
 		mixer_setCrossPointDelay: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
-				{
-					type: 'textinput',
-					id: 'outputs',
-					label: 'Outputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerInputs,
+				mixerOutputs,
 				{
 					type: 'number',
 					id: 'value',
@@ -278,20 +257,8 @@ export const options = {
 		mixer_setCrossPointMute: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
-				{
-					type: 'textinput',
-					id: 'outputs',
-					label: 'Outputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerInputs,
+				mixerOutputs,
 				{
 					type: 'dropdown',
 					id: 'value',
@@ -307,20 +274,8 @@ export const options = {
 		mixer_setCrossPointSolo: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
-				{
-					type: 'textinput',
-					id: 'outputs',
-					label: 'Outputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerInputs,
+				mixerOutputs,
 				{
 					type: 'dropdown',
 					id: 'value',
@@ -336,13 +291,7 @@ export const options = {
 		mixer_setInputGain: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerInputs,
 				{
 					type: 'number',
 					id: 'value',
@@ -366,13 +315,7 @@ export const options = {
 		mixer_setInputMute: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerInputs,
 				{
 					type: 'dropdown',
 					id: 'value',
@@ -388,13 +331,7 @@ export const options = {
 		mixer_setInputSolo: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerInputs,
 				{
 					type: 'dropdown',
 					id: 'value',
@@ -410,13 +347,7 @@ export const options = {
 		mixer_setOutputGain: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'outputs',
-					label: 'Outputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerOutputs,
 				{
 					type: 'number',
 					id: 'value',
@@ -440,13 +371,7 @@ export const options = {
 		mixer_setOutputMute: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'outputs',
-					label: 'Outputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerOutputs,
 				{
 					type: 'dropdown',
 					id: 'value',
@@ -462,13 +387,7 @@ export const options = {
 		mixer_setCueMute: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'cues',
-					label: 'Cues',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerCues,
 				{
 					type: 'dropdown',
 					id: 'value',
@@ -484,13 +403,7 @@ export const options = {
 		mixer_setCueGain: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'cues',
-					label: 'Cues',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerCues,
 				{
 					type: 'number',
 					id: 'value',
@@ -514,20 +427,8 @@ export const options = {
 		mixer_setInputCueEnable: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'cues',
-					label: 'Cues',
-					default: '1',
-					useVariables: { local: true },
-				},
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerCues,
+				mixerInputs,
 				{
 					type: 'dropdown',
 					id: 'value',
@@ -543,20 +444,8 @@ export const options = {
 		mixer_setInputCueAfl: () => {
 			return [
 				name,
-				{
-					type: 'textinput',
-					id: 'cues',
-					label: 'Cues',
-					default: '1',
-					useVariables: { local: true },
-				},
-				{
-					type: 'textinput',
-					id: 'inputs',
-					label: 'Inputs',
-					default: '1',
-					useVariables: { local: true },
-				},
+				mixerCues,
+				mixerInputs,
 				{
 					type: 'dropdown',
 					id: 'value',

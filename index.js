@@ -1794,7 +1794,15 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			statusGet: {
 				name: 'StatusGet',
-				options: [],
+				options: [
+					{
+						type: 'static-text',
+						id: 'info',
+						label: '',
+						width: 6,
+						value: 'Manually update Engine variables. Full response written to logs',
+					},
+				],
 				callback: async (_evt, _context) => {
 					await this.sendCommand('StatusGet', 0)
 				},

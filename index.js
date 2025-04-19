@@ -14,11 +14,13 @@ import {
 } from '@companion-module/base'
 import { configFields } from './config.js'
 import {
+	buildFilteredOutputArray,
 	calcRelativeValue,
 	convertValueType,
-	sanitiseVariableId,
-	buildFilteredOutputArray,
+	isCoreActive,
+	isSocketOkToSend,
 	resetModuleStatus,
+	sanitiseVariableId,
 	validMethodsToStandbyCore,
 } from './utils.js'
 import { debounce } from 'lodash'
@@ -2070,32 +2072,6 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
-	 * Check if the core is active
-	 * @param {boolean} secondary If you are asking if the Secondary core is Active
-	 * @access private
-	 */
-
-	isCoreActive(secondary = false) {
-		if (secondary) {
-			return this.moduleStatus.secondary.state == 'Active'
-		}
-		return this.moduleStatus.primary.state == 'Active'
-	}
-
-	/**
-	 * Check if socket is ok to send data
-	 * @param {boolean} secondary If you are asking if the Secondary core is Active
-	 * @access private
-	 */
-
-	isSocketOkToSend(secondary = false) {
-		if (secondary) {
-			return this.socket.sec && !this.socket.sec.isDestroyed && this.socket.sec.isConnected
-		}
-		return this.socket.pri && !this.socket.pri.isDestroyed && this.socket.pri.isConnected
-	}
-
-	/**
 	 * Log message send result
 	 * @param {boolean} sent return from socket.send
 	 * @param {object} cmd Command object sent
@@ -2117,7 +2093,7 @@ class QsysRemoteControl extends InstanceBase {
 	/**
 	 * Add message to outbound queue and send
 	 * @param {object} cmd Command object to send
-	 * @param {QRC_GET | QRC_SET} get_set Get or Set method
+	 * @param {QRC_GET | QRC_SET} get_set Get or Set method, defaults to Set (2)
 	 * @return {Promise<boolean>}
 	 * @access private
 	 */
@@ -2129,8 +2105,8 @@ class QsysRemoteControl extends InstanceBase {
 			.add(async () => {
 				let sentPri = false
 				let sentSec = false
-				if (this.isCoreActive() || validMethodsToStandbyCore(cmd)) {
-					if (this.isSocketOkToSend()) {
+				if (isCoreActive(this.moduleStatus.primary) || validMethodsToStandbyCore(cmd)) {
+					if (isSocketOkToSend(this.socket.pri)) {
 						sentPri = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
 						this.logSentMessage(sentPri, cmd)
 					} else {
@@ -2142,8 +2118,8 @@ class QsysRemoteControl extends InstanceBase {
 				}
 
 				if (this.config.redundant) {
-					if (this.isCoreActive(true) || validMethodsToStandbyCore(cmd)) {
-						if (this.isSocketOkToSend(true)) {
+					if (isCoreActive(this.moduleStatus.secondary) || validMethodsToStandbyCore(cmd)) {
+						if (isSocketOkToSend(this.socket.sec)) {
 							sentSec = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
 							this.logSentMessage(sentSec, cmd, this.config.hostSecondary)
 						} else {
@@ -2184,7 +2160,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	/**
 	 * Get named control value
-	 * @param {string | MapIterator<any>} name
+	 * @param {string | MapIterator<any> | SetIterator<any>} name
 	 * @returns {Promise<boolean>} True if message send was successful
 	 * @access private
 	 */

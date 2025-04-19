@@ -10,6 +10,8 @@ import {
 	// eslint-disable-next-line no-unused-vars
 	InstanceBase,
 	InstanceStatus,
+	// eslint-disable-next-line no-unused-vars
+	TCPHelper,
 } from '@companion-module/base'
 
 /**
@@ -144,4 +146,24 @@ export const resetModuleStatus = () => {
 export const validMethodsToStandbyCore = (cmd) => {
 	const validMethods = ['StatusGet', 'NoOp', 'Logon'] //Add methods here that are OK to send to core that is in Standby or Idle
 	return validMethods.includes(cmd?.method)
+}
+
+/**
+ * Check if socket is ok to send data
+ * @param {TCPHelper} socket
+ * @returns {boolean}
+ */
+
+export const isSocketOkToSend = (socket) => {
+	return socket && !socket.isDestroyed && socket.isConnected
+}
+
+/**
+ * Check if the core is active
+ * @param {object} engine
+ * @returns {boolean}
+ */
+
+export const isCoreActive = (engine) => {
+	return engine.state == 'Active'
 }

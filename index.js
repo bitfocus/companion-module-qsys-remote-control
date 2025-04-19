@@ -42,6 +42,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.variables = []
 		this.moduleStatus = resetModuleStatus()
 		this.controls = new Map()
+		this.namesToGet = new Set()
 		this.socket = {
 			pri: new TCPHelper('localhost', 1710),
 			sec: new TCPHelper('localhost', 1710),
@@ -78,6 +79,7 @@ class QsysRemoteControl extends InstanceBase {
 		queue.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
+		this.namesToGet = new Set()
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		this.config = config
@@ -586,6 +588,16 @@ class QsysRemoteControl extends InstanceBase {
 						tooltip: `Data type to be sent`,
 					},
 					{
+						type: 'textinput',
+						id: 'ramp',
+						label: 'Ramp:',
+						default: '',
+						useVariables: { local: true },
+						isVisible: (options) => {
+							return options.type == 'number'
+						},
+					},
+					{
 						type: 'checkbox',
 						id: 'relative',
 						label: 'Relative',
@@ -658,20 +670,18 @@ class QsysRemoteControl extends InstanceBase {
 					}
 					value = convertValueType(value, evt.options.type)
 					if (value !== undefined) {
-						const sent = await this.sendCommand('Control.Set', {
+						const params = {
 							Name: name,
 							Value: value,
-						})
+						}
+						let ramp = Number.parseFloat(await context.parseVariablesInString(evt.options.ramp))
+						if (evt.options.type == 'number' && !Number.isNaN(ramp) && ramp >= 0) params.Ramp = ramp
+						const sent = await this.sendCommand('Control.Set', params)
 						if (sent && control !== undefined) {
 							control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
 							if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
 							// Follow with Control.Get to stay in sync
-							const cmd = {
-								method: 'Control.Get',
-								params: [name],
-							}
-
-							await this.callCommandObj(cmd, QRC_GET)
+							await this.getControl(name)
 						}
 					} else {
 						this.log('warn', `Invalid value (NaN) could not complete ${evt.actionId}:${evt.id}`)
@@ -684,7 +694,7 @@ class QsysRemoteControl extends InstanceBase {
 					if (control != undefined && control.value != null) {
 						let type = 'string'
 						if (typeof control.value == 'boolean') type = 'boolean'
-						if (typeof control.value == 'number') type = 'float'
+						if (typeof control.value == 'number') type = 'number'
 						return {
 							...evt.options,
 							relative: false,
@@ -692,12 +702,7 @@ class QsysRemoteControl extends InstanceBase {
 							type: type,
 						}
 					} else {
-						const cmd = {
-							method: 'Control.Get',
-							params: [name],
-						}
-
-						await this.callCommandObj(cmd, QRC_GET)
+						await this.getControl(name)
 					}
 					return undefined
 				},
@@ -750,12 +755,7 @@ class QsysRemoteControl extends InstanceBase {
 						control.value = !control.value
 						if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
 						// Follow with Control.Get to stay in sync
-						const cmd = {
-							method: 'Control.Get',
-							params: [name],
-						}
-
-						await this.callCommandObj(cmd, QRC_GET)
+						await this.getControl(name)
 					}
 				},
 			},
@@ -2179,6 +2179,22 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
+	 * Get named control value
+	 * @param {string} name
+	 * @returns {Promise<boolean>} True if message send was successful
+	 * @access private
+	 */
+
+	async getControl(name) {
+		const cmd = {
+			method: 'Control.Get',
+			params: [name],
+		}
+
+		return await this.callCommandObj(cmd, QRC_GET)
+	}
+
+	/**
 	 * Query values of controls in this.controls
 	 * @access private
 	 */
@@ -2226,9 +2242,19 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	debouncedVariableDefUpdate = debounce(
-		() => {
+		async () => {
 			this.setVariableDefinitions(this.variables)
 			this.setEngineVariableValues()
+			if (this.namesToGet.size > 0) {
+				await this.callCommandObj(
+					{
+						method: 'Control.Get',
+						params: [...this.namesToGet.keys()],
+					},
+					QRC_GET,
+				)
+				this.namesToGet = new Set()
+			}
 		},
 		1000,
 		{ leading: false, maxWait: 5000, trailing: true },
@@ -2271,7 +2297,7 @@ class QsysRemoteControl extends InstanceBase {
 					variableId: `${sanitiseVariableId(name)}_string`,
 				},
 			)
-
+			this.namesToGet.add(name)
 			this.debouncedVariableDefUpdate()
 		}
 	}

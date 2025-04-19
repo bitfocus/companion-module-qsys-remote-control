@@ -32,6 +32,7 @@ function relativeControlSet(_context, props) {
 				action.options.min ??= ''
 				action.options.max ??= ''
 				action.options.type ??= 'string'
+				action.options.ramp ??= ''
 				result.updatedActions.push(action)
 				break
 		}

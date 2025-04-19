@@ -57,6 +57,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `StatusGet` action
 - Feat: `Control.Get` action
 - Feat: `Relative` action option for `Control.Set` only available when feedbacks are enabled, with `Min` and `Max` range limits
+- Feat: `Ramp` action option for `Control.Set` when `Type` set to `Number`
 - Feat: `Type` action option for `Control.Set` to set the data type of `Value` in the message
 - Feat: `Seek` and `RefID` action options for `LoopPlayer.Start`
 - Feat: `Control.Set` add `learn` callback
@@ -77,4 +78,4 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: Send boolean values as bools rather than strings (`Mixer.SetCrossPointMute`, `Mixer.SetCrossPointSolo`, `Mixer.SetInputMute`, `Mixer.SetInputSolo`, `Mixer.SetOutputMute`, `Mixer.SetCueMute`, `Mixer.SetInputCueEnable`, `Mixer.SetInputCueAfl`, `LoopPlayer.Start`)
 - Fix: `Feedback on boolean control value` when value is `true`
 - Fix: `LoopPlayer.Stop` & `LoopPlayer.Cancel` Send `Outputs` as array of numbers
-- Fix: `Component.Set` `Ramp` option sent as number
+- Fix: `Component.Set` option `Ramp` sent as number

@@ -665,6 +665,13 @@ class QsysRemoteControl extends InstanceBase {
 						if (sent && control !== undefined) {
 							control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
 							if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
+							// Follow with Control.Get to stay in sync
+							const cmd = {
+								method: 'Control.Get',
+								params: [name],
+							}
+
+							await this.callCommandObj(cmd, QRC_GET)
 						}
 					} else {
 						this.log('warn', `Invalid value (NaN) could not complete ${evt.actionId}:${evt.id}`)
@@ -742,6 +749,13 @@ class QsysRemoteControl extends InstanceBase {
 					if (sent) {
 						control.value = !control.value
 						if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
+						// Follow with Control.Get to stay in sync
+						const cmd = {
+							method: 'Control.Get',
+							params: [name],
+						}
+
+						await this.callCommandObj(cmd, QRC_GET)
 					}
 				},
 			},

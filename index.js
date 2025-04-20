@@ -665,12 +665,12 @@ class QsysRemoteControl extends InstanceBase {
 				subscribe: async (action, context) => await this.addControl(action, context),
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
-					const name = await context.parseVariablesInString(evt.options.name)
+					const name = (await context.parseVariablesInString(evt.options.name)).split(',')
 					if (name == '') return
 					if (!this.controls.get(name)) this.addControl(evt, context)
 					const cmd = {
 						method: 'Control.Get',
-						params: [name],
+						params: name,
 					}
 
 					await this.callCommandObj(cmd, QRC_GET)
@@ -1235,7 +1235,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	/**
 	 * Get named control value
-	 * @param {string | MapIterator<any> | SetIterator<any>} name
+	 * @param {string | MapIterator<any> | SetIterator<any> | string[]} name
 	 * @returns {Promise<boolean>} True if message send was successful
 	 * @access private
 	 */

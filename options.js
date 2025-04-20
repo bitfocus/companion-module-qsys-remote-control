@@ -165,7 +165,7 @@ export const options = {
 			]
 		},
 		controlGet: () => {
-			return [name]
+			return [{ ...name, tooltip: `Comma seperated list of control names` }]
 		},
 		componentSet: () => {
 			return [

@@ -66,7 +66,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `Verbose Logs` config option
 - Feat: `StatusGet` action
 - Improvement: Send keep alive `NoOp` messages
-- Improvement: Control polling via a change group with auto-polling for better efficiency when `bundle_feedbacks` enabled
+- Improvement: Control polling via a change group for better efficiency when `bundle_feedbacks` enabled
 - Improvement: `Control.Toggle` subscribe and unsubscribe callbacks
 - Improvement: `Control.Set` subscribe (when `relative` == `true`) and unsubscribe callbacks
 - Improvement: After `Control.toggle` & `Control.set` actions update internal controls map value and value variable

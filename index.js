@@ -81,12 +81,12 @@ class QsysRemoteControl extends InstanceBase {
 		queue.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
+		this.controls.clear()
 		this.namesToGet.clear()
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		this.config = config
 		this.console_debug = config.verbose
-		this.controls = new Map()
 		await this.initVariables(config.redundant)
 		this.init_tcp(config.host, config.port)
 		if (config.redundant) {
@@ -662,18 +662,21 @@ class QsysRemoteControl extends InstanceBase {
 			control_get: {
 				name: 'Control.Get',
 				options: options.actions.controlGet(),
-				subscribe: async (action, context) => await this.addControl(action, context),
-				unsubscribe: async (action, context) => await this.removeControl(action, context),
+				//subscribe: async (action, context) => await this.addControl(action, context),
+				//unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
-					const name = (await context.parseVariablesInString(evt.options.name)).split(',')
-					if (name == '') return
-					if (!this.controls.get(name)) this.addControl(evt, context)
-					const cmd = {
-						method: 'Control.Get',
-						params: name,
-					}
-
-					await this.callCommandObj(cmd, QRC_GET)
+					const names = (await context.parseVariablesInString(evt.options.name)).split(',')
+					let namesArray = []
+					names.forEach(async (name) => {
+						if (name == '') return
+						if (!this.controls.has(name)) {
+							evt.options.name = name
+							await this.addControl(evt, context)
+						}
+						namesArray.push(name)
+					})
+					if (namesArray.length == 0) return
+					await this.getControl(namesArray)
 				},
 			},
 			component_set: {
@@ -1240,7 +1243,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	/**
 	 * Get named control value
-	 * @param {string | MapIterator<any> | SetIterator<any> | string[]} name
+	 * @param {string | MapIterator<string> | SetIterator<string> | string[]} name
 	 * @returns {Promise<boolean>} True if message send was successful
 	 * @access private
 	 */
@@ -1263,8 +1266,8 @@ class QsysRemoteControl extends InstanceBase {
 		// It is possible to group multiple statuses; HOWEVER, if one doesn't exist, nothing will be returned...
 		// thus, we send one at a time
 		if (!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
-			this.controls.forEach(async (_x, k) => {
-				await this.getControl(k)
+			this.controls.forEach(async (_value, key) => {
+				await this.getControl(key)
 			})
 		} else {
 			//await this.getControl(this.controls.keys())
@@ -1283,13 +1286,9 @@ class QsysRemoteControl extends InstanceBase {
 			clearInterval(this.pollQRCTimer)
 			delete this.pollQRCTimer
 		}
-		if (this.config.bundle_feedbacks) {
-			this.changeGroup('AutoPoll', this.id, null, this.config.poll_interval)
-		} else {
-			this.pollQRCTimer = setInterval(async () => {
-				await this.getControlStatuses().catch(() => {})
-			}, parseInt(this.config.poll_interval))
-		}
+		this.pollQRCTimer = setInterval(async () => {
+			await this.getControlStatuses().catch(() => {})
+		}, Math.floor(this.config.poll_interval))
 	}
 
 	/**

@@ -101,7 +101,7 @@ export const buildFilteredOutputArray = async (evt, context, self) => {
 		self.log('warn', `No valid outputs for ${evt.actionId}:${evt.id}`)
 		return undefined
 	}
-	return filteredOutputs
+	return filteredOutputs.sort((a, b) => a - b)
 }
 
 /**

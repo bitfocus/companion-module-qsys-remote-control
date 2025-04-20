@@ -771,12 +771,11 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Mixer.SetCrossPointMute',
 				options: options.actions.mixer_setCrossPointMute(),
 				callback: async (evt, context) => {
-					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCrossPointMute', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
-						Value: value,
+						Value: evt.options.value,
 					})
 				},
 			},
@@ -784,12 +783,11 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Mixer.SetCrossPointSolo',
 				options: options.actions.mixer_setCrossPointSolo(),
 				callback: async (evt, context) => {
-					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCrossPointSolo', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
-						Value: value,
+						Value: evt.options.value,
 					})
 				},
 			},
@@ -809,11 +807,10 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Mixer.SetInputMute',
 				options: options.actions.mixer_setInputMute(),
 				callback: async (evt, context) => {
-					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputMute', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Value: value,
+						Value: evt.options.value,
 					})
 				},
 			},
@@ -821,11 +818,10 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Mixer.SetInputSolo',
 				options: options.actions.mixer_setInputSolo(),
 				callback: async (evt, context) => {
-					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputSolo', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Value: value,
+						Value: evt.options.value,
 					})
 				},
 			},
@@ -845,11 +841,10 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Mixer.SetOutputMute',
 				options: options.actions.mixer_setOutputMute(),
 				callback: async (evt, context) => {
-					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetOutputMute', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
-						Value: value,
+						Value: evt.options.value,
 					})
 				},
 			},
@@ -857,11 +852,10 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Mixer.SetCueMute',
 				options: options.actions.mixer_setCueMute(),
 				callback: async (evt, context) => {
-					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetCueMute', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Cues: await context.parseVariablesInString(evt.options.cues),
-						Value: value,
+						Value: evt.options.value,
 					})
 				},
 			},
@@ -881,12 +875,11 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Mixer.SetInputCueEnable',
 				options: options.actions.mixer_setInputCueEnable(),
 				callback: async (evt, context) => {
-					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputCueEnable', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Cues: await context.parseVariablesInString(evt.options.cues),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Value: value,
+						Value: evt.options.value,
 					})
 				},
 			},
@@ -894,12 +887,11 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'Mixer.SetInputCueAfl',
 				options: options.actions.mixer_setInputCueAfl(),
 				callback: async (evt, context) => {
-					const value = evt.options.value === 'true'
 					await this.sendCommand('Mixer.SetInputCueAfl', {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Cues: await context.parseVariablesInString(evt.options.cues),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Value: value,
+						Value: evt.options.value,
 					})
 				},
 			},
@@ -907,7 +899,6 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'LoopPlayer.Start',
 				options: options.actions.loopPlayer_start(),
 				callback: async (evt, context) => {
-					const loop = evt.options.loop === 'true'
 					const output = Number.parseInt(await context.parseVariablesInString(evt.options.output))
 					let refID = await context.parseVariablesInString(evt.options.refID)
 					refID = refID == '' ? `${this.label}:${evt.actionId}:${evt.id}` : refID
@@ -926,7 +917,7 @@ class QsysRemoteControl extends InstanceBase {
 						Name: await context.parseVariablesInString(evt.options.name), // Had to add name to the options array.
 						StartTime: Math.round(evt.options.startTime),
 						Seek: Math.round(evt.options.seek),
-						Loop: loop,
+						Loop: evt.options.loop,
 						Log: true,
 						RefID: refID,
 					})

@@ -265,8 +265,8 @@ export const options = {
 					label: 'Value',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 			]
@@ -282,8 +282,8 @@ export const options = {
 					label: 'Value',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 			]
@@ -322,8 +322,8 @@ export const options = {
 					label: 'Value',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 			]
@@ -338,8 +338,8 @@ export const options = {
 					label: 'Value',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 			]
@@ -378,8 +378,8 @@ export const options = {
 					label: 'Value',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 			]
@@ -394,8 +394,8 @@ export const options = {
 					label: 'Value',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 			]
@@ -435,8 +435,8 @@ export const options = {
 					label: 'Value',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 			]
@@ -452,8 +452,8 @@ export const options = {
 					label: 'Value',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 			]
@@ -510,8 +510,8 @@ export const options = {
 					label: 'Loop',
 					default: 'true',
 					choices: [
-						{ id: 'true', label: 'True' },
-						{ id: 'false', label: 'False' },
+						{ id: true, label: 'True' },
+						{ id: false, label: 'False' },
 					],
 				},
 				{

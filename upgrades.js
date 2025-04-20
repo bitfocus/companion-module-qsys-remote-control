@@ -61,6 +61,35 @@ function loopPlayerStartSeek(_context, props) {
 	return result
 }
 
+function fixBooleanValues(_context, props) {
+	const result = {
+		updatedActions: [],
+		updatedConfig: null,
+		updatedFeedbacks: [],
+	}
+
+	for (const action of props.actions) {
+		switch (action.actionId) {
+			case 'mixer_setCrossPointMute':
+			case 'mixer_setCrossPointSolo':
+			case 'mixer_setInputMute':
+			case 'mixer_setInputSolo':
+			case 'mixer_setOutputMute':
+			case 'mixer_setCueMute':
+			case 'mixer_setInputCueEnable':
+			case 'mixer_setInputCueAfl':
+				action.options.value = action.options.value === 'true'
+				result.updatedActions.push(action)
+				break
+			case 'loopPlayer_start':
+				action.options.loop = action.options.loop === 'true'
+				result.updatedActions.push(action)
+		}
+	}
+
+	return result
+}
+
 export default [
 	CreateConvertToBooleanFeedbackUpgradeScript({
 		'control-boolean': {
@@ -75,4 +104,5 @@ export default [
 	redundantCores,
 	relativeControlSet,
 	loopPlayerStartSeek,
+	fixBooleanValues,
 ]

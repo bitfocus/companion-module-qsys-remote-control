@@ -1216,11 +1216,12 @@ class QsysRemoteControl extends InstanceBase {
 	 * Call changeGroup command
 	 * @param {string} type Type of Change Group command
 	 * @param {string} id Change Group ID
-	 * @param {string | null} controls
+	 * @param {string | null} controls Control names to add or remove
+	 * @param {number} rate Autopoll interval (mS)
 	 * @access private
 	 */
 
-	async changeGroup(type, id, controls = null) {
+	async changeGroup(type, id, controls = null, rate = 1000) {
 		const obj = {
 			method: 'ChangeGroup.' + type,
 			params: {
@@ -1228,9 +1229,13 @@ class QsysRemoteControl extends InstanceBase {
 			},
 		}
 		if (controls !== null) {
-			obj.params.Controls = [controls]
+			obj.params.Controls = typeof controls == 'object' ? [...controls] : [controls]
 		}
-		await this.callCommandObj(obj, type == 'Poll' ? QRC_GET : QRC_SET)
+		if (type == 'AutoPoll') {
+			obj.params.Rate = Number(rate / 1000)
+		}
+		const getSet = type == 'Poll' || type == 'AutoPoll' ? QRC_GET : QRC_SET
+		await this.callCommandObj(obj, getSet)
 	}
 
 	/**
@@ -1262,7 +1267,8 @@ class QsysRemoteControl extends InstanceBase {
 				await this.getControl(k)
 			})
 		} else {
-			await this.getControl(this.controls.keys())
+			//await this.getControl(this.controls.keys())
+			await this.changeGroup('Poll', this.id)
 		}
 	}
 
@@ -1273,8 +1279,13 @@ class QsysRemoteControl extends InstanceBase {
 
 	initPolling() {
 		if (!this.config.feedback_enabled) return
-
-		if (this.pollQRCTimer === undefined) {
+		if (this.pollQRCTimer) {
+			clearInterval(this.pollQRCTimer)
+			delete this.pollQRCTimer
+		}
+		if (this.config.bundle_feedbacks) {
+			this.changeGroup('AutoPoll', this.id, null, this.config.poll_interval)
+		} else {
 			this.pollQRCTimer = setInterval(async () => {
 				await this.getControlStatuses().catch(() => {})
 			}, parseInt(this.config.poll_interval))
@@ -1293,9 +1304,11 @@ class QsysRemoteControl extends InstanceBase {
 				if (!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
 					this.namesToGet.forEach(async (_x, k) => {
 						await this.getControl(k)
+						await this.changeGroup('AddControl', this.id, k)
 					})
 				} else {
 					await this.getControl(this.namesToGet.keys())
+					await this.changeGroup('AddControl', this.id, this.controls.keys())
 				}
 				this.namesToGet.clear()
 			}
@@ -1364,6 +1377,7 @@ class QsysRemoteControl extends InstanceBase {
 
 			if (control.ids.size == 0) {
 				this.controls.delete(name)
+				await this.changeGroup('Remove', this.id, name)
 			}
 		}
 	}

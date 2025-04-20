@@ -35,7 +35,7 @@ This module will connect to Q-SYS systems using the [QRC](https://q-syshelp.qsc.
 - Snapshop.Save
 - StatusGet
 
-#### Mixer Input Output String Synatx
+**Mixer Input Output String Synatx**
 
 The mixer control API uses a string specification to determine to which inputs and outputs to apply changes. The syntax supports space- or comma-separated numbers, ranges of numbers, all numbers (*), and negation of a selection with the ! operator. For example:
 
@@ -48,6 +48,7 @@ The mixer control API uses a string specification to determine to which inputs a
 | 1-3 5-9    | Channels 1 through 3 and 5 through 9 |
 | 1-8 !3     | Channels 1 through 8 except 3        |
 | * !3-5     | Everything but 3 through 5           |
+|            |                                      |
 
 
 **Variables and Feedbacks**

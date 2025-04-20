@@ -98,7 +98,7 @@ export const buildFilteredOutputArray = async (evt, context, self) => {
 		if (!isNaN(out) && out > 0 && !filteredOutputs.includes(out)) filteredOutputs.push(out)
 	})
 	if (filteredOutputs.length == 0) {
-		self.log('warn', `No valid outputs for ${evt.actionId}:${evt.id}`)
+		self.log('warn', `No valid elements for ${evt.actionId}:${evt.id}`)
 		return undefined
 	}
 	return filteredOutputs.sort((a, b) => a - b)

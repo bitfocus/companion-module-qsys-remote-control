@@ -945,7 +945,7 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'LoopPlayer.Stop',
 				options: options.actions.loopPlayer_stop(),
 				callback: async (evt, context) => {
-					const filteredOutputs = buildFilteredOutputArray(evt, context, this)
+					const filteredOutputs = await buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
 						await this.sendCommand('LoopPlayer.Stop', {
 							Name: await context.parseVariablesInString(evt.options.name),
@@ -959,7 +959,7 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'LoopPlayer.Cancel',
 				options: options.actions.loopPlayer_cancel(),
 				callback: async (evt, context) => {
-					const filteredOutputs = buildFilteredOutputArray(evt, context, this)
+					const filteredOutputs = await buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
 						await this.sendCommand('LoopPlayer.Cancel', {
 							Name: await context.parseVariablesInString(evt.options.name),
@@ -994,9 +994,11 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'PA.PageSubmit - Message',
 				options: options.actions.page_submit_message(),
 				callback: async (evt, context) => {
+					evt.options.output = evt.options.zones
+					const zones = await buildFilteredOutputArray(evt, context, this)
 					await this.sendCommand('PA.PageSubmit', {
 						Mode: 'message',
-						Zones: (await context.parseVariablesInString(evt.options.zones)).split(',').map(Number),
+						Zones: zones,
 						Priority: evt.options.priority,
 						Preamble: await context.parseVariablesInString(evt.options.preamble),
 						Message: await context.parseVariablesInString(evt.options.message),

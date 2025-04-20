@@ -56,6 +56,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `PA.PageSubmit` action
 - Feat: `StatusGet` action
 - Feat: `Control.Get` action
+- Feat: `ChangeGroup.Poll` action
 - Feat: `Relative` action option for `Control.Set` only available when feedbacks are enabled, with `Min` and `Max` range limits
 - Feat: `Ramp` action option for `Control.Set` when `Type` set to `Number`
 - Feat: `Type` action option for `Control.Set` to set the data type of `Value` in the message
@@ -79,3 +80,4 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: `Feedback on boolean control value` when value is `true`
 - Fix: `LoopPlayer.Stop` & `LoopPlayer.Cancel` Send `Outputs` as array of numbers
 - Fix: `Component.Set` option `Ramp` sent as number
+- Remove: `ChangeGroup.AddComponentControl` action broken, and module has no system for tracking component values

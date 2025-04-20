@@ -24,6 +24,7 @@ const controls = {
 	label: 'Controls:',
 	default: '',
 	useVariables: { local: true },
+	tooltip: `Comma seperated list of control names`,
 }
 
 const valueString = {
@@ -196,6 +197,9 @@ export const options = {
 			return [groupID, controls]
 		},
 		changeGroup_destroy: () => {
+			return [groupID]
+		},
+		changeGroup_poll: () => {
 			return [groupID]
 		},
 		changeGroup_invalidate: () => {

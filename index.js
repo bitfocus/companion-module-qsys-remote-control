@@ -463,8 +463,15 @@ class QsysRemoteControl extends InstanceBase {
 			const obj = JSON.parse(jsonstr)
 
 			if (obj?.id == QRC_GET) {
+				// Response from Control.Get
 				if (Array.isArray(obj?.result)) {
 					obj.result.forEach((r) => this.updateControl(r))
+					refresh = true
+				} else if (Array.isArray(obj?.result?.Changes)) {
+					// Response from ChangeGroup.Poll
+					obj.result.Changes.forEach((r) => {
+						if (r.Component === undefined) this.updateControl(r) // Dont track Component values
+					})
 					refresh = true
 				} else if (obj.error !== undefined) {
 					this.log('error', JSON.stringify(obj.error))
@@ -694,21 +701,22 @@ class QsysRemoteControl extends InstanceBase {
 					await this.changeGroup(
 						'AddControl',
 						await context.parseVariablesInString(evt.options.id),
-						await context.parseVariablesInString(evt.options.controls),
+						(await context.parseVariablesInString(evt.options.controls)).split(','),
 					)
 				},
 			},
-			changeGroup_addComponentControl: {
+			/* changeGroup_addComponentControl: {
 				name: 'ChangeGroup.AddComponentControl',
 				options: options.actions.changeGroup_addComponentControl(),
 				callback: async (evt, context) => {
+					// This probably wont work.
 					await this.changeGroup(
 						'AddComponentControl',
 						await context.parseVariablesInString(evt.options.id),
 						await context.parseVariablesInString(evt.options.controls),
 					)
 				},
-			},
+			}, */
 			changeGroup_remove: {
 				name: 'ChangeGroup.Remove',
 				options: options.actions.changeGroup_remove(),
@@ -716,7 +724,7 @@ class QsysRemoteControl extends InstanceBase {
 					await this.changeGroup(
 						'Remove',
 						await context.parseVariablesInString(evt.options.id),
-						await context.parseVariablesInString(evt.options.controls),
+						(await context.parseVariablesInString(evt.options.controls)).split(','),
 					)
 				},
 			},
@@ -725,6 +733,13 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.changeGroup_destroy(),
 				callback: async (evt, context) => {
 					await this.changeGroup('Destroy', await context.parseVariablesInString(evt.options.id))
+				},
+			},
+			changeGroup_poll: {
+				name: 'ChangeGroup.Poll',
+				options: options.actions.changeGroup_poll(),
+				callback: async (evt, context) => {
+					await this.changeGroup('Poll', await context.parseVariablesInString(evt.options.id))
 				},
 			},
 			changeGroup_invalidate: {
@@ -1215,7 +1230,7 @@ class QsysRemoteControl extends InstanceBase {
 		if (controls !== null) {
 			obj.params.Controls = [controls]
 		}
-		await this.callCommandObj(obj)
+		await this.callCommandObj(obj, type == 'Poll' ? QRC_GET : QRC_SET)
 	}
 
 	/**

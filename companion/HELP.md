@@ -5,11 +5,11 @@ This module will connect to Q-SYS systems using the [QRC](https://q-syshelp.qsc.
 **Available commands for Q-SYS Remote Control**
 
 - ChangeGroup.AddControl
-- ChangeGroup.AddComponentControl
-- ChangeGroup.Remove
+- ChangeGroup.Clear
 - ChangeGroup.Destroy
 - ChangeGroup.Invalidate
-- ChangeGroup.Clear
+- ChangeGroup.Poll
+- ChangeGroup.Remove
 - Component.Set
 - Control.Get
 - Control.Set
@@ -50,8 +50,16 @@ The mixer control API uses a string specification to determine to which inputs a
 | * !3-5     | Everything but 3 through 5           |
 |            |                                      |
 
+**Feedbacks**
 
-**Variables and Feedbacks**
+- Core State
+- Change text to reflect control value
+- Feedback on boolean control value
+- Feedback if control value at or exceeds threshold
+- Fade color over control value range
+
+
+**Variables**
 
 - Engine Status
 - Named control values

@@ -1400,7 +1400,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	async addControl(feedback, context = this) {
 		const name = await context.parseVariablesInString(feedback['options']['name'])
-
+		if (name == '') return
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
 			if (control.actionIds === undefined) {

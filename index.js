@@ -1399,7 +1399,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async addControl(feedback, context = this) {
-		const name = await context.parseVariablesInString(feedback['options']['name'])
+		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
 		if (name == '') return
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
@@ -1464,7 +1464,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async removeControl(feedback, context = this) {
-		const name = await context.parseVariablesInString(feedback['options']['name'])
+		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
 
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)

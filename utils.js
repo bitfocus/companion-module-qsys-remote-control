@@ -14,6 +14,11 @@ import {
 	TCPHelper,
 } from '@companion-module/base'
 
+import {
+	// eslint-disable-next-line no-unused-vars
+	QsysRemoteControl,
+} from './index'
+
 /**
  * Perform type conversion on value
  * @param {number} value
@@ -166,4 +171,21 @@ export const isSocketOkToSend = (socket) => {
 
 export const isCoreActive = (engine) => {
 	return engine.state == 'Active'
+}
+
+/**
+ * Parse array of names from comma seperated list
+ * @param {CompanionActionInfo} action
+ * @param {CompanionActionContext} context
+ * @returns {Promise<string[]>}
+ */
+
+export const namesArray = async (action, context) => {
+	const names = (await context.parseVariablesInString(action.options.name)).split(',')
+	let namesArray = []
+	names.forEach(async (name) => {
+		const trimmedName = name.trim()
+		if (trimmedName !== '') namesArray.push(trimmedName)
+	})
+	return namesArray
 }

@@ -7,6 +7,10 @@ import {
 	TCPHelper,
 	InstanceStatus,
 	// eslint-disable-next-line no-unused-vars
+	CompanionActionInfo,
+	// eslint-disable-next-line no-unused-vars
+	CompanionActionContext,
+	// eslint-disable-next-line no-unused-vars
 	CompanionFeedbackInfo,
 	// eslint-disable-next-line no-unused-vars
 	CompanionFeedbackContext,
@@ -19,11 +23,12 @@ import {
 	convertValueType,
 	isCoreActive,
 	isSocketOkToSend,
+	namesArray,
 	resetModuleStatus,
 	sanitiseVariableId,
 	validMethodsToStandbyCore,
 } from './utils.js'
-import { debounce } from 'lodash'
+import { debounce, throttle } from 'lodash'
 import PQueue from 'p-queue'
 const queue = new PQueue({ concurrency: 1 })
 const QRC_GET = 1
@@ -45,6 +50,8 @@ class QsysRemoteControl extends InstanceBase {
 		this.moduleStatus = resetModuleStatus()
 		this.controls = new Map()
 		this.namesToGet = new Set()
+		this.feedbackIdsToCheck = new Set()
+		this.changeGroupSet = false
 		this.socket = {
 			pri: new TCPHelper('localhost', 1710),
 			sec: new TCPHelper('localhost', 1710),
@@ -81,8 +88,11 @@ class QsysRemoteControl extends InstanceBase {
 		queue.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
+		this.throttledFeedbackIdCheck.cancel()
 		this.controls.clear()
 		this.namesToGet.clear()
+		this.feedbackIdsToCheck.clear()
+		this.changeGroupSet = false
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		this.config = config
@@ -258,6 +268,11 @@ class QsysRemoteControl extends InstanceBase {
 		() => {
 			if (this.moduleStatus.logMessage !== '') this.log(this.moduleStatus.logLevel, this.moduleStatus.logMessage)
 			this.updateStatus(this.moduleStatus.status, this.moduleStatus.message)
+			if (
+				this.changeGroupSet &&
+				(this.moduleStatus.status == InstanceStatus.Ok || this.moduleStatus.status == InstanceStatus.UnknownWarning)
+			)
+				this.resetChangeGroup()
 		},
 		1000,
 		{ leading: false, maxWait: 2000, trailing: true },
@@ -457,7 +472,7 @@ class QsysRemoteControl extends InstanceBase {
 			this.socket.buffer.pri = list.pop()
 		}
 
-		let refresh = false
+		//let refresh = false
 
 		list.forEach((jsonstr) => {
 			const obj = JSON.parse(jsonstr)
@@ -466,13 +481,13 @@ class QsysRemoteControl extends InstanceBase {
 				// Response from Control.Get
 				if (Array.isArray(obj?.result)) {
 					obj.result.forEach((r) => this.updateControl(r))
-					refresh = true
+					//refresh = true
 				} else if (Array.isArray(obj?.result?.Changes)) {
 					// Response from ChangeGroup.Poll
 					obj.result.Changes.forEach((r) => {
 						if (r.Component === undefined) this.updateControl(r) // Dont track Component values
 					})
-					refresh = true
+					//refresh = true
 				} else if (obj.error !== undefined) {
 					this.log('error', JSON.stringify(obj.error))
 				}
@@ -491,7 +506,7 @@ class QsysRemoteControl extends InstanceBase {
 			}
 		})
 
-		if (refresh) this.checkFeedbacks()
+		//if (refresh) this.checkFeedbacks()
 	}
 
 	/**
@@ -537,6 +552,7 @@ class QsysRemoteControl extends InstanceBase {
 	destroy() {
 		queue.clear()
 		this.namesToGet.clear()
+		this.feedbackIdsToCheck.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
 		this.killTimersDestroySockets()
@@ -662,21 +678,18 @@ class QsysRemoteControl extends InstanceBase {
 			control_get: {
 				name: 'Control.Get',
 				options: options.actions.controlGet(),
-				//subscribe: async (action, context) => await this.addControl(action, context),
-				//unsubscribe: async (action, context) => await this.removeControl(action, context),
+				subscribe: async (action, context) => await this.addControls(action, context),
+				unsubscribe: async (action, context) => await this.removeControls(action, context),
 				callback: async (evt, context) => {
-					const names = (await context.parseVariablesInString(evt.options.name)).split(',')
-					let namesArray = []
+					const names = await namesArray(evt, context)
+					if (names.length == 0) return
 					names.forEach(async (name) => {
-						if (name == '') return
 						if (!this.controls.has(name)) {
 							evt.options.name = name
 							await this.addControl(evt, context)
 						}
-						namesArray.push(name)
 					})
-					if (namesArray.length == 0) return
-					await this.getControl(namesArray)
+					await this.getControl(names)
 				},
 			},
 			component_set: {
@@ -1221,7 +1234,7 @@ class QsysRemoteControl extends InstanceBase {
 	 * Call changeGroup command
 	 * @param {string} type Type of Change Group command
 	 * @param {string} id Change Group ID
-	 * @param {string | null} controls Control names to add or remove
+	 * @param {string | string[] | MapIterator<string> | SetIterator<string> | null} controls Control names to add or remove
 	 * @param {number} rate Autopoll interval (mS)
 	 * @access private
 	 */
@@ -1272,8 +1285,12 @@ class QsysRemoteControl extends InstanceBase {
 				await this.getControl(key)
 			})
 		} else {
-			//await this.getControl(this.controls.keys())
-			await this.changeGroup('Poll', this.id)
+			if (this.controlGroupSet) {
+				await this.changeGroup('Poll', this.id)
+			} else {
+				//Directly get controls if we havent setup the changeGroup yet
+				await this.getControl(this.controls.keys())
+			}
 		}
 	}
 
@@ -1292,9 +1309,24 @@ class QsysRemoteControl extends InstanceBase {
 			await this.getControlStatuses().catch(() => {})
 		}, Math.floor(this.config.poll_interval))
 	}
+	/**
+	 * Reinit default change group, and get all controls
+	 * @access private
+	 */
+
+	resetChangeGroup = debounce(
+		async () => {
+			await this.changeGroup('Destroy', this.id)
+			await this.getControl(this.controls.keys())
+			await this.changeGroup('AddControl', this.id, this.controls.keys())
+		},
+		1000,
+		{ leading: false, maxWait: 5000, trailing: true },
+	)
 
 	/**
 	 * Update the variable definitions
+	 * @access private
 	 */
 
 	debouncedVariableDefUpdate = debounce(
@@ -1309,8 +1341,9 @@ class QsysRemoteControl extends InstanceBase {
 					})
 				} else {
 					await this.getControl(this.namesToGet.keys())
-					await this.changeGroup('AddControl', this.id, this.controls.keys())
+					await this.changeGroup('AddControl', this.id, this.namesToGet.keys())
 				}
+				this.changeGroupSet = true
 				this.namesToGet.clear()
 			}
 		},
@@ -1319,8 +1352,23 @@ class QsysRemoteControl extends InstanceBase {
 	)
 
 	/**
-	 * @param {CompanionFeedbackInfo} feedback
-	 * @param {CompanionFeedbackContext} context
+	 * Call addControl for each element in a comma seperated list of control names
+	 * @param {CompanionActionInfo} action
+	 * @param {CompanionActionContext | InstanceBase} context
+	 * @access private
+	 */
+
+	async addControls(action, context = this) {
+		const names = await namesArray(action, context)
+		names.forEach(async (name) => {
+			action.options.name = name
+			await this.addControl(action, context)
+		})
+	}
+
+	/**
+	 * @param {CompanionActionInfo |CompanionFeedbackInfo} feedback
+	 * @param {CompanionActionContext | CompanionFeedbackContext} context
 	 * @access private
 	 */
 
@@ -1329,13 +1377,21 @@ class QsysRemoteControl extends InstanceBase {
 
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
-			if (control.ids === undefined) {
-				control.ids = new Set()
+			if (control.actionIds === undefined) {
+				control.actionIds = new Set()
 			}
-			control.ids.add(feedback.id)
+			if (control.feedbackIds === undefined) {
+				control.feedbackIds = new Set()
+			}
+			if (feedback.feedbackId !== undefined) {
+				control.feedbackIds.add(feedback.id)
+			} else {
+				control.actionIds.add(feedback.id)
+			}
 		} else {
 			this.controls.set(name, {
-				ids: new Set([feedback.id]),
+				actionIds: new Set(feedback.feedbackId !== undefined ? [] : [feedback.id]),
+				feedbackIds: new Set(feedback.feedbackId !== undefined ? [feedback.id] : []),
 				value: null,
 				position: null,
 				strval: '',
@@ -1361,8 +1417,23 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
-	 * @param {CompanionFeedbackInfo} feedback
-	 * @param {CompanionFeedbackContext | InstanceBase} context
+	 * Call removeControl for each element in a comma seperated list of control names
+	 * @param {CompanionActionInfo} action
+	 * @param {CompanionActionContext | InstanceBase} context
+	 * @access private
+	 */
+
+	async removeControls(action, context = this) {
+		const names = await namesArray(action, context)
+		names.forEach(async (name) => {
+			action.options.name = name
+			await this.removeControl(action, context)
+		})
+	}
+
+	/**
+	 * @param {CompanionActionInfo | CompanionFeedbackInfo} feedback
+	 * @param {CompanionActionContext | CompanionFeedbackContext | InstanceBase} context
 	 * @access private
 	 */
 
@@ -1371,17 +1442,32 @@ class QsysRemoteControl extends InstanceBase {
 
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
-
-			if (control.ids !== undefined) {
-				control.ids.delete(feedback.id)
+			if (feedback.feedbackId !== undefined) {
+				control.feedbackIds.delete(feedback.id)
+			} else {
+				control.actionIds.delete(feedback.id)
 			}
 
-			if (control.ids.size == 0) {
+			if (control.actionIds.size == 0 && control.feedbackIds.size == 0) {
 				this.controls.delete(name)
 				await this.changeGroup('Remove', this.id, name)
 			}
 		}
 	}
+
+	/**
+	 * Throttled Feedback checks
+	 */
+
+	throttledFeedbackIdCheck = throttle(
+		() => {
+			this.checkFeedbacksById(...this.feedbackIdsToCheck)
+			this.feedbackIdsToCheck.clear()
+		},
+		5,
+		{ leading: false, trailing: true },
+	)
+
 	/**
 	 * Updates a controls variable values
 	 * @param {object} update
@@ -1391,7 +1477,13 @@ class QsysRemoteControl extends InstanceBase {
 	updateControl(update) {
 		if (update.Name === undefined || update.Name === null) return
 		const name = sanitiseVariableId(update.Name)
-		const control = this.controls.get(update.Name) ?? { value: null, strval: '', position: null, ids: new Set() }
+		const control = this.controls.get(update.Name) ?? {
+			value: null,
+			strval: '',
+			position: null,
+			actionIds: new Set(),
+			feedbackIds: new Set(),
+		}
 
 		control.value = update.Value ?? control.value
 		control.strval = update.String ?? control.strval
@@ -1402,6 +1494,10 @@ class QsysRemoteControl extends InstanceBase {
 			[`${name}_position`]: control.position,
 			[`${name}_value`]: control.value,
 		})
+		if (control.feedbackIds.size > 0) {
+			this.feedbackIdsToCheck.push(...control.feedbackIds.keys())
+			this.throttledFeedbackIdCheck()
+		}
 	}
 }
 

@@ -17,7 +17,7 @@ import {
 import {
 	// eslint-disable-next-line no-unused-vars
 	QsysRemoteControl,
-} from './index'
+} from './index.js'
 
 /**
  * Perform type conversion on value
@@ -25,7 +25,7 @@ import {
  * @param {string} name
  * @param {CompanionActionInfo} evt
  * @param {CompanionActionContext} context
- * @param {Map} controls
+ * @param {Map<string, object>} controls
  * @param {InstanceBase} self
  * @returns {Promise<number | undefined>}
  * @since 2.3.0

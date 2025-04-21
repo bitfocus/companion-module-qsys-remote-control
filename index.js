@@ -591,7 +591,7 @@ class QsysRemoteControl extends InstanceBase {
 				},
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
-					const name = await context.parseVariablesInString(evt.options.name)
+					const name = (await context.parseVariablesInString(evt.options.name)).trim()
 					if (name == '') return
 					let value = await context.parseVariablesInString(evt.options.value)
 					const control = this.controls.get(name)
@@ -625,7 +625,7 @@ class QsysRemoteControl extends InstanceBase {
 					}
 				},
 				learn: async (evt, context) => {
-					const name = await context.parseVariablesInString(evt.options.name)
+					const name = (await context.parseVariablesInString(evt.options.name)).trim()
 					if (name == '') return undefined
 					const control = this.controls.get(name)
 					if (control != undefined && control.value != null) {
@@ -650,7 +650,7 @@ class QsysRemoteControl extends InstanceBase {
 				subscribe: async (action, context) => await this.addControl(action, context),
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
-					const name = await context.parseVariablesInString(evt.options.name)
+					const name = (await context.parseVariablesInString(evt.options.name)).trim()
 					if (name == '') return
 					const control = this.controls.get(name)
 					if (control === undefined || control.value == null) {

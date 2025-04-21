@@ -1476,6 +1476,7 @@ class QsysRemoteControl extends InstanceBase {
 
 			if (control.actionIds.size == 0 && control.feedbackIds.size == 0) {
 				this.controls.delete(name)
+				if (this.namesToGet.has(name)) this.namesToGet.delete(name)
 				await this.changeGroup('Remove', this.id, name)
 			}
 		}

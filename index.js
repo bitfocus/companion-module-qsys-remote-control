@@ -1064,8 +1064,16 @@ class QsysRemoteControl extends InstanceBase {
 			subscribe: async (feedback, context) => await this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, context) => {
-				const control = this.controls.get(await context.parseVariablesInString(feedback.options.name))
-				if (!control.value) return
+				const opt = feedback.options
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
 
 				switch (feedback.options.type) {
 					case 'string':
@@ -1101,7 +1109,10 @@ class QsysRemoteControl extends InstanceBase {
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
 					return false
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
 				}
 				return (opt.value === 'true' && !!control.value) || (opt.value === 'false' && !control.value)
 			},
@@ -1118,8 +1129,15 @@ class QsysRemoteControl extends InstanceBase {
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const control = this.controls.get(await context.parseVariablesInString(opt.name))
-
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return false
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
 				return control.value >= opt.threshold
 			},
 		}
@@ -1132,7 +1150,15 @@ class QsysRemoteControl extends InstanceBase {
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const control = this.controls.get(await context.parseVariablesInString(opt.name))
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return false
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
 				const numToRGB = (num) => {
 					return {
 						r: (num & 0xff0000) >> 16,
@@ -1495,7 +1521,7 @@ class QsysRemoteControl extends InstanceBase {
 			[`${name}_value`]: control.value,
 		})
 		if (control.feedbackIds.size > 0) {
-			this.feedbackIdsToCheck.push(...control.feedbackIds.keys())
+			control.feedbackIds.forEach((id) => this.feedbackIdsToCheck.add(id))
 			this.throttledFeedbackIdCheck()
 		}
 	}

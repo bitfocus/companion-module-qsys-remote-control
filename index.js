@@ -85,14 +85,6 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async configUpdated(config) {
-		queue.clear()
-		this.debouncedStatusUpdate.cancel()
-		this.debouncedVariableDefUpdate.cancel()
-		this.throttledFeedbackIdCheck.cancel()
-		this.controls.clear()
-		this.namesToGet.clear()
-		this.feedbackIdsToCheck.clear()
-		this.changeGroupSet = false
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		this.config = config
@@ -527,6 +519,14 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	killTimersDestroySockets() {
+		queue.clear()
+		this.debouncedStatusUpdate.cancel()
+		this.debouncedVariableDefUpdate.cancel()
+		this.throttledFeedbackIdCheck.cancel()
+		this.controls.clear()
+		this.namesToGet.clear()
+		this.feedbackIdsToCheck.clear()
+		this.changeGroupSet = false
 		if (this.pollQRCTimer !== undefined) {
 			clearInterval(this.pollQRCTimer)
 			delete this.pollQRCTimer
@@ -550,11 +550,6 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	destroy() {
-		queue.clear()
-		this.namesToGet.clear()
-		this.feedbackIdsToCheck.clear()
-		this.debouncedStatusUpdate.cancel()
-		this.debouncedVariableDefUpdate.cancel()
 		this.killTimersDestroySockets()
 		if (this.controls !== undefined) {
 			delete this.controls

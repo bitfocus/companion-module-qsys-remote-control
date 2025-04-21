@@ -64,7 +64,6 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `Control.Set` add `learn` callback
 - Feat: `Control-state` feedback
 - Feat: `Verbose Logs` config option
-- Feat: `StatusGet` action
 - Improvement: Send keep alive `NoOp` messages
 - Improvement: Process responses from `ChangeGroup.Poll` messages
 - Improvement: Control polling via a change group for better efficiency when `bundle_feedbacks` enabled

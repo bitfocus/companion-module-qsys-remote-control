@@ -25,6 +25,6 @@
 		"entrypoint": "../index.js"
 	},
 	"manufacturer": "Q-SYS",
-	"products": ["Remote Control", "QRC", "Q-Sys"],
-	"keywords": ["Remote", "Control", "QSC"]
+	"products": ["Q-Sys"],
+	"keywords": ["QSC", "QSYS", "QRC"]
 }

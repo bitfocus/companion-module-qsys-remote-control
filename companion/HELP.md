@@ -53,7 +53,6 @@ The mixer control API uses a string specification to determine to which inputs a
 **Feedbacks**
 
 - Core State
-- Change text to reflect control value
 - Feedback on boolean control value
 - Feedback if control value at or exceeds threshold
 - Fade color over control value range

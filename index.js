@@ -1066,39 +1066,13 @@ class QsysRemoteControl extends InstanceBase {
 		}
 		feedbacks['control-string'] = {
 			name: 'Change text to reflect control value',
-			description: 'Will return current state of a control as a string',
-			type: 'advanced',
+			description: 'Depreciated',
+			type: 'boolean',
 			options: options.feedbacks.controlString(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
-			callback: async (feedback, context) => {
-				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
-				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
-					return
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
-
-				switch (feedback.options.type) {
-					case 'string':
-						return {
-							text: control.strval,
-						}
-					case 'value':
-						return {
-							text: control.value.toString(),
-						}
-					case 'position':
-						return {
-							text: control.position.toString(),
-						}
-					default:
-						break
-				}
+			//subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			//unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, _context) => {
+				this.log('warn'), `Feedback ${feedback.feedbackId}:${feedback.id} has been depreciated, use variables instead.`
 			},
 		}
 		feedbacks['control-boolean'] = {

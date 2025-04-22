@@ -671,17 +671,12 @@ export const options = {
 		},
 		controlString: () => {
 			return [
-				name,
 				{
-					type: 'dropdown',
-					id: 'type',
-					label: 'Type',
-					choices: [
-						{ id: 'string', label: 'String' },
-						{ id: 'value', label: 'Value' },
-						{ id: 'position', label: 'Position' },
-					],
-					default: 'value',
+					type: 'static-text',
+					id: 'filler1',
+					label: 'Warning',
+					width: 6,
+					value: 'Feedback depreciated, use Variables instead.',
 				},
 			]
 		},

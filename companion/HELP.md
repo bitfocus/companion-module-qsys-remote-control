@@ -4,12 +4,7 @@ This module will connect to Q-SYS systems using the [QRC](https://q-syshelp.qsc.
 
 **Available commands for Q-SYS Remote Control**
 
-- ChangeGroup.AddControl
-- ChangeGroup.Clear
-- ChangeGroup.Destroy
 - ChangeGroup.Invalidate
-- ChangeGroup.Poll
-- ChangeGroup.Remove
 - Component.Set
 - Control.Get
 - Control.Set

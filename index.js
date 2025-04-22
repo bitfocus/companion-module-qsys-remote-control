@@ -723,7 +723,7 @@ class QsysRemoteControl extends InstanceBase {
 						Name: await context.parseVariablesInString(evt.options.name),
 						Controls: [
 							{
-								Name: await context.parseVariablesInString(evt.options.control_name),
+								Name: (await context.parseVariablesInString(evt.options.control_name)).trim(),
 								Value: await context.parseVariablesInString(evt.options.value),
 								Ramp: ramp,
 							},
@@ -783,7 +783,7 @@ class QsysRemoteControl extends InstanceBase {
 				name: 'ChangeGroup.Invalidate',
 				options: options.actions.changeGroup_invalidate(this.id),
 				callback: async (evt, context) => {
-					await this.changeGroup('Invalidate', await context.parseVariablesInString(evt.options.id))
+					await this.changeGroup('Invalidate', (await context.parseVariablesInString(evt.options.id)).trim())
 				},
 			},
 			/* changeGroup_clear: {
@@ -798,7 +798,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setCrossPointGain(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCrossPointGain', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
 						Value: evt.options.value,
@@ -811,7 +811,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setCrossPointDelay(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCrossPointDelay', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
 						Value: evt.options.value,
@@ -824,7 +824,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setCrossPointMute(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCrossPointMute', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
 						Value: evt.options.value,
@@ -836,7 +836,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setCrossPointSolo(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCrossPointSolo', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
 						Value: evt.options.value,
@@ -848,7 +848,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setInputGain(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetInputGain', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Value: evt.options.value,
 						Ramp: evt.options.ramp,
@@ -860,7 +860,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setInputMute(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetInputMute', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Value: evt.options.value,
 					})
@@ -871,7 +871,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setInputSolo(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetInputSolo', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Value: evt.options.value,
 					})
@@ -882,7 +882,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setOutputGain(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetOutputGain', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
 						Value: evt.options.value,
 						Ramp: evt.options.ramp,
@@ -894,7 +894,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setOutputMute(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetOutputMute', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Outputs: await context.parseVariablesInString(evt.options.outputs),
 						Value: evt.options.value,
 					})
@@ -905,7 +905,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setCueMute(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCueMute', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Cues: await context.parseVariablesInString(evt.options.cues),
 						Value: evt.options.value,
 					})
@@ -916,7 +916,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setCueGain(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetCueGain', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Cues: await context.parseVariablesInString(evt.options.cues),
 						Value: evt.options.value,
 						Ramp: evt.options.ramp,
@@ -928,7 +928,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setInputCueEnable(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetInputCueEnable', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Cues: await context.parseVariablesInString(evt.options.cues),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Value: evt.options.value,
@@ -940,7 +940,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setInputCueAfl(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetInputCueAfl', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Cues: await context.parseVariablesInString(evt.options.cues),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Value: evt.options.value,
@@ -952,7 +952,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.loopPlayer_start(),
 				callback: async (evt, context) => {
 					const output = Number.parseInt(await context.parseVariablesInString(evt.options.output))
-					let refID = await context.parseVariablesInString(evt.options.refID)
+					let refID = (await context.parseVariablesInString(evt.options.refID)).trim()
 					refID = refID == '' ? `${this.label}:${evt.actionId}:${evt.id}` : refID
 					if (isNaN(output)) {
 						this.log(`warn`, `Output is a NaN cannot complete ${evt.actionId}:${evt.id}`)
@@ -961,7 +961,7 @@ class QsysRemoteControl extends InstanceBase {
 					await this.sendCommand('LoopPlayer.Start', {
 						Files: [
 							{
-								Name: await context.parseVariablesInString(evt.options.file_name),
+								Name: (await context.parseVariablesInString(evt.options.file_name)).trim(),
 								Mode: evt.options.mode,
 								Output: output,
 							},
@@ -982,7 +982,7 @@ class QsysRemoteControl extends InstanceBase {
 					const filteredOutputs = await buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
 						await this.sendCommand('LoopPlayer.Stop', {
-							Name: await context.parseVariablesInString(evt.options.name),
+							Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 							Outputs: filteredOutputs,
 							Log: true,
 						})
@@ -996,7 +996,7 @@ class QsysRemoteControl extends InstanceBase {
 					const filteredOutputs = await buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
 						await this.sendCommand('LoopPlayer.Cancel', {
-							Name: await context.parseVariablesInString(evt.options.name),
+							Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 							Outputs: filteredOutputs,
 							Log: true,
 						})
@@ -1008,7 +1008,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.snapshot_load(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Snapshot.Load', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Bank: Math.floor(evt.options.bank),
 						Ramp: evt.options.ramp,
 					})
@@ -1019,7 +1019,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.snapshot_save(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Snapshot.Save', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
 						Bank: Math.floor(evt.options.bank),
 					})
 				},

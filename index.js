@@ -782,8 +782,8 @@ class QsysRemoteControl extends InstanceBase {
 			changeGroup_invalidate: {
 				name: 'ChangeGroup.Invalidate',
 				options: options.actions.changeGroup_invalidate(this.id),
-				callback: async (evt, context) => {
-					await this.changeGroup('Invalidate', (await context.parseVariablesInString(evt.options.id)).trim())
+				callback: async (_evt, _context) => {
+					await this.changeGroup('Invalidate', this.id)
 				},
 			},
 			/* changeGroup_clear: {

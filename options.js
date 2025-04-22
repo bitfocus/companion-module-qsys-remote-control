@@ -9,14 +9,14 @@ const name = {
 	regex: Regex.SOMETHING,
 }
 
-const groupID = {
+/* const groupID = {
 	type: 'textinput',
 	id: 'id',
 	label: 'Group Id:',
 	default: '',
 	useVariables: { local: true },
 	regex: Regex.SOMETHING,
-}
+} */
 
 /* const controls = {
 	type: 'textinput',
@@ -180,7 +180,15 @@ export const options = {
 			return [groupID]
 		}, */
 		changeGroup_invalidate: (id) => {
-			return [{ ...groupID, default: id }]
+			return [
+				{
+					type: 'static-text',
+					id: 'info',
+					label: '',
+					width: 6,
+					value: `This will invalidate change group ${id}, causing Qsys to send all values in the group`,
+				},
+			]
 		},
 		/* changeGroup_clear: () => {
 			return [groupID]

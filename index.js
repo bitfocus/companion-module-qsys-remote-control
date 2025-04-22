@@ -622,6 +622,10 @@ class QsysRemoteControl extends InstanceBase {
 						if (sent && control !== undefined) {
 							control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
 							this.setVariableValues({ [`${name}_value`]: control.value })
+							if (control.feedbackIds.size > 0) {
+								control.feedbackIds.forEach((id) => this.feedbackIdsToCheck.add(id))
+								this.throttledFeedbackIdCheck()
+							}
 							// Follow with Control.Get to stay in sync
 							await this.getControl(name)
 						}
@@ -671,6 +675,10 @@ class QsysRemoteControl extends InstanceBase {
 					if (sent) {
 						control.value = !control.value
 						this.setVariableValues({ [`${name}_value`]: control.value })
+						if (control.feedbackIds.size > 0) {
+							control.feedbackIds.forEach((id) => this.feedbackIdsToCheck.add(id))
+							this.throttledFeedbackIdCheck()
+						}
 						// Follow with Control.Get to stay in sync
 						await this.getControl(name)
 					}

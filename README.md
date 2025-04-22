@@ -50,7 +50,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Chore: Use Yarn 4
 - Chore: Lint
 
-**V2.3.0**
+**V3.0.0**
 
 - Feat: Connect to & control redundant Qsys Cores, with appropriate variables, logging and status updates
 - Feat: `PA.PageSubmit` action

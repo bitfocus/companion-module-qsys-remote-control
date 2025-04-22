@@ -52,6 +52,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.namesToGet = new Set()
 		this.feedbackIdsToCheck = new Set()
 		this.changeGroupSet = false
+		this.isRecordingActions = false
 		this.socket = {
 			pri: new TCPHelper('localhost', 1710),
 			sec: new TCPHelper('localhost', 1710),
@@ -274,7 +275,7 @@ class QsysRemoteControl extends InstanceBase {
 	 * @param {string} message Qsys host to connect to
 	 * @param {boolean} secondary True if updating secondary core status
 	 * @access private
-	 * @since 2.3.0
+	 * @since 3.0.0
 	 */
 
 	checkKeepAlive() {
@@ -526,9 +527,20 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
+	 * Track whether actions are being recorded
+	 * @param {boolean} isRecording
+	 * @access public
+	 * @since 3.0.0
+	 */
+
+	handleStartStopRecordActions(isRecording) {
+		this.isRecordingActions = isRecording
+	}
+
+	/**
 	 * Stop and delete running timers, destroy sockets
 	 * @access private
-	 * @since 2.3.0
+	 * @since 3.0.0
 	 */
 
 	killTimersDestroySockets() {
@@ -1502,6 +1514,26 @@ class QsysRemoteControl extends InstanceBase {
 		if (control.feedbackIds.size > 0) {
 			control.feedbackIds.forEach((id) => this.feedbackIdsToCheck.add(id))
 			this.throttledFeedbackIdCheck()
+		}
+		if (this.isRecordingActions) {
+			let type = 'string'
+			if (typeof control.value == 'boolean') type = 'boolean'
+			if (typeof control.value == 'number') type = 'number'
+			this.recordAction(
+				{
+					actionId: 'control_set',
+					options: {
+						name: update.Name,
+						value: control.value.toString(),
+						min: '',
+						max: '',
+						ramp: '',
+						relative: false,
+						type: type,
+					},
+				},
+				`Set:${update.Name}`,
+			)
 		}
 	}
 }

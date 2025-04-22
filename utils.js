@@ -28,7 +28,7 @@ import {
  * @param {Map<string, object>} controls
  * @param {InstanceBase} self
  * @returns {Promise<number | undefined>}
- * @since 2.3.0
+ * @since 3.0.0
  */
 
 export const calcRelativeValue = async (value, name, evt, context, controls, self) => {
@@ -54,7 +54,7 @@ export const calcRelativeValue = async (value, name, evt, context, controls, sel
  * @param {string | number} value
  * @param {'string' | 'boolean' | 'number'} type
  * @returns {string | number | boolean }
- * @since 2.3.0
+ * @since 3.0.0
  */
 
 export const convertValueType = (value, type) => {
@@ -81,7 +81,7 @@ export const convertValueType = (value, type) => {
  * Remove illegal characters from variable Ids
  * @param {string} id variable id to sanitize
  * @param {'' | '.' | '-' | '_'} substitute Char to replace illegal characters
- * @since 2.3.0
+ * @since 3.0.0
  */
 
 export const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-zA-Z0-9-_.]/gm, substitute)
@@ -92,7 +92,7 @@ export const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-z
  * @param {CompanionActionContext} context
  * @returns {Promise<number[] | undefined>}
  *  * @param {InstanceBase} self
- * @since 2.3.0
+ * @since 3.0.0
  */
 export const buildFilteredOutputArray = async (evt, context, self) => {
 	let filteredOutputs = []
@@ -112,7 +112,7 @@ export const buildFilteredOutputArray = async (evt, context, self) => {
 /**
  * Return new moduleStatus object
  * @returns {object} new moduleStatus
- * @since 2.3.0
+ * @since 3.0.0
  */
 
 export const resetModuleStatus = () => {

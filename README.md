@@ -57,7 +57,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `StatusGet` action
 - Feat: `Control.Get` action
 - Feat: `ChangeGroup.Poll` action
-- Feat: `Relative` action option for `Control.Set` only available when feedbacks are enabled, with `Min` and `Max` range limits
+- Feat: `Relative` action option for `Control.Set`, with `Min` and `Max` range limits
 - Feat: `Ramp` action option for `Control.Set` when `Type` set to `Number`
 - Feat: `Type` action option for `Control.Set` to set the data type of `Value` in the message
 - Feat: `Seek` and `RefID` action options for `LoopPlayer.Start`
@@ -73,9 +73,6 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Improvement: Throttled `checkFeedbacksById` for named controls for better efficiency. Previously every feedback was rechecked when any control changed
 - Improvement: Dont define control variables if feedbacks are disabled
 - Improvement: Debounce variable definition updates after `addControl()` calls
-- Improvement: Hide related config fields when feedbacks are disabled
-- Improvement: Add static-text warning to `Control.Toggle` when feedbacks are disabled
-- Improvement: Add static-text warning to `Control.Set` when feedbacks are disabled and `relative` is enabled
 - Improvement: Auto set `RefID` during `LoopPlayer.Start` API call if empty.
 - Improvement: Log `LoopPlayer.Error` messages
 - Fix: Send boolean values as bools rather than strings (`Mixer.SetCrossPointMute`, `Mixer.SetCrossPointSolo`, `Mixer.SetInputMute`, `Mixer.SetInputSolo`, `Mixer.SetOutputMute`, `Mixer.SetCueMute`, `Mixer.SetInputCueEnable`, `Mixer.SetInputCueAfl`, `LoopPlayer.Start`)
@@ -85,3 +82,4 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Remove: `ChangeGroup.AddComponentControl` action broken, and module has no system for tracking component values
 - Remove: `ChangeGroup.Remove`,`ChangeGroup.Destroy`,`ChangeGroup.Poll`,`ChangeGroup_clear`,`ChangeGroup.addControl` actions, `ChangeGroup` API calls managed internally now.
 - Depreciate: `Change text to reflect control value` feedback, use variables instead.
+- Depreciate: `feedbacks_enabled` config option. Feedbacks always enabled.

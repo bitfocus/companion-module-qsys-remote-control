@@ -147,7 +147,7 @@ class QsysRemoteControl extends InstanceBase {
 			)
 		}
 
-		if (!('variables' in this.config) || this.config.variables === '' || !this.config.feedback_enabled) {
+		if (!('variables' in this.config) || this.config.variables === '') {
 			this.setVariableDefinitions(this.variables) // This gets called in addControls if there are vars
 			return
 		}
@@ -603,15 +603,12 @@ class QsysRemoteControl extends InstanceBase {
 					if (name == '') return
 					let value = await context.parseVariablesInString(evt.options.value)
 					const control = this.controls.get(name)
-					if (evt.options.relative && this.config.feedback_enabled && evt.options.type == 'number') {
+					if (evt.options.relative && evt.options.type == 'number') {
 						value = await calcRelativeValue(value, name, evt, context, this.controls, this)
 						if (value === undefined) {
 							await this.addControl(evt, context)
 							return
 						}
-					} else if (evt.options.relative && !this.config.feedback_enabled) {
-						this.log('warn', `Relative ${evt.actionId} actions require Feedbacks to be enabled in the module config`)
-						return
 					}
 					value = convertValueType(value, evt.options.type)
 					if (value !== undefined) {
@@ -624,7 +621,7 @@ class QsysRemoteControl extends InstanceBase {
 						const sent = await this.sendCommand('Control.Set', params)
 						if (sent && control !== undefined) {
 							control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
-							if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
+							this.setVariableValues({ [`${name}_value`]: control.value })
 							// Follow with Control.Get to stay in sync
 							await this.getControl(name)
 						}
@@ -654,7 +651,7 @@ class QsysRemoteControl extends InstanceBase {
 			},
 			control_toggle: {
 				name: 'Control.Toggle',
-				options: options.actions.controlToggle(this.config),
+				options: options.actions.controlToggle(),
 				subscribe: async (action, context) => await this.addControl(action, context),
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
@@ -662,11 +659,7 @@ class QsysRemoteControl extends InstanceBase {
 					if (name == '') return
 					const control = this.controls.get(name)
 					if (control === undefined || control.value == null) {
-						if (!this.config.feedback_enabled) {
-							this.log('warn', `Control ${name} unavailable. Feedbacks must be enabled`)
-						} else {
-							this.log('warn', `Control ${name} unavailable. Check named control name`)
-						}
+						this.log('warn', `Control ${name} unavailable. Check named control name`)
 						return
 					}
 					const sent = await this.sendCommand('Control.Set', {
@@ -677,7 +670,7 @@ class QsysRemoteControl extends InstanceBase {
 					// of the button faster than the polling interval to correctly toggle the state
 					if (sent) {
 						control.value = !control.value
-						if (this.config.feedback_enabled) this.setVariableValues({ [`${name}_value`]: control.value })
+						this.setVariableValues({ [`${name}_value`]: control.value })
 						// Follow with Control.Get to stay in sync
 						await this.getControl(name)
 					}
@@ -1060,10 +1053,6 @@ class QsysRemoteControl extends InstanceBase {
 				return core.state === feedback.options.state
 			},
 		}
-		if (!this.config.feedback_enabled) {
-			this.setFeedbackDefinitions(feedbacks)
-			return
-		}
 		feedbacks['control-string'] = {
 			name: 'Change text to reflect control value',
 			description: 'Depreciated',
@@ -1308,7 +1297,6 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	initPolling() {
-		if (!this.config.feedback_enabled) return
 		if (this.pollQRCTimer) {
 			clearInterval(this.pollQRCTimer)
 			delete this.pollQRCTimer

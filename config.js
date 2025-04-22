@@ -100,17 +100,10 @@ export const configFields = [
 		label: 'Feedback and Variables',
 		width: 12,
 		value:
-			'Feedback must be enabled to watch for variables and feedbacks. Bundling feedbacks will send every variable/feedback control in one request vs multiple. ' +
+			'Since module version 3 Feedbacks are always enabled. Bundling feedbacks will send every variable/feedback control in one request vs multiple. ' +
 			'Depending on the amount of watched controls, this can add a lot of additional, unneccesary traffic to the device (polling interval &times; the number of named controls). ' +
 			'However, if one control name is incorrect, all of the feedbacks and variables will fail to load. Therefore, it may be useful to keep this disabled while testing, ' +
 			'and then enable it in a production environment.',
-	},
-	{
-		type: 'checkbox',
-		id: 'feedback_enabled',
-		label: 'Feedback Enabled',
-		width: 6,
-		default: false,
 	},
 	{
 		type: 'checkbox',
@@ -118,9 +111,6 @@ export const configFields = [
 		label: 'Bundle Feedbacks?',
 		width: 6,
 		default: false,
-		isVisible: (options) => {
-			return options.feedback_enabled
-		},
 	},
 	{
 		type: 'number',
@@ -130,9 +120,6 @@ export const configFields = [
 		max: 60000,
 		width: 6,
 		default: 100,
-		isVisible: (options) => {
-			return options.feedback_enabled
-		},
 	},
 	{
 		type: 'static-text',
@@ -141,9 +128,6 @@ export const configFields = [
 		width: 12,
 		value:
 			'Specify a list of named controls to add as Companion variables. Separated by commas. Any feedbacks used are automatically added to the variable list.',
-		isVisible: (options) => {
-			return options.feedback_enabled
-		},
 	},
 	{
 		type: 'textinput',
@@ -151,9 +135,6 @@ export const configFields = [
 		label: 'Variables',
 		width: 12,
 		default: '',
-		isVisible: (options) => {
-			return options.feedback_enabled
-		},
 	},
 	{
 		type: 'checkbox',

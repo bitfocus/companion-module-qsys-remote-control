@@ -63,7 +63,7 @@ const mixerCues = {
 
 export const options = {
 	actions: {
-		controlSet: (config) => {
+		controlSet: () => {
 			return [
 				name,
 				valueString,
@@ -95,10 +95,9 @@ export const options = {
 					label: 'Relative',
 					default: false,
 					tooltip: `Relative actions only work with numerical values. Resultant value = current value + new value`,
-					isVisible: (options, isVisibleData) => {
-						return (isVisibleData.feedbacks || options.relative) && options.type == 'number'
+					isVisible: (options) => {
+						return options.relative && options.type == 'number'
 					},
-					isVisibleData: { feedbacks: !!config.feedback_enabled },
 				},
 				{
 					type: 'textinput',
@@ -124,17 +123,6 @@ export const options = {
 				},
 				{
 					type: 'static-text',
-					id: 'filler1',
-					label: 'Warning',
-					width: 6,
-					value: 'Relative actions require feedbacks to be enabled!',
-					isVisible: (options, isVisibleData) => {
-						return !isVisibleData.feedbacks && options.relative
-					},
-					isVisibleData: { feedbacks: !!config.feedback_enabled },
-				},
-				{
-					type: 'static-text',
 					id: 'filler2',
 					label: 'Warning',
 					width: 6,
@@ -145,22 +133,11 @@ export const options = {
 				},
 			]
 		},
-		controlToggle: (config) => {
+		controlToggle: () => {
 			return [
 				{
 					...name,
 					tooltip: 'Only applies to controls with an on/off state.',
-				},
-				{
-					type: 'static-text',
-					id: 'filler1',
-					label: 'Warning',
-					width: 6,
-					value: 'Toggle actions require feedbacks to be enabled!',
-					isVisible: (_options, isVisibleData) => {
-						return !isVisibleData.feedbacks
-					},
-					isVisibleData: { feedbacks: !!config.feedback_enabled },
 				},
 			]
 		},

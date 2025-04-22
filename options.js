@@ -18,14 +18,14 @@ const groupID = {
 	regex: Regex.SOMETHING,
 }
 
-const controls = {
+/* const controls = {
 	type: 'textinput',
 	id: 'controls',
 	label: 'Controls:',
 	default: '',
 	useVariables: { local: true },
 	tooltip: `Comma seperated list of control names`,
-}
+} */
 
 const valueString = {
 	type: 'textinput',
@@ -187,10 +187,10 @@ export const options = {
 				},
 			]
 		},
-		changeGroup_addControl: () => {
-			return [groupID, controls]
-		},
-		changeGroup_addComponentControl: () => {
+		/* changeGroup_addControl: (id) => {
+			return [{ ...groupID, default: id }, controls]
+		}, */
+		/* changeGroup_addComponentControl: () => {
 			return [groupID, controls]
 		},
 		changeGroup_remove: () => {
@@ -201,13 +201,13 @@ export const options = {
 		},
 		changeGroup_poll: () => {
 			return [groupID]
+		}, */
+		changeGroup_invalidate: (id) => {
+			return [{ ...groupID, default: id }]
 		},
-		changeGroup_invalidate: () => {
+		/* changeGroup_clear: () => {
 			return [groupID]
-		},
-		changeGroup_clear: () => {
-			return [groupID]
-		},
+		}, */
 		mixer_setCrossPointGain: () => {
 			return [
 				name,

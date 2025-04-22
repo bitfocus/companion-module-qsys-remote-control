@@ -64,7 +64,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `Control.Set` add `learn` callback
 - Feat: `Control-state` feedback
 - Feat: `Verbose Logs` config option
-- Improvement: Send keep alive `NoOp` messages
+- Improvement: Send keep alive `NoOp` messages, when socket is connected
 - Improvement: Process responses from `ChangeGroup.Poll` messages
 - Improvement: Control polling via a change group for better efficiency when `bundle_feedbacks` enabled
 - Improvement: `Control.Toggle` subscribe and unsubscribe callbacks
@@ -83,3 +83,5 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: `LoopPlayer.Stop` & `LoopPlayer.Cancel` Send `Outputs` as array of numbers
 - Fix: `Component.Set` option `Ramp` sent as number
 - Remove: `ChangeGroup.AddComponentControl` action broken, and module has no system for tracking component values
+- Remove: `ChangeGroup.Remove`,`ChangeGroup.Destroy`,`ChangeGroup.Poll`,`ChangeGroup_clear`,`ChangeGroup.addControl` actions, `ChangeGroup` API calls managed internally now.
+- Depreciate: `Change text to reflect control value` feedback, use variables instead.

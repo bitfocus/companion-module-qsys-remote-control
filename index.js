@@ -718,17 +718,17 @@ class QsysRemoteControl extends InstanceBase {
 					})
 				},
 			},
-			changeGroup_addControl: {
+			/* changeGroup_addControl: {
 				name: 'ChangeGroup.AddControl',
-				options: options.actions.changeGroup_addControl(),
+				options: options.actions.changeGroup_addControl(this.id),
 				callback: async (evt, context) => {
 					await this.changeGroup(
 						'AddControl',
 						await context.parseVariablesInString(evt.options.id),
-						(await context.parseVariablesInString(evt.options.controls)).split(','),
+						(await context.parseVariablesInString(evt.options.controls)).split(',').map((control) => control.trim()),
 					)
 				},
-			},
+			}, */
 			/* changeGroup_addComponentControl: {
 				name: 'ChangeGroup.AddComponentControl',
 				options: options.actions.changeGroup_addComponentControl(),
@@ -741,7 +741,7 @@ class QsysRemoteControl extends InstanceBase {
 					)
 				},
 			}, */
-			changeGroup_remove: {
+			/* changeGroup_remove: {
 				name: 'ChangeGroup.Remove',
 				options: options.actions.changeGroup_remove(),
 				callback: async (evt, context) => {
@@ -751,35 +751,35 @@ class QsysRemoteControl extends InstanceBase {
 						(await context.parseVariablesInString(evt.options.controls)).split(','),
 					)
 				},
-			},
-			changeGroup_destroy: {
+			}, */
+			/* changeGroup_destroy: {
 				name: 'ChangeGroup.Destroy',
 				options: options.actions.changeGroup_destroy(),
 				callback: async (evt, context) => {
 					await this.changeGroup('Destroy', await context.parseVariablesInString(evt.options.id))
 				},
-			},
-			changeGroup_poll: {
+			}, */
+			/* changeGroup_poll: {
 				name: 'ChangeGroup.Poll',
 				options: options.actions.changeGroup_poll(),
 				callback: async (evt, context) => {
 					await this.changeGroup('Poll', await context.parseVariablesInString(evt.options.id))
 				},
-			},
+			}, */
 			changeGroup_invalidate: {
 				name: 'ChangeGroup.Invalidate',
-				options: options.actions.changeGroup_invalidate(),
+				options: options.actions.changeGroup_invalidate(this.id),
 				callback: async (evt, context) => {
 					await this.changeGroup('Invalidate', await context.parseVariablesInString(evt.options.id))
 				},
 			},
-			changeGroup_clear: {
+			/* changeGroup_clear: {
 				name: 'ChangeGroup.Clear',
 				options: options.actions.changeGroup_clear(),
 				callback: async (evt, context) => {
 					await this.changeGroup('Clear', await context.parseVariablesInString(evt.options.id))
 				},
-			},
+			}, */
 			mixer_setCrossPointGain: {
 				name: 'Mixer.SetCrossPointGain',
 				options: options.actions.mixer_setCrossPointGain(),

@@ -173,10 +173,12 @@ class QsysRemoteControl extends InstanceBase {
 		const errorEvent = (err) => {
 			this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
 			this.log('error', `Network error from ${host}: ${err.message}`)
+			this.checkKeepAlive()
 		}
 		const endEvent = () => {
 			this.checkStatus(InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
 			this.log('warn', `Connection to ${host} ended`)
+			this.checkKeepAlive()
 		}
 		const connectEvent = async () => {
 			if (secondary) {
@@ -210,11 +212,7 @@ class QsysRemoteControl extends InstanceBase {
 			this.checkStatus(InstanceStatus.Ok, '', secondary)
 
 			//await this.initVariables()
-			if (this.keepAlive === undefined) {
-				this.keepAlive = setInterval(async () => {
-					await this.sendCommand('NoOp', {})
-				}, 1000)
-			}
+			this.checkKeepAlive()
 		}
 		const dataEvent = (d) => {
 			const response = d.toString()
@@ -278,6 +276,21 @@ class QsysRemoteControl extends InstanceBase {
 	 * @access private
 	 * @since 2.3.0
 	 */
+
+	checkKeepAlive() {
+		if (this.socket.pri.isConnected || this.socket.sec.isConnected) {
+			if (this.keepAlive === undefined) {
+				this.keepAlive = setInterval(async () => {
+					await this.sendCommand('NoOp', {})
+				}, 1000)
+			}
+		} else {
+			if (this.keepAlive) {
+				clearInterval(this.keepAlive)
+				delete this.keepAlive
+			}
+		}
+	}
 
 	checkStatus(status, message, secondary) {
 		const newStatus = {

@@ -9,24 +9,6 @@ const name = {
 	regex: Regex.SOMETHING,
 }
 
-/* const groupID = {
-	type: 'textinput',
-	id: 'id',
-	label: 'Group Id:',
-	default: '',
-	useVariables: { local: true },
-	regex: Regex.SOMETHING,
-} */
-
-/* const controls = {
-	type: 'textinput',
-	id: 'controls',
-	label: 'Controls:',
-	default: '',
-	useVariables: { local: true },
-	tooltip: `Comma seperated list of control names`,
-} */
-
 const valueString = {
 	type: 'textinput',
 	id: 'value',
@@ -164,21 +146,6 @@ export const options = {
 				},
 			]
 		},
-		/* changeGroup_addControl: (id) => {
-			return [{ ...groupID, default: id }, controls]
-		}, */
-		/* changeGroup_addComponentControl: () => {
-			return [groupID, controls]
-		},
-		changeGroup_remove: () => {
-			return [groupID, controls]
-		},
-		changeGroup_destroy: () => {
-			return [groupID]
-		},
-		changeGroup_poll: () => {
-			return [groupID]
-		}, */
 		changeGroup_invalidate: (id) => {
 			return [
 				{
@@ -190,9 +157,6 @@ export const options = {
 				},
 			]
 		},
-		/* changeGroup_clear: () => {
-			return [groupID]
-		}, */
 		mixer_setCrossPointGain: () => {
 			return [
 				name,

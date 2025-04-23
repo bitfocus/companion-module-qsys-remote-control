@@ -731,54 +731,6 @@ class QsysRemoteControl extends InstanceBase {
 					})
 				},
 			},
-			/* changeGroup_addControl: {
-				name: 'ChangeGroup.AddControl',
-				options: options.actions.changeGroup_addControl(this.id),
-				callback: async (evt, context) => {
-					await this.changeGroup(
-						'AddControl',
-						await context.parseVariablesInString(evt.options.id),
-						(await context.parseVariablesInString(evt.options.controls)).split(',').map((control) => control.trim()),
-					)
-				},
-			}, */
-			/* changeGroup_addComponentControl: {
-				name: 'ChangeGroup.AddComponentControl',
-				options: options.actions.changeGroup_addComponentControl(),
-				callback: async (evt, context) => {
-					// This probably wont work.
-					await this.changeGroup(
-						'AddComponentControl',
-						await context.parseVariablesInString(evt.options.id),
-						await context.parseVariablesInString(evt.options.controls),
-					)
-				},
-			}, */
-			/* changeGroup_remove: {
-				name: 'ChangeGroup.Remove',
-				options: options.actions.changeGroup_remove(),
-				callback: async (evt, context) => {
-					await this.changeGroup(
-						'Remove',
-						await context.parseVariablesInString(evt.options.id),
-						(await context.parseVariablesInString(evt.options.controls)).split(','),
-					)
-				},
-			}, */
-			/* changeGroup_destroy: {
-				name: 'ChangeGroup.Destroy',
-				options: options.actions.changeGroup_destroy(),
-				callback: async (evt, context) => {
-					await this.changeGroup('Destroy', await context.parseVariablesInString(evt.options.id))
-				},
-			}, */
-			/* changeGroup_poll: {
-				name: 'ChangeGroup.Poll',
-				options: options.actions.changeGroup_poll(),
-				callback: async (evt, context) => {
-					await this.changeGroup('Poll', await context.parseVariablesInString(evt.options.id))
-				},
-			}, */
 			changeGroup_invalidate: {
 				name: 'ChangeGroup.Invalidate',
 				options: options.actions.changeGroup_invalidate(this.id),
@@ -786,13 +738,6 @@ class QsysRemoteControl extends InstanceBase {
 					await this.changeGroup('Invalidate', this.id)
 				},
 			},
-			/* changeGroup_clear: {
-				name: 'ChangeGroup.Clear',
-				options: options.actions.changeGroup_clear(),
-				callback: async (evt, context) => {
-					await this.changeGroup('Clear', await context.parseVariablesInString(evt.options.id))
-				},
-			}, */
 			mixer_setCrossPointGain: {
 				name: 'Mixer.SetCrossPointGain',
 				options: options.actions.mixer_setCrossPointGain(),
@@ -1078,8 +1023,6 @@ class QsysRemoteControl extends InstanceBase {
 			description: 'Depreciated',
 			type: 'boolean',
 			options: options.feedbacks.controlString(),
-			//subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			//unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, _context) => {
 				this.log('warn'), `Feedback ${feedback.feedbackId}:${feedback.id} has been depreciated, use variables instead.`
 			},

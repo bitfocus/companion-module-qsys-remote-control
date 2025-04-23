@@ -46,8 +46,8 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: Declare consts in `control-fade` feedback callback
 - Fix: Add `name` option to `loopPlayer_start` action def. Previously referenced in callback without option def
 - Chore: Update dependencies
-- Chore: Use Node 22
-- Chore: Use Yarn 4
+- Chore: Use `Node 22`
+- Chore: Use `Yarn 4`
 - Chore: Lint
 
 **V3.0.0**
@@ -65,12 +65,12 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `Control-state` feedback
 - Feat: `Verbose Logs` config option
 - Feat: `Action Recorder`
-- Improvement: Send keep alive `NoOp` messages, when socket is connected
+- Improvement: Send keep alive `NoOp` messages when socket is connected
 - Improvement: Process responses from `ChangeGroup.Poll` messages
 - Improvement: Control polling via a change group for better efficiency
 - Improvement: `Control.Toggle` subscribe and unsubscribe callbacks
 - Improvement: `Control.Set` subscribe (when `relative` == `true`) and unsubscribe callbacks
-- Improvement: After `Control.toggle` & `Control.set` actions update internal controls map value and value variable
+- Improvement: After `Control.Toggle` & `Control.Set` actions update internal controls map value, value variable & check feedbacks for response UI
 - Improvement: Throttled `checkFeedbacksById` for named controls for better efficiency. Previously every feedback was rechecked when any control changed
 - Improvement: Debounce variable definition updates after `addControl()` calls
 - Improvement: Auto set `RefID` during `LoopPlayer.Start` API call if empty.
@@ -80,7 +80,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: `LoopPlayer.Stop` & `LoopPlayer.Cancel` Send `Outputs` as array of numbers
 - Fix: `Component.Set` option `Ramp` sent as number
 - Remove: `ChangeGroup.AddComponentControl` action broken, and module has no system for tracking component values
-- Remove: `ChangeGroup.Remove`,`ChangeGroup.Destroy`,`ChangeGroup.Poll`,`ChangeGroup_clear`,`ChangeGroup.addControl` actions, `ChangeGroup` API calls managed internally now.
+- Remove: `ChangeGroup.Remove`,`ChangeGroup.Destroy`,`ChangeGroup.Poll`,`ChangeGroup.Clear`,`ChangeGroup.addControl` actions. `ChangeGroup` API calls managed internally now.
 - Depreciate: `Change text to reflect control value` feedback, use variables instead.
 - Depreciate: `feedbacks_enabled` config option. Feedbacks always enabled.
 - Depreciate: `bundle_feedbacks` option. Controls are always polled via a `ChangeGroup` which makes the option of disabling this irrelevant.

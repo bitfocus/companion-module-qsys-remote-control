@@ -1302,7 +1302,7 @@ class QsysRemoteControl extends InstanceBase {
 				await this.getControl(key)
 			})
 		} else {
-			if (this.controlGroupSet) {
+			if (this.changeGroupSet) {
 				await this.changeGroup('Poll', this.id)
 			} else {
 				//Directly get controls if we havent setup the changeGroup yet

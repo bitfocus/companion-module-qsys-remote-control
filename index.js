@@ -1024,7 +1024,7 @@ class QsysRemoteControl extends InstanceBase {
 			type: 'boolean',
 			options: options.feedbacks.controlString(),
 			callback: async (feedback, _context) => {
-				this.log('warn'), `Feedback ${feedback.feedbackId}:${feedback.id} has been depreciated, use variables instead.`
+				this.log('warn'), `Feedback ${feedback.feedbackId}:${feedback.id} has been deprecated, use variables instead.`
 			},
 		}
 		feedbacks['control-boolean'] = {

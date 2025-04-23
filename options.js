@@ -625,7 +625,7 @@ export const options = {
 					id: 'filler1',
 					label: 'Warning',
 					width: 6,
-					value: 'Feedback depreciated, use variables instead.',
+					value: 'Feedback deprecated, use variables instead.',
 				},
 			]
 		},

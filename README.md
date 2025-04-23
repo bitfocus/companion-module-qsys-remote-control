@@ -81,6 +81,6 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: `Component.Set` option `Ramp` sent as number
 - Remove: `ChangeGroup.AddComponentControl` action broken, and module has no system for tracking component values
 - Remove: `ChangeGroup.Remove`,`ChangeGroup.Destroy`,`ChangeGroup.Poll`,`ChangeGroup.Clear`,`ChangeGroup.addControl` actions. `ChangeGroup` API calls managed internally now.
-- Depreciate: `Change text to reflect control value` feedback, use variables instead.
-- Depreciate: `feedbacks_enabled` config option. Feedbacks always enabled.
-- Depreciate: `bundle_feedbacks` option. Controls are always polled via a `ChangeGroup` which makes the option of disabling this irrelevant.
+- Deprecate: `Change text to reflect control value` feedback, use variables instead.
+- Deprecate: `feedbacks_enabled` config option. Feedbacks always enabled.
+- Deprecate: `bundle_feedbacks` option. Controls are always polled via a `ChangeGroup` which makes the option of disabling this irrelevant.

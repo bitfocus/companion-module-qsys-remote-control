@@ -96,7 +96,7 @@ export const options = {
 					default: false,
 					tooltip: `Relative actions only work with numerical values. Resultant value = current value + new value`,
 					isVisible: (options) => {
-						return options.relative && options.type == 'number'
+						return options.type == 'number'
 					},
 				},
 				{

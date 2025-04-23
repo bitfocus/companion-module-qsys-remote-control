@@ -1383,7 +1383,6 @@ class QsysRemoteControl extends InstanceBase {
 
 	async removeControl(feedback, context = this) {
 		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
-
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
 			if (feedback.feedbackId !== undefined) {

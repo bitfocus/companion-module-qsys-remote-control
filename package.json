@@ -1,6 +1,6 @@
 {
 	"name": "qsys-remote-control",
-	"version": "2.2.0",
+	"version": "3.0.0",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -16,16 +16,17 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "~1.11.3",
+		"lodash": "^4.17.21",
 		"p-queue": "~8.1.0"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.2.2",
-		"eslint": "^9.24.0",
+		"@companion-module/tools": "^2.3.0",
+		"eslint": "^9.25.1",
 		"prettier": "~3.5.3"
 	},
 	"engines": {
 		"node": "^22.13"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@4.8.1"
+	"packageManager": "yarn@4.9.1"
 }

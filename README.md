@@ -67,7 +67,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `Action Recorder`
 - Improvement: Send keep alive `NoOp` messages, when socket is connected
 - Improvement: Process responses from `ChangeGroup.Poll` messages
-- Improvement: Control polling via a change group for better efficiency when `bundle_feedbacks` enabled
+- Improvement: Control polling via a change group for better efficiency
 - Improvement: `Control.Toggle` subscribe and unsubscribe callbacks
 - Improvement: `Control.Set` subscribe (when `relative` == `true`) and unsubscribe callbacks
 - Improvement: After `Control.toggle` & `Control.set` actions update internal controls map value and value variable
@@ -84,3 +84,4 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Remove: `ChangeGroup.Remove`,`ChangeGroup.Destroy`,`ChangeGroup.Poll`,`ChangeGroup_clear`,`ChangeGroup.addControl` actions, `ChangeGroup` API calls managed internally now.
 - Depreciate: `Change text to reflect control value` feedback, use variables instead.
 - Depreciate: `feedbacks_enabled` config option. Feedbacks always enabled.
+- Depreciate: `bundle_feedbacks` option. Controls are always polled via a `ChangeGroup` which makes the option of disabling this irrelevant.

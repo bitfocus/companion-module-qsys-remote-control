@@ -1295,19 +1295,11 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async getControlStatuses() {
-		// It is possible to group multiple statuses; HOWEVER, if one doesn't exist, nothing will be returned...
-		// thus, we send one at a time
-		if (!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
-			this.controls.forEach(async (_value, key) => {
-				await this.getControl(key)
-			})
+		if (this.changeGroupSet) {
+			await this.changeGroup('Poll', this.id)
 		} else {
-			if (this.changeGroupSet) {
-				await this.changeGroup('Poll', this.id)
-			} else {
-				//Directly get controls if we havent setup the changeGroup yet
-				await this.getControl(this.controls.keys())
-			}
+			//Directly get controls if we havent setup the changeGroup yet
+			await this.getControl(this.controls.keys())
 		}
 	}
 
@@ -1350,15 +1342,8 @@ class QsysRemoteControl extends InstanceBase {
 			this.setVariableDefinitions(this.variables)
 			this.setEngineVariableValues()
 			if (this.namesToGet.size > 0) {
-				if (!('bundle_feedbacks' in this.config) || !this.config.bundle_feedbacks) {
-					this.namesToGet.forEach(async (_x, k) => {
-						await this.getControl(k)
-						await this.changeGroup('AddControl', this.id, k)
-					})
-				} else {
-					await this.getControl(this.namesToGet.keys())
-					await this.changeGroup('AddControl', this.id, this.namesToGet.keys())
-				}
+				await this.getControl(this.namesToGet.keys())
+				await this.changeGroup('AddControl', this.id, this.namesToGet.keys())
 				this.changeGroupSet = true
 				this.namesToGet.clear()
 			}

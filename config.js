@@ -100,17 +100,7 @@ export const configFields = [
 		label: 'Feedback and Variables',
 		width: 12,
 		value:
-			'Since module version 3 Feedbacks are always enabled. Bundling feedbacks will send every variable/feedback control in one request vs multiple. ' +
-			'Depending on the amount of watched controls, this can add a lot of additional, unneccesary traffic to the device (polling interval &times; the number of named controls). ' +
-			'However, if one control name is incorrect, all of the feedbacks and variables will fail to load. Therefore, it may be useful to keep this disabled while testing, ' +
-			'and then enable it in a production environment.',
-	},
-	{
-		type: 'checkbox',
-		id: 'bundle_feedbacks',
-		label: 'Bundle Feedbacks?',
-		width: 6,
-		default: false,
+			'Since module version 3.0 feedbacks are always enabled. Controls are polled via a change group which is much more efficient than direct polling, and will tolerate (with errors logged) invalid control names.',
 	},
 	{
 		type: 'number',

@@ -57,9 +57,3 @@ The mixer control API uses a string specification to determine to which inputs a
 
 - Engine Status
 - Named control values
-
-**Not Implemented**
-
-- Component.Get
-- Component.GetComponents
-- ChangeGroup.AutoPoll

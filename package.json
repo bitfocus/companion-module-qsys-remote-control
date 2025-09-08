@@ -1,6 +1,6 @@
 {
 	"name": "qsys-remote-control",
-	"version": "3.0.0",
+	"version": "3.1.0",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -15,18 +15,19 @@
 		"url": "git+https://github.com/bitfocus/companion-module-qsys-remote-control.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.11.3",
-		"lodash": "^4.17.21",
-		"p-queue": "~8.1.0"
+		"@companion-module/base": "~1.13.2",
+		"companion-module-utils": "^0.5.0",
+		"es-toolkit": "^1.39.10",
+		"p-queue": "~8.1.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.3.0",
-		"eslint": "^9.25.1",
-		"prettier": "~3.5.3"
+		"@companion-module/tools": "^2.4.0",
+		"eslint": "^9.35.0",
+		"prettier": "~3.6.2"
 	},
 	"engines": {
-		"node": "^22.13"
+		"node": "^22.17"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@4.9.1"
+	"packageManager": "yarn@4.9.4"
 }

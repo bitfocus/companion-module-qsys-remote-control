@@ -43,6 +43,41 @@ const mixerCues = {
 	tooltip: `User Mixer IO String Syntax`,
 }
 
+const positionOption = {
+	type: 'dropdown',
+	label: 'Position',
+	id: 'position',
+	default: 'right',
+	choices: [
+		{ id: 'left', label: 'Left' },
+		{ id: 'right', label: 'Right' },
+		{ id: 'top', label: 'Top' },
+		{ id: 'bottom', label: 'Bottom' },
+	],
+}
+
+const paddingOption = {
+	type: 'number',
+	label: 'Padding',
+	id: 'padding',
+	tooltip: 'Distance from edge of button, perpendicular orientation',
+	min: 0,
+	max: 72,
+	default: 1,
+	required: true,
+}
+
+const offsetOption = {
+	type: 'number',
+	label: 'Offset',
+	id: 'offset',
+	tooltip: 'Distance from edge of button, axial orientation',
+	min: 0,
+	max: 20,
+	default: 5,
+	required: true,
+}
+
 export const options = {
 	actions: {
 		controlSet: () => {
@@ -690,6 +725,57 @@ export const options = {
 					label: 'High threshold color',
 					id: 'high_bg',
 					default: colours.red,
+				},
+			]
+		},
+		levelMeter: () => {
+			return [
+				name,
+				positionOption,
+				paddingOption,
+				offsetOption,
+				{
+					type: 'number',
+					label: 'Maximum Value',
+					id: 'max',
+					default: 0,
+				},
+				{
+					type: 'number',
+					label: 'Minimum Value',
+					id: 'min',
+					default: -100,
+				},
+			]
+		},
+		indicator: () => {
+			return [
+				name,
+				positionOption,
+				paddingOption,
+				{
+					...offsetOption,
+					default: 4,
+				},
+				{
+					type: 'number',
+					label: 'Maximum Value',
+					id: 'max',
+					default: 0,
+				},
+				{
+					type: 'number',
+					label: 'Minimum Value',
+					id: 'min',
+					default: -100,
+				},
+				{
+					type: 'colorpicker',
+					label: 'Color',
+					id: 'indicatorColor',
+					default: 0xffffff,
+					enableAlpha: false,
+					returnType: 'number',
 				},
 			]
 		},

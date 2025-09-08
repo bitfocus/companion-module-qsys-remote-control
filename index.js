@@ -27,9 +27,12 @@ import {
 	resetModuleStatus,
 	sanitiseVariableId,
 	validMethodsToStandbyCore,
+	valueToPercent,
 } from './utils.js'
-import { debounce, throttle } from 'lodash'
+import { debounce, throttle } from 'es-toolkit'
 import PQueue from 'p-queue'
+import { graphics } from 'companion-module-utils'
+
 const queue = new PQueue({ concurrency: 1 })
 const QRC_GET = 1
 const QRC_SET = 2
@@ -53,6 +56,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.feedbackIdsToCheck = new Set()
 		this.changeGroupSet = false
 		this.isRecordingActions = false
+		this.controller = new AbortController()
 		this.socket = {
 			pri: new TCPHelper('localhost', 1710),
 			sec: new TCPHelper('localhost', 1710),
@@ -266,7 +270,7 @@ class QsysRemoteControl extends InstanceBase {
 				this.resetChangeGroup()
 		},
 		1000,
-		{ leading: false, maxWait: 2000, trailing: true },
+		{ leading: false, maxWait: 2000, trailing: true, signal: this.controller.signal },
 	)
 
 	/**
@@ -579,6 +583,7 @@ class QsysRemoteControl extends InstanceBase {
 		if (this.controls !== undefined) {
 			delete this.controls
 		}
+		this.controller.abort()
 	}
 
 	/**
@@ -1024,7 +1029,8 @@ class QsysRemoteControl extends InstanceBase {
 			type: 'boolean',
 			options: options.feedbacks.controlString(),
 			callback: async (feedback, _context) => {
-				this.log('warn'), `Feedback ${feedback.feedbackId}:${feedback.id} has been deprecated, use variables instead.`
+				;(this.log('warn'),
+					`Feedback ${feedback.feedbackId}:${feedback.id} has been deprecated, use variables instead.`)
 			},
 		}
 		feedbacks['control-boolean'] = {
@@ -1120,6 +1126,182 @@ class QsysRemoteControl extends InstanceBase {
 				}
 			},
 		}
+		feedbacks['level-meter'] = {
+			name: 'Level Meter',
+			description: 'Level Meter',
+			type: 'advanced',
+			options: options.feedbacks.levelMeter(),
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const opt = feedback.options
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return {}
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
+				if (opt.min >= opt.max) {
+					this.log('warn', `Invalid min/max choices for level-meter.\n${JSON.stringify(opt)}`)
+					return {}
+				}
+				const position = feedback.options.position
+				const padding = feedback.options.padding
+				let ofsX1 = 0
+				let ofsX2 = 0
+				let ofsY1 = 0
+				let ofsY2 = 0
+				let bWidth = 0
+				let bLength = 0
+				switch (position) {
+					case 'left':
+						ofsX1 = padding
+						ofsY1 = opt.offset
+						bWidth = 6
+						bLength = feedback.image.height - ofsY1 * 2
+						ofsX2 = ofsX1 + bWidth + 1
+						ofsY2 = ofsY1
+						break
+					case 'right':
+						ofsY1 = opt.offset
+						bWidth = 6
+						bLength = feedback.image.height - ofsY1 * 2
+						ofsX2 = feedback.image.width - bWidth - padding
+						ofsX1 = ofsX2
+						ofsY2 = ofsY1
+						break
+					case 'top':
+						ofsX1 = opt.offset
+						ofsY1 = padding
+						bWidth = 7
+						bLength = feedback.image.width - ofsX1 * 2
+						ofsX2 = ofsX1
+						ofsY2 = ofsY1 + bWidth + 1
+						break
+					case 'bottom':
+						ofsX1 = opt.offset
+						bWidth = 7
+						ofsY2 = feedback.image.height - bWidth - padding
+						bLength = feedback.image.width - ofsX1 * 2
+						ofsX2 = ofsX1
+						ofsY1 = ofsY2
+				}
+				const options1 = {
+					width: feedback.image.width,
+					height: feedback.image.height,
+					colors: [
+						{ size: 50, color: combineRgb(0, 255, 0), background: combineRgb(0, 255, 0), backgroundOpacity: 64 },
+						{ size: 25, color: combineRgb(255, 255, 0), background: combineRgb(255, 255, 0), backgroundOpacity: 64 },
+						{ size: 25, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
+					],
+					barLength: bLength,
+					barWidth: bWidth,
+					type: position == 'left' || position == 'right' ? 'vertical' : 'horizontal',
+					value: valueToPercent(control.value, opt.min, opt.max),
+					offsetX: ofsX1,
+					offsetY: ofsY1,
+					opacity: 255,
+				}
+				const peak1 = {
+					...options1,
+					colors: [
+						{ size: 100, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
+					],
+					value: 100,
+				}
+
+				return { imageBuffer: options1.value == 100 ? graphics.bar(peak1) : graphics.bar(options1) }
+			},
+		}
+		feedbacks['Indicator'] = {
+			type: 'advanced',
+			name: 'Indicator',
+			description: 'Show a position indicator on the button',
+			options: options.feedbacks.indicator(),
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, _context) => {
+				const opt = feedback.options
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return {}
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
+				if (opt.min >= opt.max) {
+					this.log('warn', `Invalid min/max choices for indicator.\n${JSON.stringify(opt)}`)
+					return {}
+				}
+				const position = feedback.options.position
+				const padding = feedback.options.padding
+				let ofsX1 = 0
+				let ofsX2 = 0
+				let ofsY1 = 0
+				let ofsY2 = 0
+				let bWidth = 0
+				let bLength = 0
+				const markerOffset = (bLength, value, offset) => {
+					return bLength * value + offset
+				}
+				switch (position) {
+					case 'left':
+						ofsX1 = padding
+						ofsY1 = opt.offset
+						bWidth = 6
+						bLength = feedback.image.height - ofsY1 * 2 - 2
+						ofsX2 = ofsX1 + bWidth + 1
+						ofsY2 = ofsY1
+						break
+					case 'right':
+						ofsY1 = opt.offset
+						bWidth = 6
+						bLength = feedback.image.height - ofsY1 * 2 - 2
+						ofsX2 = feedback.image.width - bWidth - padding
+						ofsX1 = ofsX2
+						ofsY2 = ofsY1
+						break
+					case 'top':
+						ofsX1 = opt.offset
+						ofsY1 = padding
+						bWidth = 7
+						bLength = feedback.image.width - ofsX1 * 2 - 2
+						ofsX2 = ofsX1
+						ofsY2 = ofsY1 + bWidth + 1
+						break
+					case 'bottom':
+						ofsX1 = opt.offset
+						bWidth = 7
+						ofsY2 = feedback.image.height - bWidth - padding
+						bLength = feedback.image.width - ofsX1 * 2 - 2
+						ofsX2 = ofsX1
+						ofsY1 = ofsY2
+				}
+				const val = valueToPercent(control.value, opt.min, opt.max)
+				const options = {
+					width: feedback.image.width,
+					height: feedback.image.height,
+					rectWidth: position == 'left' || position == 'right' ? 6 : 3,
+					rectHeight: position == 'left' || position == 'right' ? 3 : 7,
+					strokeWidth: 1,
+					color: feedback.options.indicatorColor,
+					fillColor: combineRgb(128, 128, 128),
+					fillOpacity: 255,
+					offsetX: position == 'left' || position == 'right' ? ofsX1 : markerOffset(bLength, val, ofsX1),
+					offsetY:
+						position == 'left' || position == 'right'
+							? feedback.image.height - markerOffset(bLength, val, ofsY1)
+							: ofsY1,
+				}
+
+				return { imageBuffer: graphics.rect(options) }
+			},
+		}
 
 		this.setFeedbackDefinitions(feedbacks)
 	}
@@ -1155,36 +1337,39 @@ class QsysRemoteControl extends InstanceBase {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
 		return await queue
-			.add(async () => {
-				let sentPri = false
-				let sentSec = false
-				if (isCoreActive(this.moduleStatus.primary) || validMethodsToStandbyCore(cmd)) {
-					if (isSocketOkToSend(this.socket.pri)) {
-						sentPri = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
-						this.logSentMessage(sentPri, cmd)
-					} else {
-						this.log(
-							'warn',
-							`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd),
-						)
-					}
-				}
-
-				if (this.config.redundant) {
-					if (isCoreActive(this.moduleStatus.secondary) || validMethodsToStandbyCore(cmd)) {
-						if (isSocketOkToSend(this.socket.sec)) {
-							sentSec = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
-							this.logSentMessage(sentSec, cmd, this.config.hostSecondary)
+			.add(
+				async () => {
+					let sentPri = false
+					let sentSec = false
+					if (isCoreActive(this.moduleStatus.primary) || validMethodsToStandbyCore(cmd)) {
+						if (isSocketOkToSend(this.socket.pri)) {
+							sentPri = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
+							this.logSentMessage(sentPri, cmd)
 						} else {
 							this.log(
 								'warn',
-								`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` + JSON.stringify(cmd),
+								`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd),
 							)
 						}
 					}
-				}
-				return sentPri || sentSec
-			})
+
+					if (this.config.redundant) {
+						if (isCoreActive(this.moduleStatus.secondary) || validMethodsToStandbyCore(cmd)) {
+							if (isSocketOkToSend(this.socket.sec)) {
+								sentSec = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
+								this.logSentMessage(sentSec, cmd, this.config.hostSecondary)
+							} else {
+								this.log(
+									'warn',
+									`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` + JSON.stringify(cmd),
+								)
+							}
+						}
+					}
+					return sentPri || sentSec
+				},
+				{ signal: this.controller.signal },
+			)
 			.catch(() => {
 				return false
 			})
@@ -1272,7 +1457,7 @@ class QsysRemoteControl extends InstanceBase {
 			await this.changeGroup('AddControl', this.id, this.controls.keys())
 		},
 		1000,
-		{ leading: false, maxWait: 5000, trailing: true },
+		{ leading: false, maxWait: 5000, trailing: true, signal: this.controller.signal },
 	)
 
 	/**
@@ -1292,7 +1477,7 @@ class QsysRemoteControl extends InstanceBase {
 			}
 		},
 		1000,
-		{ leading: false, maxWait: 5000, trailing: true },
+		{ leading: false, maxWait: 5000, trailing: true, signal: this.controller.signal },
 	)
 
 	/**
@@ -1409,7 +1594,7 @@ class QsysRemoteControl extends InstanceBase {
 			this.feedbackIdsToCheck.clear()
 		},
 		5,
-		{ leading: false, trailing: true },
+		{ leading: false, trailing: true, signal: this.controller.signal },
 	)
 
 	/**

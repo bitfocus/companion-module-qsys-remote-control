@@ -84,3 +84,11 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Deprecate: `Change text to reflect control value` feedback, use variables instead.
 - Deprecate: `feedbacks_enabled` config option. Feedbacks always enabled.
 - Deprecate: `bundle_feedbacks` option. Controls are always polled via a `ChangeGroup` which makes the option of disabling this irrelevant.
+
+**V3.1.0**
+
+- Feat: `Level Meter` Advanced Feedback
+- Feat: `Indicator` Advanced Feedback
+- Improvement: `config.password` is secret
+- Chore: replace `lodash` with `es-toolkit`
+- Chore: Use `AbortController` to end active queue elements.

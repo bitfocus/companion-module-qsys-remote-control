@@ -1251,7 +1251,7 @@ class QsysRemoteControl extends InstanceBase {
 				let bWidth = 0
 				let bLength = 0
 				const markerOffset = (bLength, value, offset) => {
-					return bLength * value + offset
+					return bLength * (value / 100) + offset
 				}
 				switch (position) {
 					case 'left':
@@ -1286,12 +1286,12 @@ class QsysRemoteControl extends InstanceBase {
 						ofsX2 = ofsX1
 						ofsY1 = ofsY2
 				}
-				const val = valueToPercent(control.value, opt.min, opt.max)
+				const val = valueToPercent(opt.valPos ? control.position : control.value, opt.min, opt.max)
 				const options = {
 					width: feedback.image.width,
 					height: feedback.image.height,
-					rectWidth: position == 'left' || position == 'right' ? 6 : 3,
-					rectHeight: position == 'left' || position == 'right' ? 3 : 7,
+					rectWidth: position == 'left' || position == 'right' ? opt.width : 3,
+					rectHeight: position == 'left' || position == 'right' ? 3 : opt.width,
 					strokeWidth: 1,
 					color: feedback.options.indicatorColor,
 					fillColor: combineRgb(128, 128, 128),

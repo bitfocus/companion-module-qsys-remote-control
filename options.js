@@ -814,6 +814,12 @@ export const options = {
 					default: -100,
 				},
 				{
+					type: 'checkbox',
+					label: 'Use Position',
+					id: 'valPos',
+					default: false,
+				},
+				{
 					type: 'number',
 					label: 'Marker Width',
 					id: 'width',
@@ -828,6 +834,13 @@ export const options = {
 					default: 0xffffff,
 					enableAlpha: false,
 					returnType: 'number',
+				},
+				{
+					type: 'static-text',
+					id: 'info',
+					isVisibleExpression: '!!$(options:valPos)',
+					value:
+						'Maximum Value and Minimum Value options should be set between 0.0 and 1.0 when Use Position is enabled',
 				},
 			]
 		},

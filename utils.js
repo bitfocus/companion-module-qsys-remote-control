@@ -199,6 +199,7 @@ export const namesArray = async (action, context) => {
  */
 
 export const valueToPercent = (value, min = 0, max = 100) => {
+	if (typeof value == 'string') value = Number.parseFloat(value)
 	const percent = ((value - min) / (max - min)) * 100
 	return Number.isNaN(percent) || percent < 0 ? 0 : Math.round(percent)
 }

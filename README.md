@@ -91,4 +91,5 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Feat: `Indicator` Advanced Feedback
 - Improvement: `config.password` is secret
 - Chore: replace `lodash` with `es-toolkit`
-- Chore: Use `AbortController` to end active queue elements.
+- Chore: Use `AbortController` to end active queue elements
+- Chore: set `process.title` during `configUpdated`

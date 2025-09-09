@@ -37,6 +37,9 @@ const queue = new PQueue({ concurrency: 1 })
 const QRC_GET = 1
 const QRC_SET = 2
 
+const CONTROLLER = new AbortController()
+const SIGNAL = CONTROLLER.signal
+
 const colours = {
 	black: combineRgb(0, 0, 0),
 	white: combineRgb(255, 255, 255),
@@ -56,7 +59,6 @@ class QsysRemoteControl extends InstanceBase {
 		this.feedbackIdsToCheck = new Set()
 		this.changeGroupSet = false
 		this.isRecordingActions = false
-		this.controller = new AbortController()
 		this.socket = {
 			pri: new TCPHelper('localhost', 1710),
 			sec: new TCPHelper('localhost', 1710),
@@ -92,6 +94,7 @@ class QsysRemoteControl extends InstanceBase {
 	async configUpdated(config) {
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
+		process.title = this.label
 		this.config = config
 		this.console_debug = config.verbose
 		await this.initVariables(config.redundant)
@@ -270,7 +273,7 @@ class QsysRemoteControl extends InstanceBase {
 				this.resetChangeGroup()
 		},
 		1000,
-		{ leading: false, maxWait: 2000, trailing: true, signal: this.controller.signal },
+		{ leading: false, maxWait: 2000, trailing: true, signal: SIGNAL },
 	)
 
 	/**
@@ -583,7 +586,7 @@ class QsysRemoteControl extends InstanceBase {
 		if (this.controls !== undefined) {
 			delete this.controls
 		}
-		this.controller.abort()
+		CONTROLLER.abort()
 	}
 
 	/**
@@ -1160,14 +1163,14 @@ class QsysRemoteControl extends InstanceBase {
 					case 'left':
 						ofsX1 = padding
 						ofsY1 = opt.offset
-						bWidth = 6
+						bWidth = opt.width ?? 6
 						bLength = feedback.image.height - ofsY1 * 2
 						ofsX2 = ofsX1 + bWidth + 1
 						ofsY2 = ofsY1
 						break
 					case 'right':
 						ofsY1 = opt.offset
-						bWidth = 6
+						bWidth = opt.width ?? 6
 						bLength = feedback.image.height - ofsY1 * 2
 						ofsX2 = feedback.image.width - bWidth - padding
 						ofsX1 = ofsX2
@@ -1176,44 +1179,45 @@ class QsysRemoteControl extends InstanceBase {
 					case 'top':
 						ofsX1 = opt.offset
 						ofsY1 = padding
-						bWidth = 7
+						bWidth = opt.width ?? 7
 						bLength = feedback.image.width - ofsX1 * 2
 						ofsX2 = ofsX1
 						ofsY2 = ofsY1 + bWidth + 1
 						break
 					case 'bottom':
 						ofsX1 = opt.offset
-						bWidth = 7
+						bWidth = opt.width ?? 7
 						ofsY2 = feedback.image.height - bWidth - padding
 						bLength = feedback.image.width - ofsX1 * 2
 						ofsX2 = ofsX1
 						ofsY1 = ofsY2
 				}
-				const options1 = {
+
+				const colors = opt.customColor
+					? [{ size: 100, color: opt.color ?? 0xffffff, background: opt.color ?? 0x000000, backgroundOpacity: 64 }]
+					: [
+							{ size: 50, color: combineRgb(0, 255, 0), background: combineRgb(0, 255, 0), backgroundOpacity: 64 },
+							{ size: 25, color: combineRgb(255, 255, 0), background: combineRgb(255, 255, 0), backgroundOpacity: 64 },
+							{ size: 25, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
+						]
+				const options = {
 					width: feedback.image.width,
 					height: feedback.image.height,
-					colors: [
-						{ size: 50, color: combineRgb(0, 255, 0), background: combineRgb(0, 255, 0), backgroundOpacity: 64 },
-						{ size: 25, color: combineRgb(255, 255, 0), background: combineRgb(255, 255, 0), backgroundOpacity: 64 },
-						{ size: 25, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
-					],
+					colors: colors,
 					barLength: bLength,
 					barWidth: bWidth,
 					type: position == 'left' || position == 'right' ? 'vertical' : 'horizontal',
-					value: valueToPercent(control.value, opt.min, opt.max),
+					value: valueToPercent(opt.valPos ? control.position : control.value, opt.min, opt.max),
+					reverse: opt.invert,
 					offsetX: ofsX1,
 					offsetY: ofsY1,
 					opacity: 255,
 				}
-				const peak1 = {
-					...options1,
-					colors: [
-						{ size: 100, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
-					],
-					value: 100,
+				if (this.console_debug)
+					this.log('debug', `Feedback: ${JSON.stringify(feedback)}\n Bar Options: ${JSON.stringify(options)}`)
+				return {
+					imageBuffer: graphics.bar(options),
 				}
-
-				return { imageBuffer: options1.value == 100 ? graphics.bar(peak1) : graphics.bar(options1) }
 			},
 		}
 		feedbacks['Indicator'] = {
@@ -1223,7 +1227,7 @@ class QsysRemoteControl extends InstanceBase {
 			options: options.feedbacks.indicator(),
 			subscribe: async (feedback, context) => await this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
-			callback: async (feedback, _context) => {
+			callback: async (feedback, context) => {
 				const opt = feedback.options
 				const name = await context.parseVariablesInString(opt.name)
 				const control = this.controls.get(name)
@@ -1253,14 +1257,14 @@ class QsysRemoteControl extends InstanceBase {
 					case 'left':
 						ofsX1 = padding
 						ofsY1 = opt.offset
-						bWidth = 6
+						bWidth = opt.width ?? 6
 						bLength = feedback.image.height - ofsY1 * 2 - 2
 						ofsX2 = ofsX1 + bWidth + 1
 						ofsY2 = ofsY1
 						break
 					case 'right':
 						ofsY1 = opt.offset
-						bWidth = 6
+						bWidth = opt.width ?? 6
 						bLength = feedback.image.height - ofsY1 * 2 - 2
 						ofsX2 = feedback.image.width - bWidth - padding
 						ofsX1 = ofsX2
@@ -1269,14 +1273,14 @@ class QsysRemoteControl extends InstanceBase {
 					case 'top':
 						ofsX1 = opt.offset
 						ofsY1 = padding
-						bWidth = 7
+						bWidth = opt.width ?? 7
 						bLength = feedback.image.width - ofsX1 * 2 - 2
 						ofsX2 = ofsX1
 						ofsY2 = ofsY1 + bWidth + 1
 						break
 					case 'bottom':
 						ofsX1 = opt.offset
-						bWidth = 7
+						bWidth = opt.width ?? 7
 						ofsY2 = feedback.image.height - bWidth - padding
 						bLength = feedback.image.width - ofsX1 * 2 - 2
 						ofsX2 = ofsX1
@@ -1298,6 +1302,8 @@ class QsysRemoteControl extends InstanceBase {
 							? feedback.image.height - markerOffset(bLength, val, ofsY1)
 							: ofsY1,
 				}
+				if (this.console_debug)
+					this.log('debug', `Feedback: ${JSON.stringify(feedback)}\n Rectangle Options: ${JSON.stringify(options)}`)
 
 				return { imageBuffer: graphics.rect(options) }
 			},
@@ -1368,7 +1374,7 @@ class QsysRemoteControl extends InstanceBase {
 					}
 					return sentPri || sentSec
 				},
-				{ signal: this.controller.signal },
+				{ signal: SIGNAL },
 			)
 			.catch(() => {
 				return false
@@ -1457,7 +1463,7 @@ class QsysRemoteControl extends InstanceBase {
 			await this.changeGroup('AddControl', this.id, this.controls.keys())
 		},
 		1000,
-		{ leading: false, maxWait: 5000, trailing: true, signal: this.controller.signal },
+		{ leading: false, maxWait: 5000, trailing: true, signal: SIGNAL },
 	)
 
 	/**
@@ -1477,7 +1483,7 @@ class QsysRemoteControl extends InstanceBase {
 			}
 		},
 		1000,
-		{ leading: false, maxWait: 5000, trailing: true, signal: this.controller.signal },
+		{ leading: false, maxWait: 5000, trailing: true, signal: SIGNAL },
 	)
 
 	/**
@@ -1594,7 +1600,7 @@ class QsysRemoteControl extends InstanceBase {
 			this.feedbackIdsToCheck.clear()
 		},
 		5,
-		{ leading: false, trailing: true, signal: this.controller.signal },
+		{ leading: false, trailing: true, signal: SIGNAL },
 	)
 
 	/**

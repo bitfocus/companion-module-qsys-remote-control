@@ -87,8 +87,9 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 
 **V3.1.0**
 
-- Feat: `Level Meter` Advanced Feedback
 - Feat: `Indicator` Advanced Feedback
+- Feat: `LED` Advanced Feedback
+- Feat: `Level Meter` Advanced Feedback
 - Improvement: `config.password` is secret
 - Chore: replace `lodash` with `es-toolkit`
 - Chore: Use `AbortController` to end active queue elements

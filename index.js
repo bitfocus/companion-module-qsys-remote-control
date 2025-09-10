@@ -1151,8 +1151,8 @@ class QsysRemoteControl extends InstanceBase {
 					this.log('warn', `Invalid min/max choices for level-meter.\n${JSON.stringify(opt)}`)
 					return {}
 				}
-				const position = feedback.options.position
-				const padding = feedback.options.padding
+				const position = opt.position
+				const padding = opt.padding
 				let ofsX1 = 0
 				let ofsX2 = 0
 				let ofsY1 = 0
@@ -1242,8 +1242,8 @@ class QsysRemoteControl extends InstanceBase {
 					this.log('warn', `Invalid min/max choices for indicator.\n${JSON.stringify(opt)}`)
 					return {}
 				}
-				const position = feedback.options.position
-				const padding = feedback.options.padding
+				const position = opt.position
+				const padding = opt.padding
 				let ofsX1 = 0
 				let ofsX2 = 0
 				let ofsY1 = 0
@@ -1308,7 +1308,74 @@ class QsysRemoteControl extends InstanceBase {
 				return { imageBuffer: graphics.rect(options) }
 			},
 		}
+		feedbacks['led'] = {
+			type: 'advanced',
+			name: 'LED',
+			description: 'Show a boolean LED on the button',
+			options: options.feedbacks.led(),
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const opt = feedback.options
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return {}
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
+				let options = {}
+				let imageBuf
+				if (opt.shape == 'cirlce') {
+					const cirlceOptions = {
+						radius: Math.round(opt.radius),
+						color: Math.round(control.position) ? opt.colorOn : opt.colorOff,
+						opacity: Math.round(control.position) ? opt.opacityOn : opt.opacityOff,
+					}
+					const circle = graphics.circle(cirlceOptions)
+					options = {
+						width: feedback.image.width,
+						height: feedback.image.height,
+						custom: circle,
+						type: 'custom',
+						customHeight: 2 * Math.round(opt.radius),
+						customWidth: 2 * Math.round(opt.radius),
+						offsetX: opt.offsetX,
+						offsetY: opt.offsetY,
+					}
+					if (this.console_debug)
+						this.log(
+							'debug',
+							`Feedback: ${JSON.stringify(feedback)}\nCircle Options: ${JSON.stringify(cirlceOptions)}\nIcon Options: ${JSON.stringify(options)}`,
+						)
+					imageBuf = graphics.icon(options)
+				} else if (opt.shape == 'rectangle') {
+					options = {
+						width: feedback.image.width,
+						height: feedback.image.height,
+						rectWidth: opt.width,
+						rectHeight: opt.height,
+						strokeWidth: 1,
+						color: Math.round(control.position) ? opt.colorOn : opt.colorOff,
+						fillColor: Math.round(control.position) ? opt.colorOn : opt.colorOff,
+						opacity: Math.round(control.position) ? opt.opacityOn : opt.opacityOff,
+						fillOpacity: Math.round(control.position) ? opt.opacityOn : opt.opacityOff,
+						offsetX: opt.offsetX,
+						offsetY: opt.offsetY,
+					}
+					if (this.console_debug)
+						this.log(
+							'debug',
+							`Feedback: ${JSON.stringify(feedback)}\nRectangle Options: ${JSON.stringify(options)}`,
+						)
+					imageBuf = graphics.rect(options)
+				}
 
+				return { imageBuffer: imageBuf }
+			},
+		}
 		this.setFeedbackDefinitions(feedbacks)
 	}
 

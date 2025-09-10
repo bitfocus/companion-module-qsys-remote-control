@@ -52,6 +52,7 @@ The mixer control API uses a string specification to determine to which inputs a
 - Feedback if control value at or exceeds threshold
 - Fade color over control value range
 - Indicator
+- LED
 - Level Meter
 
 **Variables**

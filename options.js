@@ -764,8 +764,14 @@ export const options = {
 				},
 				{
 					type: 'checkbox',
-					label: 'Invert',
-					id: 'invert',
+					label: 'Invert Meter',
+					id: 'invertMeter',
+					default: false,
+				},
+				{
+					type: 'checkbox',
+					label: 'Invert Value',
+					id: 'invertValue',
 					default: false,
 				},
 				{

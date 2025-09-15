@@ -195,11 +195,13 @@ export const namesArray = async (action, context) => {
  * @param {number} value
  * @param {number} min
  * @param {number} max
+ * @param {boolean} invert
  * @returns rounded percentage
  */
 
-export const valueToPercent = (value, min = 0, max = 100) => {
+export const valueToPercent = (value, min = 0, max = 100, invert = false) => {
 	if (typeof value == 'string') value = Number.parseFloat(value)
 	const percent = ((value - min) / (max - min)) * 100
-	return Number.isNaN(percent) || percent < 0 ? 0 : Math.round(percent)
+	let result = Number.isNaN(percent) || percent < 0 ? 0 : Math.round(percent)
+	return invert ? 100 - result : result
 }

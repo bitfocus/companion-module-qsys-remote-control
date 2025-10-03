@@ -1,6 +1,6 @@
 {
 	"name": "qsys-remote-control",
-	"version": "3.1.0-rc8",
+	"version": "3.1.0",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -29,5 +29,5 @@
 		"node": "^22.17"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@4.9.4"
+	"packageManager": "yarn@4.10.3"
 }

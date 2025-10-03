@@ -1366,10 +1366,7 @@ class QsysRemoteControl extends InstanceBase {
 						offsetY: opt.offsetY,
 					}
 					if (this.console_debug)
-						this.log(
-							'debug',
-							`Feedback: ${JSON.stringify(feedback)}\nRectangle Options: ${JSON.stringify(options)}`,
-						)
+						this.log('debug', `Feedback: ${JSON.stringify(feedback)}\nRectangle Options: ${JSON.stringify(options)}`)
 					imageBuf = graphics.rect(options)
 				}
 
@@ -1441,7 +1438,7 @@ class QsysRemoteControl extends InstanceBase {
 					}
 					return sentPri || sentSec
 				},
-				{ signal: SIGNAL },
+				{ signal: SIGNAL, priority: get_set },
 			)
 			.catch(() => {
 				return false

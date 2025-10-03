@@ -43,6 +43,41 @@ const mixerCues = {
 	tooltip: `User Mixer IO String Syntax`,
 }
 
+const positionOption = {
+	type: 'dropdown',
+	label: 'Position',
+	id: 'position',
+	default: 'right',
+	choices: [
+		{ id: 'left', label: 'Left' },
+		{ id: 'right', label: 'Right' },
+		{ id: 'top', label: 'Top' },
+		{ id: 'bottom', label: 'Bottom' },
+	],
+}
+
+const paddingOption = {
+	type: 'number',
+	label: 'Padding',
+	id: 'padding',
+	tooltip: 'Distance from edge of button, perpendicular orientation',
+	min: 0,
+	max: 72,
+	default: 1,
+	required: true,
+}
+
+const offsetOption = {
+	type: 'number',
+	label: 'Offset',
+	id: 'offset',
+	tooltip: 'Distance from edge of button, axial orientation',
+	min: 0,
+	max: 20,
+	default: 5,
+	required: true,
+}
+
 export const options = {
 	actions: {
 		controlSet: () => {
@@ -690,6 +725,237 @@ export const options = {
 					label: 'High threshold color',
 					id: 'high_bg',
 					default: colours.red,
+				},
+			]
+		},
+		levelMeter: () => {
+			return [
+				name,
+				positionOption,
+				paddingOption,
+				offsetOption,
+				{
+					type: 'number',
+					label: 'Meter Width',
+					id: 'width',
+					default: 6,
+					min: 1,
+					max: 20,
+				},
+				{
+					type: 'number',
+					label: 'Maximum Value',
+					id: 'max',
+					default: 0,
+					tooltip: 'Value greater than or equal to this will result in fullscale metering',
+				},
+				{
+					type: 'number',
+					label: 'Minimum Value',
+					id: 'min',
+					default: -100,
+					tooltip: 'Value less than or equal to this will result in no metering',
+				},
+				{
+					type: 'checkbox',
+					label: 'Use Position',
+					id: 'valPos',
+					default: false,
+				},
+				{
+					type: 'checkbox',
+					label: 'Invert Meter',
+					id: 'invertMeter',
+					default: false,
+				},
+				{
+					type: 'checkbox',
+					label: 'Invert Value',
+					id: 'invertValue',
+					default: false,
+				},
+				{
+					type: 'checkbox',
+					label: 'Custom Color',
+					id: 'customColor',
+					default: false,
+				},
+				{
+					type: 'colorpicker',
+					label: 'Color',
+					id: 'color',
+					default: 0xffffff,
+					enableAlpha: false,
+					returnType: 'number',
+					isVisibleExpression: '!!$(options:customColor)',
+				},
+				{
+					type: 'static-text',
+					id: 'info',
+					isVisibleExpression: '!!$(options:valPos)',
+					value:
+						'Maximum Value and Minimum Value options should be set between 0.0 and 1.0 when Use Position is enabled',
+				},
+			]
+		},
+		indicator: () => {
+			return [
+				name,
+				positionOption,
+				paddingOption,
+				{
+					...offsetOption,
+					default: 4,
+				},
+				{
+					type: 'number',
+					label: 'Marker Width',
+					id: 'width',
+					default: 6,
+					min: 1,
+					max: 20,
+				},
+				{
+					type: 'number',
+					label: 'Maximum Value',
+					id: 'max',
+					default: 0,
+				},
+				{
+					type: 'number',
+					label: 'Minimum Value',
+					id: 'min',
+					default: -100,
+				},
+				{
+					type: 'checkbox',
+					label: 'Use Position',
+					id: 'valPos',
+					default: false,
+				},
+				{
+					type: 'colorpicker',
+					label: 'Color',
+					id: 'indicatorColor',
+					default: 0xffffff,
+					enableAlpha: false,
+					returnType: 'number',
+				},
+				{
+					type: 'static-text',
+					id: 'info',
+					isVisibleExpression: '!!$(options:valPos)',
+					value:
+						'Maximum Value and Minimum Value options should be set between 0.0 and 1.0 when Use Position is enabled',
+				},
+			]
+		},
+		led: () => {
+			return [
+				name,
+				{
+					type: 'number',
+					label: 'X Offset',
+					id: 'offsetX',
+					min: 0,
+					max: 72,
+					default: 5,
+					range: true,
+					step: 1,
+				},
+				{
+					type: 'number',
+					label: 'Y Offset',
+					id: 'offsetY',
+					min: 0,
+					max: 72,
+					default: 5,
+					range: true,
+					step: 1,
+				},
+				{
+					type: 'dropdown',
+					label: 'Shape',
+					id: 'shape',
+					default: 'circle',
+					choices: [
+						{ id: 'circle', label: 'Circle' },
+						{ id: 'rectangle', label: 'Rectangle' },
+					],
+				},
+				{
+					type: 'number',
+					label: 'Radius',
+					id: 'radius',
+					default: 4,
+					min: 1,
+					max: 20,
+					range: true,
+					step: 1,
+					isVisibleExpression: `$(options:shape) == 'circle'`,
+				},
+				{
+					type: 'number',
+					label: 'Width',
+					id: 'width',
+					default: 4,
+					min: 1,
+					max: 20,
+					range: true,
+					step: 1,
+					isVisibleExpression: `$(options:shape) == 'rectangle'`,
+				},
+				{
+					type: 'number',
+					label: 'Height',
+					id: 'height',
+					default: 4,
+					min: 1,
+					max: 20,
+					range: true,
+					step: 1,
+					isVisibleExpression: `$(options:shape) == 'rectangle'`,
+				},
+				{
+					type: 'colorpicker',
+					label: 'On Color',
+					id: 'colorOn',
+					default: 0xffffff,
+					enableAlpha: false,
+					returnType: 'number',
+				},
+				{
+					type: 'number',
+					label: 'On Opacity',
+					id: 'opacityOn',
+					min: 0,
+					max: 255,
+					default: 255,
+					range: true,
+					step: 1,
+				},
+				{
+					type: 'colorpicker',
+					label: 'Off Color',
+					id: 'colorOff',
+					default: 0x000000,
+					enableAlpha: false,
+					returnType: 'number',
+				},
+				{
+					type: 'number',
+					label: 'Off Opacity',
+					id: 'opacityOff',
+					min: 0,
+					max: 255,
+					default: 0,
+					range: true,
+					step: 1,
+				},
+				{
+					type: 'static-text',
+					id: 'info',
+					value: 'LED On when Control.Position >= 0.5',
 				},
 			]
 		},

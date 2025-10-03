@@ -189,3 +189,19 @@ export const namesArray = async (action, context) => {
 	})
 	return namesArray
 }
+
+/**
+ * Converts value to a percentage value of the range between min and max. NaN and -ve values return 0.
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @param {boolean} invert
+ * @returns rounded percentage
+ */
+
+export const valueToPercent = (value, min = 0, max = 100, invert = false) => {
+	if (typeof value == 'string') value = Number.parseFloat(value)
+	const percent = ((value - min) / (max - min)) * 100
+	let result = Number.isNaN(percent) || percent < 0 ? 0 : Math.round(percent)
+	return invert ? 100 - result : result
+}

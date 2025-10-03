@@ -88,7 +88,7 @@ export const configFields = [
 		default: '',
 	},
 	{
-		type: 'textinput',
+		type: 'secret-text',
 		id: 'pass',
 		label: 'Password',
 		width: 6,

@@ -15,14 +15,14 @@
 		"url": "git+https://github.com/bitfocus/companion-module-qsys-remote-control.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.13.2",
+		"@companion-module/base": "~1.13.4",
 		"companion-module-utils": "^0.5.0",
-		"es-toolkit": "^1.39.10",
+		"es-toolkit": "^1.41.0",
 		"p-queue": "~9.0.0"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.4.1",
-		"eslint": "^9.36.0",
+		"@companion-module/tools": "^2.4.2",
+		"eslint": "^9.38.0",
 		"prettier": "~3.6.2"
 	},
 	"engines": {

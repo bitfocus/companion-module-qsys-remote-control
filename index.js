@@ -305,15 +305,14 @@ class QsysRemoteControl extends InstanceBase {
 	checkKeepAlive() {
 		this.debug(`checkKeepAlive`)
 		if (this.socket.pri.isConnected || this.socket.sec.isConnected) {
-			if (this.keepAlive === undefined) {
-				this.keepAlive = setInterval(async () => {
-					this.debug(`sending keepalive. Queue size ${queue.size}`)
-					await this.sendCommand('NoOp', {})
-				}, 5000)
-			}
+			if (this.keepAlive) clearTimeout(this.keepAlive)
+			this.keepAlive = setTimeout(async () => {
+				this.debug(`sending keepalive. Queue size ${queue.size}`)
+				await this.sendCommand('NoOp', {})
+			}, 5000)
 		} else {
 			if (this.keepAlive) {
-				clearInterval(this.keepAlive)
+				clearTimeout(this.keepAlive)
 				delete this.keepAlive
 			}
 		}
@@ -588,11 +587,11 @@ class QsysRemoteControl extends InstanceBase {
 		this.feedbackIdsToCheck.clear()
 		this.changeGroupSet = false
 		if (this.pollQRCTimer !== undefined) {
-			clearInterval(this.pollQRCTimer)
+			clearTimeout(this.pollQRCTimer)
 			delete this.pollQRCTimer
 		}
 		if (this.keepAlive !== undefined) {
-			clearInterval(this.keepAlive)
+			clearTimeout(this.keepAlive)
 			delete this.keepAlive
 		}
 		if (!this.socket.pri.isDestroyed) {
@@ -1545,11 +1544,11 @@ class QsysRemoteControl extends InstanceBase {
 	initPolling() {
 		this.debug(`initPolling`)
 		if (this.pollQRCTimer) {
-			clearInterval(this.pollQRCTimer)
-			delete this.pollQRCTimer
+			clearTimeout(this.pollQRCTimer)
 		}
-		this.pollQRCTimer = setInterval(async () => {
+		this.pollQRCTimer = setTimeout(async () => {
 			await this.getControlStatuses().catch(() => {})
+			this.initPolling()
 		}, Math.round(this.config.poll_interval))
 	}
 	/**

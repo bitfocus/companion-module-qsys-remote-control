@@ -81,7 +81,7 @@ class QsysRemoteControl extends InstanceBase {
 	debug(msg) {
 		if (this.config.verbose) {
 			if (typeof msg == 'object') msg = JSON.stringify(msg)
-			this.log('debug', msg)
+			this.log('debug', `[${new Date().toJSON()}] ${msg}`)
 		}
 	}
 
@@ -93,8 +93,8 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async init(config) {
-		this.debug(`init\nConfig: ${JSON.stringify(config)}`)
 		this.config = config
+		this.debug(`init\nConfig: ${JSON.stringify(config)}`)
 		this.actions()
 		await this.configUpdated(config)
 	}
@@ -107,11 +107,11 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async configUpdated(config) {
+		this.config = config
 		this.debug(`configUpdated\nConfig: ${JSON.stringify(config)}`)
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		process.title = this.label
-		this.config = config
 		await this.initVariables(config.redundant)
 		this.init_tcp(config.host, config.port)
 		if (config.redundant) {
@@ -198,11 +198,13 @@ class QsysRemoteControl extends InstanceBase {
 		const errorEvent = (err) => {
 			this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
 			this.log('error', `Network error from ${host}: ${err.message}`)
+			if (!this.config.redudant) queue.clear()
 			this.checkKeepAlive()
 		}
 		const endEvent = () => {
 			this.checkStatus(InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
 			this.log('warn', `Connection to ${host} ended`)
+			if (!this.config.redudant) queue.clear()
 			this.checkKeepAlive()
 		}
 		const connectEvent = async () => {
@@ -305,8 +307,9 @@ class QsysRemoteControl extends InstanceBase {
 		if (this.socket.pri.isConnected || this.socket.sec.isConnected) {
 			if (this.keepAlive === undefined) {
 				this.keepAlive = setInterval(async () => {
+					this.debug(`sending keepalive. Queue size ${queue.size}`)
 					await this.sendCommand('NoOp', {})
-				}, 1000)
+				}, 5000)
 			}
 		} else {
 			if (this.keepAlive) {
@@ -453,10 +456,6 @@ class QsysRemoteControl extends InstanceBase {
 				.set('design_nameSecondary', this.moduleStatus.secondary.design_name)
 				.set('redundantSecondary', this.moduleStatus.secondary.redundant)
 				.set('emulatorSecondary', this.moduleStatus.secondary.emulator)
-			//engineVars.stateSecondary = this.moduleStatus.secondary.state
-			//engineVars.design_nameSecondary = this.moduleStatus.secondary.design_name
-			//engineVars.redundantSecondary = !!this.moduleStatus.secondary.redundant
-			//engineVars.emulatorSecondary = !!this.moduleStatus.secondary.emulator
 		}
 		this.variablesToUpdate
 			.set('state', this.moduleStatus.primary.state)
@@ -464,11 +463,6 @@ class QsysRemoteControl extends InstanceBase {
 			.set('redundant', this.moduleStatus.primary.redundant)
 			.set('emulator', this.moduleStatus.primary.emulator)
 		this.throttledVariableUpdates()
-		//engineVars.state = this.moduleStatus.primary.state
-		//engineVars.design_name = this.moduleStatus.primary.design_name
-		//engineVars.redundant = !!this.moduleStatus.primary.redundant
-		//engineVars.emulator = !!this.moduleStatus.primary.emulator
-		//this.setVariableValues(engineVars)
 	}
 
 	/**
@@ -622,6 +616,7 @@ class QsysRemoteControl extends InstanceBase {
 			delete this.controls
 		}
 		CONTROLLER.abort()
+		queue.clear()
 	}
 
 	/**
@@ -683,7 +678,6 @@ class QsysRemoteControl extends InstanceBase {
 						const sent = await this.sendCommand('Control.Set', params)
 						if (sent && control !== undefined) {
 							control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
-							//this.setVariableValues({ [`${name}_value`]: control.value })
 							this.variablesToUpdate.set(`${name}_value`, control.value)
 							this.throttledVariableUpdates()
 							if (control.feedbackIds.size > 0) {
@@ -1534,7 +1528,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async getControlStatuses() {
-		this.debug(`getControlStatuses`)
+		this.debug(`getControlStatuses Queue Size ${queue.size}`)
 		if (this.changeGroupSet) {
 			await this.changeGroup('Poll', this.id)
 		} else {
@@ -1556,7 +1550,7 @@ class QsysRemoteControl extends InstanceBase {
 		}
 		this.pollQRCTimer = setInterval(async () => {
 			await this.getControlStatuses().catch(() => {})
-		}, Math.floor(this.config.poll_interval))
+		}, Math.round(this.config.poll_interval))
 	}
 	/**
 	 * Reinit default change group, and get all controls
@@ -1709,11 +1703,11 @@ class QsysRemoteControl extends InstanceBase {
 
 	throttledFeedbackIdCheck = throttle(
 		() => {
-			this.debug(`throttledFeedbackIdCheck: ${JSON.stringify(Object.fromEntries(this.feedbackIdsToCheck))}`)
+			this.debug(`throttledFeedbackIdCheck: ${[...this.feedbackIdsToCheck].join(', ')}`)
 			this.checkFeedbacksById(...this.feedbackIdsToCheck)
 			this.feedbackIdsToCheck.clear()
 		},
-		20,
+		40,
 		{ leading: false, trailing: true, signal: SIGNAL },
 	)
 
@@ -1727,7 +1721,7 @@ class QsysRemoteControl extends InstanceBase {
 			this.setVariableValues(Object.fromEntries(this.variablesToUpdate))
 			this.variablesToUpdate.clear()
 		},
-		20,
+		40,
 		{ leading: false, trailing: true, signal: SIGNAL },
 	)
 
@@ -1753,11 +1747,10 @@ class QsysRemoteControl extends InstanceBase {
 		control.strval = update.String ?? control.strval
 		control.position = update.Position ?? control.position
 		this.controls.set(update.Name, control)
-		this.variablesToUpdate.set(
-			[`${name}_string`, control.strval],
-			[`${name}_position`, control.position],
-			[`${name}_value`, control.value],
-		)
+		this.variablesToUpdate
+			.set(`${name}_string`, control.strval)
+			.set(`${name}_position`, control.position)
+			.set(`${name}_value`, control.value)
 		this.throttledVariableUpdates()
 		if (control.feedbackIds.size > 0) {
 			control.feedbackIds.forEach((id) => this.feedbackIdsToCheck.add(id))
@@ -1767,21 +1760,20 @@ class QsysRemoteControl extends InstanceBase {
 			let type = 'string'
 			if (typeof control.value == 'boolean') type = 'boolean'
 			if (typeof control.value == 'number') type = 'number'
-			this.recordAction(
-				{
-					actionId: 'control_set',
-					options: {
-						name: update.Name,
-						value: control.value.toString(),
-						min: '',
-						max: '',
-						ramp: '',
-						relative: false,
-						type: type,
-					},
+			const opts = {
+				actionId: 'control_set',
+				options: {
+					name: update.Name,
+					value: control.value.toString(),
+					min: '',
+					max: '',
+					ramp: '',
+					relative: false,
+					type: type,
 				},
-				`Set:${update.Name}`,
-			)
+			}
+			this.recordAction(opts, `Set:${update.Name}`)
+			this.debug(`recordAction: Set:${update.Name}\n${JSON.stringify(opts)}`)
 		}
 	}
 }

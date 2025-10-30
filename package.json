@@ -1,6 +1,6 @@
 {
 	"name": "qsys-remote-control",
-	"version": "3.1.1-RecursiveTimeOuts",
+	"version": "3.1.1-recursive-timeouts",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {

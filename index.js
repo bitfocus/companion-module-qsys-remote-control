@@ -1235,7 +1235,14 @@ class QsysRemoteControl extends InstanceBase {
 				}
 
 				const colors = opt.customColor
-					? [{ size: 100, color: opt.color ?? 0xffffff, background: opt.color ?? 0x000000, backgroundOpacity: 64 }]
+					? [
+							{
+								size: 100,
+								color: opt.color ?? colours.white,
+								background: opt.color ?? colours.black,
+								backgroundOpacity: 64,
+							},
+						]
 					: [
 							{ size: 50, color: colours.greenBright, background: colours.greenBright, backgroundOpacity: 64 },
 							{ size: 25, color: colours.yellow, background: colours.yellow, backgroundOpacity: 64 },

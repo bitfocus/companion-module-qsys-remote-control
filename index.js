@@ -1246,7 +1246,7 @@ class QsysRemoteControl extends InstanceBase {
 					: [
 							{ size: 50, color: colours.greenBright, background: colours.greenBright, backgroundOpacity: 64 },
 							{ size: 25, color: colours.yellow, background: colours.yellow, backgroundOpacity: 64 },
-							{ size: 25, color: colors.red, background: colors.red, backgroundOpacity: 64 },
+							{ size: 25, color: colours.red, background: colours.red, backgroundOpacity: 64 },
 						]
 				const options = {
 					width: feedback.image.width,

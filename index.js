@@ -261,10 +261,12 @@ class QsysRemoteControl extends InstanceBase {
 		let socket
 		if (secondary) {
 			if (!this.socket.sec.isDestroyed) this.socket.sec.destroy()
+			this.socket.sec.removeAllListeners()
 			this.socket.sec = new TCPHelper(host, port)
 			socket = this.socket.sec
 		} else {
 			if (!this.socket.pri.isDestroyed) this.socket.pri.destroy()
+			this.socket.pri.removeAllListeners()
 			this.socket.pri = new TCPHelper(host, port)
 			socket = this.socket.pri
 		}
@@ -587,6 +589,7 @@ class QsysRemoteControl extends InstanceBase {
 		this.controls.clear()
 		this.namesToGet.clear()
 		this.feedbackIdsToCheck.clear()
+		this.variablesToUpdate.clear()
 		this.changeGroupSet = false
 		if (this.pollQRCTimer !== undefined) {
 			clearTimeout(this.pollQRCTimer)
@@ -613,9 +616,6 @@ class QsysRemoteControl extends InstanceBase {
 	destroy() {
 		this.debug(`destroy ${this.id}: ${this.label}`)
 		this.killTimersDestroySockets()
-		if (this.controls !== undefined) {
-			delete this.controls
-		}
 		CONTROLLER.abort()
 		queue.clear()
 	}
@@ -1613,7 +1613,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async addControl(feedback, context = this) {
-		this.debug(`addControl: ${JSON.stringify(feedback)}`)
+		this.debug(`addControl: ${JSON.stringify(feedback)}\n Current size of this.controls: ${this.controls.size}`)
 		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
 		if (name == '') return
 		if (this.controls.has(name)) {
@@ -1680,7 +1680,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async removeControl(feedback, context = this) {
-		this.debug(`removeControl: ${JSON.stringify(feedback)}`)
+		this.debug(`removeControl: ${JSON.stringify(feedback)}\n Current size of this.controls: ${this.controls.size}`)
 		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
@@ -1704,7 +1704,9 @@ class QsysRemoteControl extends InstanceBase {
 
 	throttledFeedbackIdCheck = throttle(
 		() => {
-			this.debug(`throttledFeedbackIdCheck: ${[...this.feedbackIdsToCheck].join(', ')}`)
+			this.debug(
+				`throttledFeedbackIdCheck: Number of Feedbcaks: ${this.feedbackIdsToCheck.size}\n ${[...this.feedbackIdsToCheck].join(', ')}`,
+			)
 			this.checkFeedbacksById(...this.feedbackIdsToCheck)
 			this.feedbackIdsToCheck.clear()
 		},
@@ -1718,7 +1720,9 @@ class QsysRemoteControl extends InstanceBase {
 
 	throttledVariableUpdates = throttle(
 		() => {
-			this.debug(`throttledVariableUpdates: ${JSON.stringify(Object.fromEntries(this.variablesToUpdate))}`)
+			this.debug(
+				`throttledVariableUpdates: Number of Variables ${this.variablesToUpdate.size}\n${JSON.stringify(Object.fromEntries(this.variablesToUpdate))}`,
+			)
 			this.setVariableValues(Object.fromEntries(this.variablesToUpdate))
 			this.variablesToUpdate.clear()
 		},
@@ -1733,7 +1737,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	updateControl(update) {
-		this.debug(`updateControl: ${JSON.stringify(update)}`)
+		this.debug(`updateControl: ${JSON.stringify(update)}\n Current size of this.controls: ${this.controls.size}`)
 		if (update.Name === undefined || update.Name === null) return
 		const name = sanitiseVariableId(update.Name)
 		const control = this.controls.get(update.Name) ?? {

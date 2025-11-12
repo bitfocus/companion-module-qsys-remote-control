@@ -45,18 +45,21 @@ const colours = {
 	white: combineRgb(255, 255, 255),
 	red: combineRgb(255, 0, 0),
 	green: combineRgb(0, 204, 0),
+	greenBright: combineRgb(0, 255, 0),
+	yellow: combineRgb(255, 255, 0),
 }
 
 class QsysRemoteControl extends InstanceBase {
 	constructor(internal) {
 		super(internal)
-		this.console_debug = false
+		//this.cpuUsage = process.cpuUsage()
 		this.pollQRCTimer = undefined
 		this.variables = []
 		this.moduleStatus = resetModuleStatus()
 		this.controls = new Map()
 		this.namesToGet = new Set()
 		this.feedbackIdsToCheck = new Set()
+		this.variablesToUpdate = new Map()
 		this.changeGroupSet = false
 		this.isRecordingActions = false
 		this.socket = {
@@ -72,6 +75,22 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	/**
+	 * Debug logging utility function
+	 * @param {string | object} msg
+	 * @access private
+	 * @since 3.1.1
+	 */
+
+	debug(msg) {
+		//this.cpuUsage = process.cpuUsage(this.cpuUsage)
+		if (this.config.verbose) {
+			if (typeof msg == 'object') msg = JSON.stringify(msg)
+			this.log('debug', `[${new Date().toJSON()}] ${msg}`)
+			//this.log('debug', `Δ CPU Usage: ${JSON.stringify(this.cpuUsage)}`)
+		}
+	}
+
+	/**
 	 * Main initialization when it's ok to login
 	 * @param {Object} config New configuration
 	 * @access public
@@ -80,6 +99,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	async init(config) {
 		this.config = config
+		this.debug(`init\nConfig: ${JSON.stringify(config)}`)
 		this.actions()
 		await this.configUpdated(config)
 	}
@@ -92,11 +112,11 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async configUpdated(config) {
+		this.config = config
+		this.debug(`configUpdated\nConfig: ${JSON.stringify(config)}`)
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		process.title = this.label
-		this.config = config
-		this.console_debug = config.verbose
 		await this.initVariables(config.redundant)
 		this.init_tcp(config.host, config.port)
 		if (config.redundant) {
@@ -115,6 +135,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async initVariables(redundant) {
+		this.debug(`initVariables`)
 		this.variables = []
 		this.variables.push(
 			{
@@ -178,14 +199,17 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	init_tcp(host, port, secondary = false) {
+		this.debug(`init_tcp for ${secondary ? 'Primary' : 'Secondary'} \nHost: ${host} Port: ${port}`)
 		const errorEvent = (err) => {
 			this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
 			this.log('error', `Network error from ${host}: ${err.message}`)
+			if (!this.config.redundant) queue.clear()
 			this.checkKeepAlive()
 		}
 		const endEvent = () => {
 			this.checkStatus(InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
 			this.log('warn', `Connection to ${host} ended`)
+			if (!this.config.redundant) queue.clear()
 			this.checkKeepAlive()
 		}
 		const connectEvent = async () => {
@@ -208,10 +232,8 @@ class QsysRemoteControl extends InstanceBase {
 				}
 			}
 
-			if (this.console_debug) {
-				console.log(`Q-SYS Connected to ${host}:${port}`)
-				console.log('Q-SYS Send: ' + JSON.stringify(login))
-			}
+			this.debug(`Q-SYS Connected to ${host}:${port}`)
+			this.debug('Q-SYS Send: ' + JSON.stringify(login))
 
 			await socket.send(JSON.stringify(login) + '\x00')
 
@@ -225,9 +247,8 @@ class QsysRemoteControl extends InstanceBase {
 		const dataEvent = (d) => {
 			const response = d.toString()
 
-			if (this.console_debug) {
-				console.log(`[${new Date().toJSON()}] Message recieved from ${host}: ${response}`)
-			}
+			this.debug(`Message recieved from ${host}: ${response}`)
+
 			this.processResponse(response, secondary)
 		}
 		if (!host) {
@@ -243,10 +264,12 @@ class QsysRemoteControl extends InstanceBase {
 		let socket
 		if (secondary) {
 			if (!this.socket.sec.isDestroyed) this.socket.sec.destroy()
+			this.socket.sec.removeAllListeners()
 			this.socket.sec = new TCPHelper(host, port)
 			socket = this.socket.sec
 		} else {
 			if (!this.socket.pri.isDestroyed) this.socket.pri.destroy()
+			this.socket.pri.removeAllListeners()
 			this.socket.pri = new TCPHelper(host, port)
 			socket = this.socket.pri
 		}
@@ -264,6 +287,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	debouncedStatusUpdate = debounce(
 		() => {
+			this.debug(`debouncedStatusUpdate`)
 			if (this.moduleStatus.logMessage !== '') this.log(this.moduleStatus.logLevel, this.moduleStatus.logMessage)
 			this.updateStatus(this.moduleStatus.status, this.moduleStatus.message)
 			if (
@@ -286,21 +310,23 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	checkKeepAlive() {
+		this.debug(`checkKeepAlive`)
 		if (this.socket.pri.isConnected || this.socket.sec.isConnected) {
-			if (this.keepAlive === undefined) {
-				this.keepAlive = setInterval(async () => {
-					await this.sendCommand('NoOp', {})
-				}, 1000)
-			}
+			if (this.keepAlive) clearTimeout(this.keepAlive)
+			this.keepAlive = setTimeout(async () => {
+				this.debug(`sending keepalive. Queue size ${queue.size}`)
+				await this.sendCommand('NoOp', {})
+			}, 5000)
 		} else {
 			if (this.keepAlive) {
-				clearInterval(this.keepAlive)
+				clearTimeout(this.keepAlive)
 				delete this.keepAlive
 			}
 		}
 	}
 
 	checkStatus(status, message, secondary) {
+		this.debug(`checkStatus from ${secondary ? 'Primary' : 'Secondary'} \nStatus: ${status} Message: ${message}`)
 		const newStatus = {
 			status: InstanceStatus.UnknownWarning,
 			message: '',
@@ -428,18 +454,21 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	setEngineVariableValues() {
-		let engineVars = []
+		this.debug(`setEngineVariableValues`)
+		//let engineVars = []
 		if (this.config.redundant) {
-			engineVars.stateSecondary = this.moduleStatus.secondary.state
-			engineVars.design_nameSecondary = this.moduleStatus.secondary.design_name
-			engineVars.redundantSecondary = !!this.moduleStatus.secondary.redundant
-			engineVars.emulatorSecondary = !!this.moduleStatus.secondary.emulator
+			this.variablesToUpdate
+				.set('stateSecondary', this.moduleStatus.secondary.state)
+				.set('design_nameSecondary', this.moduleStatus.secondary.design_name)
+				.set('redundantSecondary', this.moduleStatus.secondary.redundant)
+				.set('emulatorSecondary', this.moduleStatus.secondary.emulator)
 		}
-		engineVars.state = this.moduleStatus.primary.state
-		engineVars.design_name = this.moduleStatus.primary.design_name
-		engineVars.redundant = !!this.moduleStatus.primary.redundant
-		engineVars.emulator = !!this.moduleStatus.primary.emulator
-		this.setVariableValues(engineVars)
+		this.variablesToUpdate
+			.set('state', this.moduleStatus.primary.state)
+			.set('design_name', this.moduleStatus.primary.design_name)
+			.set('redundant', this.moduleStatus.primary.redundant)
+			.set('emulator', this.moduleStatus.primary.emulator)
+		this.throttledVariableUpdates()
 	}
 
 	/**
@@ -450,6 +479,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	updateEngineVariables(data, secondary) {
+		this.debug(`updateEngineVariables from ${secondary ? 'Primary' : 'Secondary'} \nResponse: ${JSON.stringify(data)}`)
 		if (secondary) {
 			this.moduleStatus.secondary.state = data?.State.toString() ?? this.moduleStatus.secondary.state
 			this.moduleStatus.secondary.design_name = data?.DesignName.toString() ?? this.moduleStatus.secondary.design_name
@@ -476,6 +506,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	processResponse(response, secondary) {
+		this.debug(`processResponse from ${secondary ? 'Primary' : 'Secondary'} \nResponse: ${response}`)
 		let list = []
 		if (secondary) {
 			list = (this.socket.buffer.sec + response).split('\x00')
@@ -530,6 +561,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	getConfigFields() {
+		this.debug(`getConfigFields ${JSON.stringify(configFields)}`)
 		return configFields
 	}
 
@@ -541,6 +573,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	handleStartStopRecordActions(isRecording) {
+		this.debug(`handleStartStopRecordActions ${isRecording}`)
 		this.isRecordingActions = isRecording
 	}
 
@@ -551,6 +584,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	killTimersDestroySockets() {
+		this.debug(`killTimersDestroySockets`)
 		queue.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
@@ -558,13 +592,14 @@ class QsysRemoteControl extends InstanceBase {
 		this.controls.clear()
 		this.namesToGet.clear()
 		this.feedbackIdsToCheck.clear()
+		this.variablesToUpdate.clear()
 		this.changeGroupSet = false
 		if (this.pollQRCTimer !== undefined) {
-			clearInterval(this.pollQRCTimer)
+			clearTimeout(this.pollQRCTimer)
 			delete this.pollQRCTimer
 		}
 		if (this.keepAlive !== undefined) {
-			clearInterval(this.keepAlive)
+			clearTimeout(this.keepAlive)
 			delete this.keepAlive
 		}
 		if (!this.socket.pri.isDestroyed) {
@@ -582,11 +617,10 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	destroy() {
+		this.debug(`destroy ${this.id}: ${this.label}`)
 		this.killTimersDestroySockets()
-		if (this.controls !== undefined) {
-			delete this.controls
-		}
 		CONTROLLER.abort()
+		queue.clear()
 	}
 
 	/**
@@ -598,6 +632,12 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async sendCommand(command, params) {
+		this.debug(
+			`sendCommand: ${JSON.stringify({
+				method: command,
+				params: params,
+			})}`,
+		)
 		return await this.callCommandObj({
 			method: command,
 			params: params,
@@ -610,6 +650,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	actions() {
+		this.debug(`actions`)
 		this.setActionDefinitions({
 			control_set: {
 				name: 'Control.Set',
@@ -619,9 +660,9 @@ class QsysRemoteControl extends InstanceBase {
 				},
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
 				callback: async (evt, context) => {
-					const name = (await context.parseVariablesInString(evt.options.name)).trim()
+					const name = evt.options.name.trim()
 					if (name == '') return
-					let value = await context.parseVariablesInString(evt.options.value)
+					let value = evt.options.value
 					const control = this.controls.get(name)
 					if (evt.options.relative && evt.options.type == 'number') {
 						value = await calcRelativeValue(value, name, evt, context, this.controls, this)
@@ -636,12 +677,13 @@ class QsysRemoteControl extends InstanceBase {
 							Name: name,
 							Value: value,
 						}
-						let ramp = Number.parseFloat(await context.parseVariablesInString(evt.options.ramp))
+						const ramp = Number.parseFloat(evt.options.ramp)
 						if (evt.options.type == 'number' && !Number.isNaN(ramp) && ramp >= 0) params.Ramp = ramp
 						const sent = await this.sendCommand('Control.Set', params)
 						if (sent && control !== undefined) {
 							control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
-							this.setVariableValues({ [`${name}_value`]: control.value })
+							this.variablesToUpdate.set(`${name}_value`, control.value)
+							this.throttledVariableUpdates()
 							if (control.feedbackIds.size > 0) {
 								control.feedbackIds.forEach((id) => this.feedbackIdsToCheck.add(id))
 								this.throttledFeedbackIdCheck()
@@ -653,8 +695,8 @@ class QsysRemoteControl extends InstanceBase {
 						this.log('warn', `Invalid value (NaN) could not complete ${evt.actionId}:${evt.id}`)
 					}
 				},
-				learn: async (evt, context) => {
-					const name = (await context.parseVariablesInString(evt.options.name)).trim()
+				learn: async (evt, _context) => {
+					const name = evt.options.name.trim()
 					if (name == '') return undefined
 					const control = this.controls.get(name)
 					if (control != undefined && control.value != null) {
@@ -678,8 +720,8 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.controlToggle(),
 				subscribe: async (action, context) => await this.addControl(action, context),
 				unsubscribe: async (action, context) => await this.removeControl(action, context),
-				callback: async (evt, context) => {
-					const name = (await context.parseVariablesInString(evt.options.name)).trim()
+				callback: async (evt, _context) => {
+					const name = evt.options.name.trim()
 					if (name == '') return
 					const control = this.controls.get(name)
 					if (control === undefined || control.value == null) {
@@ -694,7 +736,8 @@ class QsysRemoteControl extends InstanceBase {
 					// of the button faster than the polling interval to correctly toggle the state
 					if (sent) {
 						control.value = !control.value
-						this.setVariableValues({ [`${name}_value`]: control.value })
+						this.variablesToUpdate.set(`${name}_value`, control.value)
+						this.throttledVariableUpdates()
 						if (control.feedbackIds.size > 0) {
 							control.feedbackIds.forEach((id) => this.feedbackIdsToCheck.add(id))
 							this.throttledFeedbackIdCheck()
@@ -724,15 +767,15 @@ class QsysRemoteControl extends InstanceBase {
 			component_set: {
 				name: 'Component.Set',
 				options: options.actions.componentSet(),
-				callback: async (evt, context) => {
-					let ramp = Number.parseFloat(await context.parseVariablesInString(evt.options.ramp))
+				callback: async (evt, _context) => {
+					let ramp = Number.parseFloat(evt.options.ramp)
 					if (Number.isNaN(ramp) || ramp < 0) ramp = 0
 					await this.sendCommand('Component.Set', {
-						Name: await context.parseVariablesInString(evt.options.name),
+						Name: evt.options.name,
 						Controls: [
 							{
-								Name: (await context.parseVariablesInString(evt.options.control_name)).trim(),
-								Value: await context.parseVariablesInString(evt.options.value),
+								Name: evt.options.control_name.trim(),
+								Value: evt.options.value,
 								Ramp: ramp,
 							},
 						],
@@ -749,11 +792,11 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setCrossPointGain: {
 				name: 'Mixer.SetCrossPointGain',
 				options: options.actions.mixer_setCrossPointGain(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetCrossPointGain', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Outputs: await context.parseVariablesInString(evt.options.outputs),
+						Name: evt.options.name.trim(),
+						Inputs: evt.options.inputs,
+						Outputs: evt.options.outputs,
 						Value: evt.options.value,
 						Ramp: evt.options.ramp,
 					})
@@ -762,11 +805,11 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setCrossPointDelay: {
 				name: 'Mixer.SetCrossPointDelay',
 				options: options.actions.mixer_setCrossPointDelay(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetCrossPointDelay', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Outputs: await context.parseVariablesInString(evt.options.outputs),
+						Name: evt.options.name.trim(),
+						Inputs: evt.options.inputs,
+						Outputs: evt.options.outputs,
 						Value: evt.options.value,
 						Ramp: evt.options.ramp,
 					})
@@ -775,11 +818,11 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setCrossPointMute: {
 				name: 'Mixer.SetCrossPointMute',
 				options: options.actions.mixer_setCrossPointMute(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetCrossPointMute', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Outputs: await context.parseVariablesInString(evt.options.outputs),
+						Name: evt.options.name.trim(),
+						Inputs: evt.options.inputs,
+						Outputs: evt.options.outputs,
 						Value: evt.options.value,
 					})
 				},
@@ -787,11 +830,11 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setCrossPointSolo: {
 				name: 'Mixer.SetCrossPointSolo',
 				options: options.actions.mixer_setCrossPointSolo(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetCrossPointSolo', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
-						Outputs: await context.parseVariablesInString(evt.options.outputs),
+						Name: evt.options.name.trim(),
+						Inputs: evt.options.inputs,
+						Outputs: evt.options.outputs,
 						Value: evt.options.value,
 					})
 				},
@@ -799,10 +842,10 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setInputGain: {
 				name: 'Mixer.SetInputGain',
 				options: options.actions.mixer_setInputGain(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetInputGain', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
+						Name: evt.options.name.trim(),
+						Inputs: evt.options.inputs,
 						Value: evt.options.value,
 						Ramp: evt.options.ramp,
 					})
@@ -811,10 +854,10 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setInputMute: {
 				name: 'Mixer.SetInputMute',
 				options: options.actions.mixer_setInputMute(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetInputMute', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
+						Name: evt.options.name.trim(),
+						Inputs: evt.options.inputs,
 						Value: evt.options.value,
 					})
 				},
@@ -824,7 +867,7 @@ class QsysRemoteControl extends InstanceBase {
 				options: options.actions.mixer_setInputSolo(),
 				callback: async (evt, context) => {
 					await this.sendCommand('Mixer.SetInputSolo', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
+						Name: evt.options.name.trim(),
 						Inputs: await context.parseVariablesInString(evt.options.inputs),
 						Value: evt.options.value,
 					})
@@ -833,10 +876,10 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setOutputGain: {
 				name: 'Mixer.SetOutputGain',
 				options: options.actions.mixer_setOutputGain(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetOutputGain', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Outputs: await context.parseVariablesInString(evt.options.outputs),
+						Name: evt.options.name.trim(),
+						Outputs: evt.options.outputs,
 						Value: evt.options.value,
 						Ramp: evt.options.ramp,
 					})
@@ -845,10 +888,10 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setOutputMute: {
 				name: 'Mixer.SetOutputMute',
 				options: options.actions.mixer_setOutputMute(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetOutputMute', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Outputs: await context.parseVariablesInString(evt.options.outputs),
+						Name: evt.options.name.trim(),
+						Outputs: evt.options.outputs,
 						Value: evt.options.value,
 					})
 				},
@@ -856,10 +899,10 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setCueMute: {
 				name: 'Mixer.SetCueMute',
 				options: options.actions.mixer_setCueMute(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetCueMute', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Cues: await context.parseVariablesInString(evt.options.cues),
+						Name: evt.options.name.trim(),
+						Cues: evt.options.cues,
 						Value: evt.options.value,
 					})
 				},
@@ -867,10 +910,10 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setCueGain: {
 				name: 'Mixer.SetCueGain',
 				options: options.actions.mixer_setCueGain(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetCueGain', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Cues: await context.parseVariablesInString(evt.options.cues),
+						Name: evt.options.name.trim(),
+						Cues: evt.options.cues,
 						Value: evt.options.value,
 						Ramp: evt.options.ramp,
 					})
@@ -879,11 +922,11 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setInputCueEnable: {
 				name: 'Mixer.SetInputCueEnable',
 				options: options.actions.mixer_setInputCueEnable(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetInputCueEnable', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Cues: await context.parseVariablesInString(evt.options.cues),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
+						Name: evt.options.name.trim(),
+						Cues: evt.options.cues,
+						Inputs: evt.options.inputs,
 						Value: evt.options.value,
 					})
 				},
@@ -891,11 +934,11 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setInputCueAfl: {
 				name: 'Mixer.SetInputCueAfl',
 				options: options.actions.mixer_setInputCueAfl(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetInputCueAfl', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
-						Cues: await context.parseVariablesInString(evt.options.cues),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
+						Name: evt.options.name.trim(),
+						Cues: evt.options.cues,
+						Inputs: evt.options.inputs,
 						Value: evt.options.value,
 					})
 				},
@@ -903,9 +946,9 @@ class QsysRemoteControl extends InstanceBase {
 			loopPlayer_start: {
 				name: 'LoopPlayer.Start',
 				options: options.actions.loopPlayer_start(),
-				callback: async (evt, context) => {
-					const output = Number.parseInt(await context.parseVariablesInString(evt.options.output))
-					let refID = (await context.parseVariablesInString(evt.options.refID)).trim()
+				callback: async (evt, _context) => {
+					const output = Number.parseInt(evt.options.output)
+					let refID = evt.options.refID.trim()
 					refID = refID == '' ? `${this.label}:${evt.actionId}:${evt.id}` : refID
 					if (isNaN(output)) {
 						this.log(`warn`, `Output is a NaN cannot complete ${evt.actionId}:${evt.id}`)
@@ -914,12 +957,12 @@ class QsysRemoteControl extends InstanceBase {
 					await this.sendCommand('LoopPlayer.Start', {
 						Files: [
 							{
-								Name: (await context.parseVariablesInString(evt.options.file_name)).trim(),
+								Name: evt.options.file_name.trim(),
 								Mode: evt.options.mode,
 								Output: output,
 							},
 						],
-						Name: await context.parseVariablesInString(evt.options.name), // Had to add name to the options array.
+						Name: evt.options.name, // Had to add name to the options array.
 						StartTime: Math.round(evt.options.startTime),
 						Seek: Math.round(evt.options.seek),
 						Loop: evt.options.loop,
@@ -935,7 +978,7 @@ class QsysRemoteControl extends InstanceBase {
 					const filteredOutputs = await buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
 						await this.sendCommand('LoopPlayer.Stop', {
-							Name: (await context.parseVariablesInString(evt.options.name)).trim(),
+							Name: evt.options.name.trim(),
 							Outputs: filteredOutputs,
 							Log: true,
 						})
@@ -949,7 +992,7 @@ class QsysRemoteControl extends InstanceBase {
 					const filteredOutputs = await buildFilteredOutputArray(evt, context, this)
 					if (filteredOutputs.length > 0) {
 						await this.sendCommand('LoopPlayer.Cancel', {
-							Name: (await context.parseVariablesInString(evt.options.name)).trim(),
+							Name: evt.options.name.trim(),
 							Outputs: filteredOutputs,
 							Log: true,
 						})
@@ -959,9 +1002,9 @@ class QsysRemoteControl extends InstanceBase {
 			snapshot_load: {
 				name: 'Snapshot.Load',
 				options: options.actions.snapshot_load(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Snapshot.Load', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
+						Name: evt.options.name.trim(),
 						Bank: Math.floor(evt.options.bank),
 						Ramp: evt.options.ramp,
 					})
@@ -970,9 +1013,9 @@ class QsysRemoteControl extends InstanceBase {
 			snapshot_save: {
 				name: 'Snapshot.Save',
 				options: options.actions.snapshot_save(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Snapshot.Save', {
-						Name: (await context.parseVariablesInString(evt.options.name)).trim(),
+						Name: evt.options.name.trim(),
 						Bank: Math.floor(evt.options.bank),
 					})
 				},
@@ -987,8 +1030,8 @@ class QsysRemoteControl extends InstanceBase {
 						Mode: 'message',
 						Zones: zones,
 						Priority: evt.options.priority,
-						Preamble: await context.parseVariablesInString(evt.options.preamble),
-						Message: await context.parseVariablesInString(evt.options.message),
+						Preamble: evt.options.preamble,
+						Message: evt.options.message,
 						Start: true,
 					})
 				},
@@ -1009,6 +1052,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	initFeedbacks() {
+		this.debug(`initFeedbacks`)
 		const feedbacks = {}
 		feedbacks['core-state'] = {
 			name: 'Core state',
@@ -1194,11 +1238,18 @@ class QsysRemoteControl extends InstanceBase {
 				}
 
 				const colors = opt.customColor
-					? [{ size: 100, color: opt.color ?? 0xffffff, background: opt.color ?? 0x000000, backgroundOpacity: 64 }]
+					? [
+							{
+								size: 100,
+								color: opt.color ?? colours.white,
+								background: opt.color ?? colours.black,
+								backgroundOpacity: 64,
+							},
+						]
 					: [
-							{ size: 50, color: combineRgb(0, 255, 0), background: combineRgb(0, 255, 0), backgroundOpacity: 64 },
-							{ size: 25, color: combineRgb(255, 255, 0), background: combineRgb(255, 255, 0), backgroundOpacity: 64 },
-							{ size: 25, color: combineRgb(255, 0, 0), background: combineRgb(255, 0, 0), backgroundOpacity: 64 },
+							{ size: 50, color: colours.greenBright, background: colours.greenBright, backgroundOpacity: 64 },
+							{ size: 25, color: colours.yellow, background: colours.yellow, backgroundOpacity: 64 },
+							{ size: 25, color: colours.red, background: colours.red, backgroundOpacity: 64 },
 						]
 				const options = {
 					width: feedback.image.width,
@@ -1213,8 +1264,7 @@ class QsysRemoteControl extends InstanceBase {
 					offsetY: ofsY1,
 					opacity: 255,
 				}
-				if (this.console_debug)
-					this.log('debug', `Feedback: ${JSON.stringify(feedback)}\n Bar Options: ${JSON.stringify(options)}`)
+				this.debug(`Feedback: ${JSON.stringify(feedback)}\n Bar Options: ${JSON.stringify(options)}`)
 				return {
 					imageBuffer: graphics.bar(options),
 				}
@@ -1302,8 +1352,7 @@ class QsysRemoteControl extends InstanceBase {
 							? feedback.image.height - markerOffset(bLength, val, ofsY1)
 							: ofsY1,
 				}
-				if (this.console_debug)
-					this.log('debug', `Feedback: ${JSON.stringify(feedback)}\n Rectangle Options: ${JSON.stringify(options)}`)
+				this.debug(`Feedback: ${JSON.stringify(feedback)}\n Rectangle Options: ${JSON.stringify(options)}`)
 
 				return { imageBuffer: graphics.rect(options) }
 			},
@@ -1345,11 +1394,9 @@ class QsysRemoteControl extends InstanceBase {
 						offsetX: opt.offsetX,
 						offsetY: opt.offsetY,
 					}
-					if (this.console_debug)
-						this.log(
-							'debug',
-							`Feedback: ${JSON.stringify(feedback)}\nCircle Options: ${JSON.stringify(cirlceOptions)}\nIcon Options: ${JSON.stringify(options)}`,
-						)
+					this.debug(
+						`Feedback: ${JSON.stringify(feedback)}\nCircle Options: ${JSON.stringify(cirlceOptions)}\nIcon Options: ${JSON.stringify(options)}`,
+					)
 					imageBuf = graphics.icon(options)
 				} else if (opt.shape == 'rectangle') {
 					options = {
@@ -1365,8 +1412,7 @@ class QsysRemoteControl extends InstanceBase {
 						offsetX: opt.offsetX,
 						offsetY: opt.offsetY,
 					}
-					if (this.console_debug)
-						this.log('debug', `Feedback: ${JSON.stringify(feedback)}\nRectangle Options: ${JSON.stringify(options)}`)
+					this.debug(`Feedback: ${JSON.stringify(feedback)}\nRectangle Options: ${JSON.stringify(options)}`)
 					imageBuf = graphics.rect(options)
 				}
 
@@ -1387,9 +1433,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	logSentMessage(sent, cmd, host = this.config.host) {
 		if (sent) {
-			if (this.console_debug) {
-				console.log(`Q-SYS Sent to ${host}: ` + JSON.stringify(cmd) + '\r')
-			}
+			this.debug(`Q-SYS Sent to ${host}: ` + JSON.stringify(cmd) + '\r')
 		} else {
 			this.log('warn', `Q-SYS Send to ${host} Failed: ` + JSON.stringify(cmd) + '\r')
 		}
@@ -1406,6 +1450,7 @@ class QsysRemoteControl extends InstanceBase {
 	async callCommandObj(cmd, get_set = QRC_SET) {
 		cmd.jsonrpc = 2.0
 		cmd.id = get_set
+		this.debug(`callCommandObj: ${JSON.stringify(cmd)}`)
 		return await queue
 			.add(
 				async () => {
@@ -1467,6 +1512,7 @@ class QsysRemoteControl extends InstanceBase {
 		if (type == 'AutoPoll') {
 			obj.params.Rate = Number(rate / 1000)
 		}
+		this.debug(`changeGroup: ${JSON.stringify(obj)}`)
 		const getSet = type == 'Poll' || type == 'AutoPoll' ? QRC_GET : QRC_SET
 		await this.callCommandObj(obj, getSet)
 	}
@@ -1483,7 +1529,7 @@ class QsysRemoteControl extends InstanceBase {
 			method: 'Control.Get',
 			params: typeof name == 'object' ? [...name] : [name],
 		}
-
+		this.debug(`getControl: ${JSON.stringify(cmd)}`)
 		return await this.callCommandObj(cmd, QRC_GET)
 	}
 
@@ -1493,6 +1539,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async getControlStatuses() {
+		this.debug(`getControlStatuses Queue Size ${queue.size}`)
 		if (this.changeGroupSet) {
 			await this.changeGroup('Poll', this.id)
 		} else {
@@ -1507,13 +1554,14 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	initPolling() {
+		this.debug(`initPolling`)
 		if (this.pollQRCTimer) {
-			clearInterval(this.pollQRCTimer)
-			delete this.pollQRCTimer
+			clearTimeout(this.pollQRCTimer)
 		}
-		this.pollQRCTimer = setInterval(async () => {
+		this.pollQRCTimer = setTimeout(async () => {
 			await this.getControlStatuses().catch(() => {})
-		}, Math.floor(this.config.poll_interval))
+			this.initPolling()
+		}, Math.round(this.config.poll_interval))
 	}
 	/**
 	 * Reinit default change group, and get all controls
@@ -1522,6 +1570,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	resetChangeGroup = debounce(
 		async () => {
+			this.debug(`resetChangeGroup`)
 			await this.changeGroup('Destroy', this.id)
 			await this.getControl(this.controls.keys())
 			await this.changeGroup('AddControl', this.id, this.controls.keys())
@@ -1537,6 +1586,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	debouncedVariableDefUpdate = debounce(
 		async () => {
+			this.debug(`debouncedVariableDefUpdate: ${JSON.stringify(this.variables)}`)
 			this.setVariableDefinitions(this.variables)
 			this.setEngineVariableValues()
 			if (this.namesToGet.size > 0) {
@@ -1558,6 +1608,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async addControls(action, context = this) {
+		this.debug(`addControls: ${JSON.stringify(action)}`)
 		const names = await namesArray(action, context)
 		names.forEach(async (name) => {
 			action.options.name = name
@@ -1572,6 +1623,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async addControl(feedback, context = this) {
+		this.debug(`addControl: ${JSON.stringify(feedback)}\n Current size of this.controls: ${this.controls.size}`)
 		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
 		if (name == '') return
 		if (this.controls.has(name)) {
@@ -1623,6 +1675,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async removeControls(action, context = this) {
+		this.debug(`removeControls: ${JSON.stringify(action)}`)
 		const names = await namesArray(action, context)
 		names.forEach(async (name) => {
 			action.options.name = name
@@ -1637,6 +1690,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async removeControl(feedback, context = this) {
+		this.debug(`removeControl: ${JSON.stringify(feedback)}\n Current size of this.controls: ${this.controls.size}`)
 		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
@@ -1660,10 +1714,29 @@ class QsysRemoteControl extends InstanceBase {
 
 	throttledFeedbackIdCheck = throttle(
 		() => {
+			this.debug(
+				`throttledFeedbackIdCheck: Number of Feedbcaks: ${this.feedbackIdsToCheck.size}\n ${[...this.feedbackIdsToCheck].join(', ')}`,
+			)
 			this.checkFeedbacksById(...this.feedbackIdsToCheck)
 			this.feedbackIdsToCheck.clear()
 		},
-		5,
+		40,
+		{ leading: false, trailing: true, signal: SIGNAL },
+	)
+
+	/**
+	 * Throttled Feedback checks
+	 */
+
+	throttledVariableUpdates = throttle(
+		() => {
+			this.debug(
+				`throttledVariableUpdates: Number of Variables ${this.variablesToUpdate.size}\n${JSON.stringify(Object.fromEntries(this.variablesToUpdate))}`,
+			)
+			this.setVariableValues(Object.fromEntries(this.variablesToUpdate))
+			this.variablesToUpdate.clear()
+		},
+		40,
 		{ leading: false, trailing: true, signal: SIGNAL },
 	)
 
@@ -1674,6 +1747,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	updateControl(update) {
+		this.debug(`updateControl: ${JSON.stringify(update)}\n Current size of this.controls: ${this.controls.size}`)
 		if (update.Name === undefined || update.Name === null) return
 		const name = sanitiseVariableId(update.Name)
 		const control = this.controls.get(update.Name) ?? {
@@ -1688,11 +1762,11 @@ class QsysRemoteControl extends InstanceBase {
 		control.strval = update.String ?? control.strval
 		control.position = update.Position ?? control.position
 		this.controls.set(update.Name, control)
-		this.setVariableValues({
-			[`${name}_string`]: control.strval,
-			[`${name}_position`]: control.position,
-			[`${name}_value`]: control.value,
-		})
+		this.variablesToUpdate
+			.set(`${name}_string`, control.strval)
+			.set(`${name}_position`, control.position)
+			.set(`${name}_value`, control.value)
+		this.throttledVariableUpdates()
 		if (control.feedbackIds.size > 0) {
 			control.feedbackIds.forEach((id) => this.feedbackIdsToCheck.add(id))
 			this.throttledFeedbackIdCheck()
@@ -1701,21 +1775,20 @@ class QsysRemoteControl extends InstanceBase {
 			let type = 'string'
 			if (typeof control.value == 'boolean') type = 'boolean'
 			if (typeof control.value == 'number') type = 'number'
-			this.recordAction(
-				{
-					actionId: 'control_set',
-					options: {
-						name: update.Name,
-						value: control.value.toString(),
-						min: '',
-						max: '',
-						ramp: '',
-						relative: false,
-						type: type,
-					},
+			const opts = {
+				actionId: 'control_set',
+				options: {
+					name: update.Name,
+					value: control.value.toString(),
+					min: '',
+					max: '',
+					ramp: '',
+					relative: false,
+					type: type,
 				},
-				`Set:${update.Name}`,
-			)
+			}
+			this.recordAction(opts, `Set:${update.Name}`)
+			this.debug(`recordAction: Set:${update.Name}\n${JSON.stringify(opts)}`)
 		}
 	}
 }

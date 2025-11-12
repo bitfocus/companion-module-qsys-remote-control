@@ -1,0 +1,14 @@
+diff --git a/src/util.ts b/src/util.ts
+index 7a109dda662dc66f173dfaa33065f4cc6b89bf1a..8fbad2f5406bdb626e31cbe32fd99d70feee3dfb 100644
+--- a/src/util.ts
++++ b/src/util.ts
+@@ -9,6 +9,9 @@ export class Cache {
+   }
+ 
+   public readonly set = (key: string, imageBuffer: Uint8Array): void => {
++    if (this.data.size > 5000) {
++      this.data.delete(this.data.keys().next().value ?? '')
++    }
+     this.data.set(key, imageBuffer)
+   }
+ }

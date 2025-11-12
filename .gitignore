@@ -4,5 +4,10 @@ node_modules/
 .DS_Store
 DEBUG-*
 .vscode/
-.yarn/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
 qsys-remote-control-*.tgz

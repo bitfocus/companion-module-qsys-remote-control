@@ -247,7 +247,7 @@ class QsysRemoteControl extends InstanceBase {
 		const dataEvent = (d) => {
 			const response = d.toString()
 
-			this.debug(`[${new Date().toJSON()}] Message recieved from ${host}: ${response}`)
+			this.debug(`Message recieved from ${host}: ${response}`)
 
 			this.processResponse(response, secondary)
 		}

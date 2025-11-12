@@ -805,11 +805,11 @@ __metadata:
 
 "companion-module-utils@patch:companion-module-utils@npm%3A0.5.0#~/.yarn/patches/companion-module-utils-npm-0.5.0-031725c535.patch":
   version: 0.5.0
-  resolution: "companion-module-utils@patch:companion-module-utils@npm%3A0.5.0#~/.yarn/patches/companion-module-utils-npm-0.5.0-031725c535.patch::version=0.5.0&hash=a302d5"
+  resolution: "companion-module-utils@patch:companion-module-utils@npm%3A0.5.0#~/.yarn/patches/companion-module-utils-npm-0.5.0-031725c535.patch::version=0.5.0&hash=f04495"
   dependencies:
     "@types/pngjs": "npm:^6.0.1"
     pngjs: "npm:^7.0.0"
-  checksum: 10c0/559977b2608d08044946de0bc49cb11f8290fd2b0a145400f06df07a1cb94227cadc638076bda7226f34126dfb577f48db4de3d6150cd2805cb0eff2f89d6532
+  checksum: 10c0/df7d2f9fc7e795ff342508e93e08e7bad839e33581d2bea25489a1439db7459e6e61c17f8af68c6e13e20354be86a9fcb7e7911ff3f2594cf25016c0189d742e
   languageName: node
   linkType: hard
 

@@ -52,6 +52,7 @@ const colours = {
 class QsysRemoteControl extends InstanceBase {
 	constructor(internal) {
 		super(internal)
+		//this.cpuUsage = process.cpuUsage()
 		this.pollQRCTimer = undefined
 		this.variables = []
 		this.moduleStatus = resetModuleStatus()
@@ -81,9 +82,11 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	debug(msg) {
+		//this.cpuUsage = process.cpuUsage(this.cpuUsage)
 		if (this.config.verbose) {
 			if (typeof msg == 'object') msg = JSON.stringify(msg)
 			this.log('debug', `[${new Date().toJSON()}] ${msg}`)
+			//this.log('debug', `Δ CPU Usage: ${JSON.stringify(this.cpuUsage)}`)
 		}
 	}
 
@@ -503,7 +506,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	processResponse(response, secondary) {
-		this.debug(`processResponse from ${secondary ? 'Primary' : 'Secondary'} \nResponse: ${JSON.stringify(response)}`)
+		this.debug(`processResponse from ${secondary ? 'Primary' : 'Secondary'} \nResponse: ${response}`)
 		let list = []
 		if (secondary) {
 			list = (this.socket.buffer.sec + response).split('\x00')

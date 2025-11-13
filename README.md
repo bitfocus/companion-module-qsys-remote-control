@@ -94,3 +94,20 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Chore: replace `lodash` with `es-toolkit`
 - Chore: Use `AbortController` to end active queue elements
 - Chore: set `process.title` during `configUpdated`
+
+**V3.1.1**
+
+- Improvement: Throttle and batch feedback checks
+- Improvement: Throttle and batch variable updates
+- Improvement: refactor and expand debug logging
+- Improvement: Slow `NoOp` keep alive message interval to 5s
+- Improvement: Poll with recursive `setTimeout`'s to ensure promises resolve before starting next timeout interval
+- Improvement: Limit drawing library cache size
+- Improvement: Let companion parse action variables
+- Improvement: Clear message queue on connection error / end
+- Chore: Update dependencies
+- Chore: Refactor use of colours
+
+**V3.1.2**
+
+- Fix: rebuild `yarn.lock`

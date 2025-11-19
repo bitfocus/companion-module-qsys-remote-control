@@ -111,3 +111,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 **V3.1.2**
 
 - Fix: rebuild `yarn.lock`
+
+**V3.1.3**
+
+- Fix: Update `p-queue` library to patch memory leak

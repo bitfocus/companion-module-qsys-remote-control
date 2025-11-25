@@ -40,6 +40,8 @@ const QRC_SET = 2
 const CONTROLLER = new AbortController()
 const SIGNAL = CONTROLLER.signal
 
+const KA_INTERVAL = 5000 //Interval on which to send NoOp keepalives
+
 const colours = {
 	black: combineRgb(0, 0, 0),
 	white: combineRgb(255, 255, 255),
@@ -310,14 +312,15 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	checkKeepAlive() {
-		this.debug(`checkKeepAlive`)
 		if (this.socket.pri.isConnected || this.socket.sec.isConnected) {
 			if (this.keepAlive) clearTimeout(this.keepAlive)
 			this.keepAlive = setTimeout(async () => {
-				this.debug(`sending keepalive. Queue size ${queue.size}`)
+				this.debug(`Sending keepalive`)
 				await this.sendCommand('NoOp', {})
-			}, 5000)
+				this.checkKeepAlive()
+			}, KA_INTERVAL)
 		} else {
+			this.debug(`No socket connected; ceasing keep alive`)
 			if (this.keepAlive) {
 				clearTimeout(this.keepAlive)
 				delete this.keepAlive

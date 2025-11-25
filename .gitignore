@@ -11,3 +11,4 @@ DEBUG-*
 !.yarn/sdks
 !.yarn/versions
 qsys-remote-control-*.tgz
+*.zip

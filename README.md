@@ -115,3 +115,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 **V3.1.3**
 
 - Fix: Update `p-queue` library to patch memory leak
+
+**V3.1.4**
+
+- Fix: `checkKeepAlive` recursive timeouts

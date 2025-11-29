@@ -99,11 +99,12 @@ class QsysRemoteControl extends InstanceBase {
 	 * @since 1.0.0
 	 */
 
-	async init(config) {
+	async init(config, _isFirstInit, secrets) {
 		this.config = config
+		this.secrets = secrets
 		this.debug(`init\nConfig: ${JSON.stringify(config)}`)
 		this.actions()
-		await this.configUpdated(config)
+		await this.configUpdated(config, secrets)
 	}
 
 	/**
@@ -113,8 +114,9 @@ class QsysRemoteControl extends InstanceBase {
 	 * @since 1.0.0
 	 */
 
-	async configUpdated(config) {
+	async configUpdated(config, secrets) {
 		this.config = config
+		this.secrets = secrets
 		this.debug(`configUpdated\nConfig: ${JSON.stringify(config)}`)
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
@@ -227,10 +229,10 @@ class QsysRemoteControl extends InstanceBase {
 				params: {},
 			}
 
-			if ('user' in this.config && 'pass' in this.config) {
+			if ('user' in this.config && 'pass' in this.secrets) {
 				login.params = {
 					User: this.config.user,
-					Password: this.config.pass,
+					Password: this.secrets.pass,
 				}
 			}
 

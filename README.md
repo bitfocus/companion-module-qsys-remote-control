@@ -119,3 +119,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 **V3.1.4**
 
 - Fix: `checkKeepAlive` recursive timeouts
+
+**V3.1.5**
+
+- Fix: `password` handling

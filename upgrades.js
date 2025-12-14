@@ -90,6 +90,26 @@ function fixBooleanValues(_context, props) {
 	return result
 }
 
+function makePasswordSecret(_context, props) {
+	const result = {
+		updatedActions: [],
+		updatedConfig: null,
+		updatedSecrets: null,
+		updatedFeedbacks: [],
+	}
+
+	if (props.config.pass) {
+		result.updatedSecrets = {
+			pass: props.config.pass,
+		}
+		const config = props.config
+		delete config.pass
+		result.updatedConfig = config
+	}
+
+	return result
+}
+
 export default [
 	CreateConvertToBooleanFeedbackUpgradeScript({
 		'control-boolean': {
@@ -105,4 +125,5 @@ export default [
 	relativeControlSet,
 	loopPlayerStartSeek,
 	fixBooleanValues,
+	makePasswordSecret,
 ]

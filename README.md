@@ -123,3 +123,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 **V3.1.5**
 
 - Fix: `password` handling
+
+**V3.1.6**
+
+- Fix: Upgrade script for `password`

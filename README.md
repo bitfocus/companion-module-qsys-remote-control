@@ -124,6 +124,6 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 
 - Fix: `password` handling
 
-**V3.1.6**
+**V3.1.7**
 
 - Fix: Upgrade script for `password`

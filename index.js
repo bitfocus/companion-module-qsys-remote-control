@@ -54,7 +54,18 @@ const colours = {
 class QsysRemoteControl extends InstanceBase {
 	constructor(internal) {
 		super(internal)
-		//this.cpuUsage = process.cpuUsage()
+		this.config = {
+			host: '',
+			port: '1710',
+			redundant: false,
+			verbose: false,
+			hostSecondary: '',
+			portSecondary: '1710',
+			user: '',
+			variables: '',
+			poll_interval: 1000,
+		}
+		this.secrets = { pass: '' }
 		this.pollQRCTimer = undefined
 		this.variables = []
 		this.moduleStatus = resetModuleStatus()
@@ -84,11 +95,9 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	debug(msg) {
-		//this.cpuUsage = process.cpuUsage(this.cpuUsage)
-		if (this.config.verbose) {
+		if (this.config?.verbose) {
 			if (typeof msg == 'object') msg = JSON.stringify(msg)
-			this.log('debug', `[${new Date().toJSON()}] ${msg}`)
-			//this.log('debug', `Δ CPU Usage: ${JSON.stringify(this.cpuUsage)}`)
+			this.log('debug', `${msg}`)
 		}
 	}
 

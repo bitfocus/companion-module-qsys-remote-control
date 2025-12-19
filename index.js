@@ -1433,6 +1433,66 @@ class QsysRemoteControl extends InstanceBase {
 				return { imageBuffer: imageBuf }
 			},
 		}
+		feedbacks['control-value'] = {
+			name: 'Named Control Value Feedback',
+			type: 'value',
+			options: options.feedbacks.controlValue(),
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const opt = feedback.options
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return false
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
+				return control.value ?? null
+			},
+		}
+		feedbacks['control-string-value'] = {
+			name: 'Named Control String Value Feedback',
+			type: 'value',
+			options: options.feedbacks.controlStringValue(),
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const opt = feedback.options
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return false
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
+				return control.strval ?? null
+			},
+		}
+		feedbacks['control-position'] = {
+			name: 'Named Control Position Feedback',
+			type: 'value',
+			options: options.feedbacks.controlPosition(),
+			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			callback: async (feedback, context) => {
+				const opt = feedback.options
+				const name = await context.parseVariablesInString(opt.name)
+				const control = this.controls.get(name)
+				if (control === undefined) {
+					this.log('warn', `Control ${name} from ${feedback.id} not found`)
+					await this.addControl(feedback, context)
+					return false
+				} else {
+					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
+				}
+				return control.position ?? null
+			},
+		}
 		this.setFeedbackDefinitions(feedbacks)
 	}
 

@@ -105,6 +105,7 @@ export const options = {
 					isVisible: (options) => {
 						return options.type == 'number'
 					},
+					tooltip: `Time in seconds to ramp to new value`,
 				},
 				{
 					type: 'checkbox',
@@ -958,6 +959,15 @@ export const options = {
 					value: 'LED On when Control.Position >= 0.5',
 				},
 			]
+		},
+		controlValue: () => {
+			return [name]
+		},
+		controlPosition: () => {
+			return [name]
+		},
+		controlStringValue: () => {
+			return [name]
 		},
 	},
 }

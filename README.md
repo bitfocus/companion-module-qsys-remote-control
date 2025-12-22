@@ -127,3 +127,11 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 **V3.1.7**
 
 - Fix: Upgrade script for `password`
+
+**V3.1.8**
+
+- Fix: Crash when initialising new connection
+
+**V3.2.0**
+
+- Feat: Value Feedbacks: Named Control Position, Named Control String Value, Named Control Value

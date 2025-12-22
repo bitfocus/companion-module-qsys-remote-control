@@ -5,9 +5,9 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@companion-module/base@npm:~1.14.0":
-  version: 1.14.0
-  resolution: "@companion-module/base@npm:1.14.0"
+"@companion-module/base@npm:~1.14.1":
+  version: 1.14.1
+  resolution: "@companion-module/base@npm:1.14.1"
   dependencies:
     ajv: "npm:^8.17.1"
     colord: "npm:^2.9.3"
@@ -18,7 +18,7 @@ __metadata:
     p-queue: "npm:^6.6.2"
     p-timeout: "npm:^4.1.0"
     tslib: "npm:^2.8.1"
-  checksum: 10c0/e9d79d01d024f4cbea2b58ba66d422ed8cd874a5f092a25c7c27220b52c34bfe3e5289758cf5dd40f5f36619bcf7e9f7ad978495d8010270dfd0e85bc9c8bf58
+  checksum: 10c0/55296836c01197e811ccf5dac9faa2b815668532754315c00b5fc14193fc969f58da0fc2e62eb572f0a3cfc1901ad56574000b389a386f8d929f4a9c6237140f
   languageName: node
   linkType: hard
 
@@ -1943,7 +1943,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "qsys-remote-control@workspace:."
   dependencies:
-    "@companion-module/base": "npm:~1.14.0"
+    "@companion-module/base": "npm:~1.14.1"
     "@companion-module/tools": "npm:^2.5.0"
     companion-module-utils: "patch:companion-module-utils@npm%3A0.5.0#~/.yarn/patches/companion-module-utils-npm-0.5.0-031725c535.patch"
     es-toolkit: "npm:^1.43.0"

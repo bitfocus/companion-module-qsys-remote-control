@@ -104,6 +104,8 @@ class QsysRemoteControl extends InstanceBase {
 	/**
 	 * Main initialization when it's ok to login
 	 * @param {Object} config New configuration
+	 * @param {boolean} _isFirstInit True if first init after module is loaded
+	 * @param {Object} secrets New secrets
 	 * @access public
 	 * @since 1.0.0
 	 */
@@ -119,6 +121,7 @@ class QsysRemoteControl extends InstanceBase {
 	/**
 	 * Process configuration updates
 	 * @param {Object} config New configuration
+	 * @param {Object} secrets New secrets
 	 * @access public
 	 * @since 1.0.0
 	 */
@@ -129,7 +132,6 @@ class QsysRemoteControl extends InstanceBase {
 		this.debug(`configUpdated\nConfig: ${JSON.stringify(config)}`)
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
-		process.title = this.label
 		await this.initVariables(config.redundant)
 		this.init_tcp(config.host, config.port)
 		if (config.redundant) {

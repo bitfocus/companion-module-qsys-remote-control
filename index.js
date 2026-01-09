@@ -1791,13 +1791,13 @@ class QsysRemoteControl extends InstanceBase {
 	throttledFeedbackIdCheck = throttle(
 		() => {
 			this.debug(
-				`throttledFeedbackIdCheck: Number of Feedbcaks: ${this.feedbackIdsToCheck.size}\n ${[...this.feedbackIdsToCheck].join(', ')}`,
+				`throttledFeedbackIdCheck: Number of Feedbacks: ${this.feedbackIdsToCheck.size}\n${[...this.feedbackIdsToCheck].join(', ')}`,
 			)
 			this.checkFeedbacksById(...this.feedbackIdsToCheck)
 			this.feedbackIdsToCheck.clear()
 		},
 		40,
-		{ leading: false, trailing: true, signal: SIGNAL },
+		{ edges: ['trailing'], signal: SIGNAL },
 	)
 
 	/**
@@ -1813,7 +1813,7 @@ class QsysRemoteControl extends InstanceBase {
 			this.variablesToUpdate.clear()
 		},
 		40,
-		{ leading: false, trailing: true, signal: SIGNAL },
+		{ edges: ['trailing'], signal: SIGNAL },
 	)
 
 	/**

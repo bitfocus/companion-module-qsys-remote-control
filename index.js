@@ -214,7 +214,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	init_tcp(host, port, secondary = false) {
-		this.debug(`init_tcp for ${secondary ? 'Primary' : 'Secondary'} \nHost: ${host} Port: ${port}`)
+		this.debug(`init_tcp for ${!secondary ? 'Primary' : 'Secondary'} \nHost: ${host} Port: ${port}`)
 		const errorEvent = (err) => {
 			this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
 			this.log('error', `Network error from ${host}: ${err.message}`)
@@ -342,7 +342,7 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	checkStatus(status, message, secondary) {
-		this.debug(`checkStatus from ${secondary ? 'Primary' : 'Secondary'} \nStatus: ${status} Message: ${message}`)
+		this.debug(`checkStatus from ${!secondary ? 'Primary' : 'Secondary'} \nStatus: ${status} Message: ${message}`)
 		const newStatus = {
 			status: InstanceStatus.UnknownWarning,
 			message: '',
@@ -495,7 +495,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	updateEngineVariables(data, secondary) {
-		this.debug(`updateEngineVariables from ${secondary ? 'Primary' : 'Secondary'} \nResponse: ${JSON.stringify(data)}`)
+		this.debug(`updateEngineVariables from ${!secondary ? 'Primary' : 'Secondary'} \nResponse: ${JSON.stringify(data)}`)
 		if (secondary) {
 			this.moduleStatus.secondary.state = data?.State.toString() ?? this.moduleStatus.secondary.state
 			this.moduleStatus.secondary.design_name = data?.DesignName.toString() ?? this.moduleStatus.secondary.design_name
@@ -522,7 +522,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	processResponse(response, secondary) {
-		this.debug(`processResponse from ${secondary ? 'Primary' : 'Secondary'} \nResponse: ${response}`)
+		this.debug(`processResponse from ${!secondary ? 'Primary' : 'Secondary'} \nResponse: ${response}`)
 		let list = []
 		if (secondary) {
 			list = (this.socket.buffer.sec + response).split('\x00')

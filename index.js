@@ -36,6 +36,7 @@ import { graphics } from 'companion-module-utils'
 const queue = new PQueue({ concurrency: 1 })
 const QRC_GET = 1
 const QRC_SET = 2
+const QRC_LOGIN = 3
 
 const CONTROLLER = new AbortController()
 const SIGNAL = CONTROLLER.signal
@@ -234,7 +235,7 @@ class QsysRemoteControl extends InstanceBase {
 				this.socket.buffer.pri = ''
 			}
 
-			const login = {
+			/* const login = {
 				jsonrpc: 2.0,
 				method: 'Logon',
 				params: {},
@@ -245,12 +246,14 @@ class QsysRemoteControl extends InstanceBase {
 					User: this.config.user,
 					Password: this.secrets.pass,
 				}
-			}
+			} */
 
 			this.debug(`Q-SYS Connected to ${host}:${port}`)
-			this.debug('Q-SYS Send: ' + JSON.stringify(login))
+			//this.debug('Q-SYS Send: ' + JSON.stringify(login))
 
-			await socket.send(JSON.stringify(login) + '\x00')
+			//await socket.send(JSON.stringify(login) + '\x00')
+
+			await this.login()
 
 			await this.sendCommand('StatusGet', 0)
 
@@ -293,6 +296,29 @@ class QsysRemoteControl extends InstanceBase {
 		socket.on('end', endEvent)
 		socket.on('connect', connectEvent)
 		socket.on('data', dataEvent)
+	}
+
+	/**
+	 * Logon to core if credentials provided
+	 * @param {string} user
+	 * @param {string} pass
+	 * @access private
+	 */
+
+	async login(user = this.config.user, pass = this.secrets.pass) {
+		const login = {
+			jsonrpc: 2.0,
+			method: 'Logon',
+			params: {},
+		}
+
+		if (user && pass) {
+			login.params = {
+				User: user,
+				Password: pass,
+			}
+			await this.callCommandObj(login, QRC_LOGIN)
+		}
 	}
 
 	/**
@@ -562,6 +588,11 @@ class QsysRemoteControl extends InstanceBase {
 						`StatusGet Response from ${secondary ? this.config.hostSecondary : this.config.host}: ${JSON.stringify(obj.result)}`,
 					)
 					this.updateEngineVariables(obj.result, secondary)
+				}
+			} else if (obj?.id == QRC_LOGIN) {
+				if ('error' in obj) {
+					if (Number(obj.error?.code) === 10) this.login()
+					if (obj.error?.message) this.log('warn', obj.error.message)
 				}
 			}
 		})
@@ -1518,7 +1549,7 @@ class QsysRemoteControl extends InstanceBase {
 	/**
 	 * Add message to outbound queue and send
 	 * @param {object} cmd Command object to send
-	 * @param {QRC_GET | QRC_SET} get_set Get or Set method, defaults to Set (2)
+	 * @param {QRC_GET | QRC_SET | QRC_LOGIN} get_set Get or Set method, defaults to Set (2)
 	 * @return {Promise<boolean>}
 	 * @access private
 	 */

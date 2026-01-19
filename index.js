@@ -36,6 +36,7 @@ import { graphics } from 'companion-module-utils'
 const queue = new PQueue({ concurrency: 1 })
 const QRC_GET = 1
 const QRC_SET = 2
+const QRC_LOGIN = 3
 
 const CONTROLLER = new AbortController()
 const SIGNAL = CONTROLLER.signal
@@ -214,7 +215,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	init_tcp(host, port, secondary = false) {
-		this.debug(`init_tcp for ${secondary ? 'Primary' : 'Secondary'} \nHost: ${host} Port: ${port}`)
+		this.debug(`init_tcp for ${!secondary ? 'Primary' : 'Secondary'} \nHost: ${host} Port: ${port}`)
 		const errorEvent = (err) => {
 			this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
 			this.log('error', `Network error from ${host}: ${err.message}`)
@@ -234,7 +235,7 @@ class QsysRemoteControl extends InstanceBase {
 				this.socket.buffer.pri = ''
 			}
 
-			const login = {
+			/* const login = {
 				jsonrpc: 2.0,
 				method: 'Logon',
 				params: {},
@@ -245,12 +246,14 @@ class QsysRemoteControl extends InstanceBase {
 					User: this.config.user,
 					Password: this.secrets.pass,
 				}
-			}
+			} */
 
 			this.debug(`Q-SYS Connected to ${host}:${port}`)
-			this.debug('Q-SYS Send: ' + JSON.stringify(login))
+			//this.debug('Q-SYS Send: ' + JSON.stringify(login))
 
-			await socket.send(JSON.stringify(login) + '\x00')
+			//await socket.send(JSON.stringify(login) + '\x00')
+
+			await this.login()
 
 			await this.sendCommand('StatusGet', 0)
 
@@ -293,6 +296,29 @@ class QsysRemoteControl extends InstanceBase {
 		socket.on('end', endEvent)
 		socket.on('connect', connectEvent)
 		socket.on('data', dataEvent)
+	}
+
+	/**
+	 * Logon to core if credentials provided
+	 * @param {string} user
+	 * @param {string} pass
+	 * @access private
+	 */
+
+	async login(user = this.config.user, pass = this.secrets.pass) {
+		const login = {
+			jsonrpc: 2.0,
+			method: 'Logon',
+			params: {},
+		}
+
+		if (user && pass) {
+			login.params = {
+				User: user,
+				Password: pass,
+			}
+			await this.callCommandObj(login, QRC_LOGIN)
+		}
 	}
 
 	/**
@@ -342,7 +368,7 @@ class QsysRemoteControl extends InstanceBase {
 	}
 
 	checkStatus(status, message, secondary) {
-		this.debug(`checkStatus from ${secondary ? 'Primary' : 'Secondary'} \nStatus: ${status} Message: ${message}`)
+		this.debug(`checkStatus from ${!secondary ? 'Primary' : 'Secondary'} \nStatus: ${status} Message: ${message}`)
 		const newStatus = {
 			status: InstanceStatus.UnknownWarning,
 			message: '',
@@ -495,7 +521,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	updateEngineVariables(data, secondary) {
-		this.debug(`updateEngineVariables from ${secondary ? 'Primary' : 'Secondary'} \nResponse: ${JSON.stringify(data)}`)
+		this.debug(`updateEngineVariables from ${!secondary ? 'Primary' : 'Secondary'} \nResponse: ${JSON.stringify(data)}`)
 		if (secondary) {
 			this.moduleStatus.secondary.state = data?.State.toString() ?? this.moduleStatus.secondary.state
 			this.moduleStatus.secondary.design_name = data?.DesignName.toString() ?? this.moduleStatus.secondary.design_name
@@ -522,7 +548,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	processResponse(response, secondary) {
-		this.debug(`processResponse from ${secondary ? 'Primary' : 'Secondary'} \nResponse: ${response}`)
+		this.debug(`processResponse from ${!secondary ? 'Primary' : 'Secondary'} \nResponse: ${response}`)
 		let list = []
 		if (secondary) {
 			list = (this.socket.buffer.sec + response).split('\x00')
@@ -562,6 +588,11 @@ class QsysRemoteControl extends InstanceBase {
 						`StatusGet Response from ${secondary ? this.config.hostSecondary : this.config.host}: ${JSON.stringify(obj.result)}`,
 					)
 					this.updateEngineVariables(obj.result, secondary)
+				}
+			} else if (obj?.id == QRC_LOGIN) {
+				if ('error' in obj) {
+					if (Number(obj.error?.code) === 10) this.login()
+					if (obj.error?.message) this.log('warn', obj.error.message)
 				}
 			}
 		})
@@ -1518,7 +1549,7 @@ class QsysRemoteControl extends InstanceBase {
 	/**
 	 * Add message to outbound queue and send
 	 * @param {object} cmd Command object to send
-	 * @param {QRC_GET | QRC_SET} get_set Get or Set method, defaults to Set (2)
+	 * @param {QRC_GET | QRC_SET | QRC_LOGIN} get_set Get or Set method, defaults to Set (2)
 	 * @return {Promise<boolean>}
 	 * @access private
 	 */
@@ -1791,13 +1822,13 @@ class QsysRemoteControl extends InstanceBase {
 	throttledFeedbackIdCheck = throttle(
 		() => {
 			this.debug(
-				`throttledFeedbackIdCheck: Number of Feedbcaks: ${this.feedbackIdsToCheck.size}\n ${[...this.feedbackIdsToCheck].join(', ')}`,
+				`throttledFeedbackIdCheck: Number of Feedbacks: ${this.feedbackIdsToCheck.size}\n${[...this.feedbackIdsToCheck].join(', ')}`,
 			)
 			this.checkFeedbacksById(...this.feedbackIdsToCheck)
 			this.feedbackIdsToCheck.clear()
 		},
 		40,
-		{ leading: false, trailing: true, signal: SIGNAL },
+		{ edges: ['trailing'], signal: SIGNAL },
 	)
 
 	/**
@@ -1813,7 +1844,7 @@ class QsysRemoteControl extends InstanceBase {
 			this.variablesToUpdate.clear()
 		},
 		40,
-		{ leading: false, trailing: true, signal: SIGNAL },
+		{ edges: ['trailing'], signal: SIGNAL },
 	)
 
 	/**

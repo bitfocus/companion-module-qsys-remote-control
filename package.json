@@ -1,6 +1,6 @@
 {
 	"name": "qsys-remote-control",
-	"version": "3.2.0",
+	"version": "3.2.1",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -17,13 +17,13 @@
 	"dependencies": {
 		"@companion-module/base": "~1.14.1",
 		"companion-module-utils": "patch:companion-module-utils@npm%3A0.5.0#~/.yarn/patches/companion-module-utils-npm-0.5.0-031725c535.patch",
-		"es-toolkit": "^1.43.0",
-		"p-queue": "~9.0.1"
+		"es-toolkit": "^1.44.0",
+		"p-queue": "~9.1.0"
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^2.5.0",
 		"eslint": "^9.39.2",
-		"prettier": "~3.7.4"
+		"prettier": "~3.8.0"
 	},
 	"engines": {
 		"node": "^22.17"

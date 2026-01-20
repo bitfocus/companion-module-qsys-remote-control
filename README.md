@@ -135,3 +135,11 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 **V3.2.0**
 
 - Feat: Value Feedbacks: Named Control Position, Named Control String Value, Named Control Value
+
+**V3.2.1**
+
+- Improvement: Send `logon` message (if credentials provided) in response to logon required error message.
+- Improvement: Refactor logon.
+- Fix: Some log entries mixed up primary / secondary core references
+- Fix: Correctly specify edges in throttle function.
+- Chore: Update some dependencies (`p-queue`, `es-toolkit`, `prettier`)

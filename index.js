@@ -1555,7 +1555,7 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async callCommandObj(cmd, get_set = QRC_SET) {
-		cmd.jsonrpc = 2.0
+		cmd.jsonrpc = `2.0`
 		cmd.id = get_set
 		this.debug(`callCommandObj: ${JSON.stringify(cmd)}`)
 		return await queue

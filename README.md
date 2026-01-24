@@ -146,4 +146,5 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 
 **V3.2.2**
 
+- Improvement: Module config informs Qsys Administrator must be used to configure access control.
 - Fix: Make `jsonrpc` property a string

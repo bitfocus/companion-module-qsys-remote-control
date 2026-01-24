@@ -78,7 +78,8 @@ export const configFields = [
 		id: 'info1',
 		label: 'Login Information',
 		width: 12,
-		value: 'If you have login enabled, specify the creditials below.',
+		value:
+			'If you have login enabled, specify the creditials below. User accounts and access control is configured via Q-SYS Administrator.',
 	},
 	{
 		type: 'textinput',

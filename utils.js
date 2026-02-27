@@ -1,18 +1,5 @@
-import {
-	// eslint-disable-next-line no-unused-vars
-	CompanionActionInfo,
-	// eslint-disable-next-line no-unused-vars
-	CompanionActionContext,
-	// eslint-disable-next-line no-unused-vars
-	CompanionFeedbackInfo,
-	// eslint-disable-next-line no-unused-vars
-	CompanionFeedbackContext,
-	// eslint-disable-next-line no-unused-vars
-	InstanceBase,
-	InstanceStatus,
-	// eslint-disable-next-line no-unused-vars
-	TCPHelper,
-} from '@companion-module/base'
+// eslint-disable-next-line no-unused-vars
+import base from '@companion-module/base'
 
 import {
 	// eslint-disable-next-line no-unused-vars
@@ -23,26 +10,23 @@ import {
  * Perform type conversion on value
  * @param {number} value
  * @param {string} name
- * @param {CompanionActionInfo} evt
- * @param {CompanionActionContext} context
+ * @param {base.CompanionActionInfo} evt
  * @param {Map<string, object>} controls
- * @param {InstanceBase} self
- * @returns {Promise<number | undefined>}
+ * @returns {number | undefined}
+ * @throws If Calculation fails or is a NaN
  * @since 3.0.0
  */
 
-export const calcRelativeValue = async (value, name, evt, context, controls, self) => {
+export const calcRelativeValue = (value, name, evt, controls) => {
 	const control = controls.get(name)
-	const min = Number.parseFloat(await context.parseVariablesInString(evt.options.min))
-	const max = Number.parseFloat(await context.parseVariablesInString(evt.options.max))
+	const min = Number.parseFloat(evt.options.min)
+	const max = Number.parseFloat(evt.options.max)
 	if (control == undefined || control.value == null) {
-		self.log('warn', `Do not have existing value of ${name}, cannot perform action ${evt.actionId}:${evt.id}`)
-		return undefined
+		throw new Error(`Do not have existing value of ${name}, cannot perform action ${evt.actionId}:${evt.id}`)
 	}
 	value = Number(value) + Number(control.value)
 	if (isNaN(value)) {
-		self.log('warn', `Result value is a NaN, cannot perform action ${evt.actionId}:${evt.id}`)
-		return undefined
+		throw new Error(`Result value is a NaN, cannot perform action ${evt.actionId}:${evt.id}`)
 	}
 	if (!isNaN(min)) value = value < min ? min : value
 	if (!isNaN(max)) value = value > max ? max : value
@@ -88,23 +72,20 @@ export const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-z
 
 /**
  * Build valid array of outputs
- * @param {CompanionActionInfo} evt
- * @param {CompanionActionContext} context
- * @returns {Promise<number[] | undefined>}
- *  * @param {InstanceBase} self
+ * @param {base.CompanionActionInfo} evt
+ * @param {QsysRemoteControl} self
+ * @returns {number[]}
  * @since 3.0.0
  */
-export const buildFilteredOutputArray = async (evt, context, self) => {
+export const buildFilteredOutputArray = (evt, self) => {
 	let filteredOutputs = []
-	const outputs = (await context.parseVariablesInString(evt.options.output))
-		.split(',')
-		.map((out) => Number.parseInt(out))
+	const outputs = evt.options.output.split(',').map((out) => Number.parseInt(out))
 	outputs.forEach((out) => {
-		if (!isNaN(out) && out > 0 && !filteredOutputs.includes(out)) filteredOutputs.push(out)
+		if (!Number.isNaN(out) && out > 0 && !filteredOutputs.includes(out)) filteredOutputs.push(out)
 	})
 	if (filteredOutputs.length == 0) {
 		self.log('warn', `No valid elements for ${evt.actionId}:${evt.id}`)
-		return undefined
+		return []
 	}
 	return filteredOutputs.sort((a, b) => a - b)
 }
@@ -117,12 +98,12 @@ export const buildFilteredOutputArray = async (evt, context, self) => {
 
 export const resetModuleStatus = () => {
 	return {
-		status: InstanceStatus.Connecting,
+		status: base.InstanceStatus.Connecting,
 		message: '',
 		logLevel: 'debug',
 		logMessage: '',
 		primary: {
-			status: InstanceStatus.Connecting,
+			status: base.InstanceStatus.Connecting,
 			message: '',
 			state: null,
 			design_name: '',
@@ -131,7 +112,7 @@ export const resetModuleStatus = () => {
 			design_code: '',
 		},
 		secondary: {
-			status: InstanceStatus.Connecting,
+			status: base.InstanceStatus.Connecting,
 			message: '',
 			state: null,
 			design_name: '',
@@ -175,19 +156,18 @@ export const isCoreActive = (engine) => {
 
 /**
  * Parse array of names from comma seperated list
- * @param {CompanionActionInfo} action
- * @param {CompanionActionContext} context
- * @returns {Promise<string[]>}
+ * @param {base.CompanionActionInfo} action
+ * @returns {string[]}
  */
 
-export const namesArray = async (action, context) => {
-	const names = (await context.parseVariablesInString(action.options.name)).split(',')
-	let namesArray = []
-	names.forEach(async (name) => {
+export const namesArray = (action) => {
+	const names = action.options.name.split(',')
+	const result = []
+	names.forEach((name) => {
 		const trimmedName = name.trim()
-		if (trimmedName !== '') namesArray.push(trimmedName)
+		if (trimmedName !== '') result.push(trimmedName)
 	})
-	return namesArray
+	return result
 }
 
 /**

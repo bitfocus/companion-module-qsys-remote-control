@@ -148,3 +148,14 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 
 - Improvement: Module config informs Qsys Administrator must be used to configure access control.
 - Fix: Make `jsonrpc` property a string
+
+**V3.2.3**
+
+- Improvement: Let companion handle variable parsing
+- Improvement: Multiline `variables` config field. Requires Companion `4.3.0` or greater
+- Improvement: Convert `isVisible` statements to `isVisibleExpression`
+- Improvement: Refactor `checkStatus`
+- Fix: `LED` feedback when `circle` shape selected
+- Fix: Other minor fixes and refactoring
+- Chore: Change imports to work in Companion `4.3.0` as a dev module
+- Chore: Update `companion-module-tools`

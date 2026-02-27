@@ -37,9 +37,7 @@ export const configFields = [
 		label: 'Secondary Target IP',
 		width: 6,
 		regex: Regex.IP | Regex.HOSTNAME,
-		isVisible: (options) => {
-			return !!options.redundant
-		},
+		isVisibleExpression: `$(options:redundant)`,
 	},
 	{
 		type: 'textinput',
@@ -49,9 +47,7 @@ export const configFields = [
 		default: `1710`,
 		regex: Regex.PORT,
 		tooltip: 'Default: 1710',
-		isVisible: (options) => {
-			return !!options.redundant
-		},
+		isVisibleExpression: `$(options:redundant)`,
 	},
 	{
 		type: 'static-text',
@@ -59,9 +55,7 @@ export const configFields = [
 		label: '',
 		width: 6,
 		value: '',
-		isVisible: (options) => {
-			return !options.redundant
-		},
+		isVisibleExpression: `!$(options:redundant)`,
 	},
 	{
 		type: 'static-text',
@@ -69,9 +63,7 @@ export const configFields = [
 		label: '',
 		width: 6,
 		value: '',
-		isVisible: (options) => {
-			return !options.redundant
-		},
+		isVisibleExpression: `!$(options:redundant)`,
 	},
 	{
 		type: 'static-text',
@@ -126,6 +118,7 @@ export const configFields = [
 		label: 'Variables',
 		width: 12,
 		default: '',
+		multiline: true,
 	},
 	{
 		type: 'checkbox',

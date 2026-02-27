@@ -1,4 +1,5 @@
 {
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
 	"id": "qsys-remote-control",
 	"name": "qsys-remote-control",
 	"shortname": "Q-SYS Remote",

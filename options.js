@@ -24,6 +24,8 @@ const mixerInputs = {
 	default: '1',
 	useVariables: { local: true },
 	tooltip: `User Mixer IO String Syntax`,
+	description:
+		'Accepts: * (all), numbers (1 2 3), ranges (1-6), combinations (1-6 9), negation (1-8 !3), or Companion variables. Examples: "1-8 !3", "* !3-5", "1 2 3", "1-6 9 15-20"',
 }
 const mixerOutputs = {
 	type: 'textinput',
@@ -32,6 +34,8 @@ const mixerOutputs = {
 	default: '1',
 	useVariables: { local: true },
 	tooltip: `User Mixer IO String Syntax`,
+	description:
+		'Accepts: * (all), numbers (1 2 3), ranges (1-6), combinations (1-6 9), negation (1-8 !3), or Companion variables. Examples: "1-8 !3", "* !3-5", "1 2 3", "1-6 9 15-20"',
 }
 
 const mixerCues = {
@@ -41,6 +45,8 @@ const mixerCues = {
 	default: '1',
 	useVariables: { local: true },
 	tooltip: `User Mixer IO String Syntax`,
+	description:
+		'Accepts: * (all), numbers (1 2 3), ranges (1-6), combinations (1-6 9), negation (1-8 !3), or Companion variables. Examples: "1-8 !3", "* !3-5", "1 2 3", "1-6 9 15-20"',
 }
 
 const positionOption = {
@@ -102,9 +108,7 @@ export const options = {
 					label: 'Ramp:',
 					default: '',
 					useVariables: { local: true },
-					isVisible: (options) => {
-						return options.type == 'number'
-					},
+					isVisibleExpression: `$(options:type) == 'number'`,
 					tooltip: `Time in seconds to ramp to new value`,
 				},
 				{
@@ -113,9 +117,7 @@ export const options = {
 					label: 'Relative',
 					default: false,
 					tooltip: `Relative actions only work with numerical values. Resultant value = current value + new value`,
-					isVisible: (options) => {
-						return options.type == 'number'
-					},
+					isVisibleExpression: `$(options:type) == 'number'`,
 				},
 				{
 					type: 'textinput',
@@ -124,9 +126,7 @@ export const options = {
 					default: '',
 					useVariables: { local: true },
 					tooltip: 'Relative action will be constrained to this lower limit',
-					isVisible: (options) => {
-						return options.relative && options.type == 'number'
-					},
+					isVisibleExpression: `$(options:relative) && $(options:type) == 'number'`,
 				},
 				{
 					type: 'textinput',
@@ -135,9 +135,7 @@ export const options = {
 					default: '',
 					useVariables: { local: true },
 					tooltip: 'Relative action will be constrained to this upper limit',
-					isVisible: (options) => {
-						return options.relative && options.type == 'number'
-					},
+					isVisibleExpression: `$(options:relative) && $(options:type) == 'number'`,
 				},
 				{
 					type: 'static-text',
@@ -145,9 +143,7 @@ export const options = {
 					label: 'Warning',
 					width: 6,
 					value: 'Relative actions require Number Type',
-					isVisible: (options) => {
-						return options.relative && options.type !== 'number'
-					},
+					isVisibleExpression: `$(options:relative) && $(options:type) != 'number'`,
 				},
 			]
 		},
@@ -636,10 +632,7 @@ export const options = {
 						{ id: 'sec', label: 'Secondary' },
 					],
 					default: 'pri',
-					isVisible: (_options, isVisibleData) => {
-						return isVisibleData.redundant
-					},
-					isVisibleData: { redundant: redundant },
+					isVisibleExpression: `${redundant}`,
 				},
 				{
 					type: 'dropdown',

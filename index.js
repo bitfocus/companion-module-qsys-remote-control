@@ -1,20 +1,6 @@
 import UpgradeScripts from './upgrades.js'
 
-import {
-	InstanceBase,
-	combineRgb,
-	runEntrypoint,
-	TCPHelper,
-	InstanceStatus,
-	// eslint-disable-next-line no-unused-vars
-	CompanionActionInfo,
-	// eslint-disable-next-line no-unused-vars
-	CompanionActionContext,
-	// eslint-disable-next-line no-unused-vars
-	CompanionFeedbackInfo,
-	// eslint-disable-next-line no-unused-vars
-	CompanionFeedbackContext,
-} from '@companion-module/base'
+import base from '@companion-module/base'
 import { configFields } from './config.js'
 import { options } from './options.js'
 import {
@@ -44,15 +30,15 @@ const SIGNAL = CONTROLLER.signal
 const KA_INTERVAL = 5000 //Interval on which to send NoOp keepalives
 
 const colours = {
-	black: combineRgb(0, 0, 0),
-	white: combineRgb(255, 255, 255),
-	red: combineRgb(255, 0, 0),
-	green: combineRgb(0, 204, 0),
-	greenBright: combineRgb(0, 255, 0),
-	yellow: combineRgb(255, 255, 0),
+	black: base.combineRgb(0, 0, 0),
+	white: base.combineRgb(255, 255, 255),
+	red: base.combineRgb(255, 0, 0),
+	green: base.combineRgb(0, 204, 0),
+	greenBright: base.combineRgb(0, 255, 0),
+	yellow: base.combineRgb(255, 255, 0),
 }
 
-class QsysRemoteControl extends InstanceBase {
+export class QsysRemoteControl extends base.InstanceBase {
 	constructor(internal) {
 		super(internal)
 		this.config = {
@@ -77,8 +63,8 @@ class QsysRemoteControl extends InstanceBase {
 		this.changeGroupSet = false
 		this.isRecordingActions = false
 		this.socket = {
-			pri: new TCPHelper('localhost', 1710),
-			sec: new TCPHelper('localhost', 1710),
+			pri: new base.TCPHelper('localhost', 1710),
+			sec: new base.TCPHelper('localhost', 1710),
 			buffer: {
 				pri: '',
 				sec: '',
@@ -197,7 +183,7 @@ class QsysRemoteControl extends InstanceBase {
 			return
 		}
 		for (const v of this.config.variables.split(',')) {
-			await this.addControl({
+			this.addControl({
 				options: {
 					name: v.trim(),
 				},
@@ -217,13 +203,13 @@ class QsysRemoteControl extends InstanceBase {
 	init_tcp(host, port, secondary = false) {
 		this.debug(`init_tcp for ${!secondary ? 'Primary' : 'Secondary'} \nHost: ${host} Port: ${port}`)
 		const errorEvent = (err) => {
-			this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
+			this.checkStatus(base.InstanceStatus.ConnectionFailure, '', secondary)
 			this.log('error', `Network error from ${host}: ${err.message}`)
 			if (!this.config.redundant) queue.clear()
 			this.checkKeepAlive()
 		}
 		const endEvent = () => {
-			this.checkStatus(InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
+			this.checkStatus(base.InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
 			this.log('warn', `Connection to ${host} ended`)
 			if (!this.config.redundant) queue.clear()
 			this.checkKeepAlive()
@@ -235,29 +221,13 @@ class QsysRemoteControl extends InstanceBase {
 				this.socket.buffer.pri = ''
 			}
 
-			/* const login = {
-				jsonrpc: 2.0,
-				method: 'Logon',
-				params: {},
-			}
-
-			if ('user' in this.config && 'pass' in this.secrets) {
-				login.params = {
-					User: this.config.user,
-					Password: this.secrets.pass,
-				}
-			} */
-
 			this.debug(`Q-SYS Connected to ${host}:${port}`)
-			//this.debug('Q-SYS Send: ' + JSON.stringify(login))
-
-			//await socket.send(JSON.stringify(login) + '\x00')
 
 			await this.login()
 
 			await this.sendCommand('StatusGet', 0)
 
-			this.checkStatus(InstanceStatus.Ok, '', secondary)
+			this.checkStatus(base.InstanceStatus.Ok, '', secondary)
 
 			//await this.initVariables()
 			this.checkKeepAlive()
@@ -271,24 +241,24 @@ class QsysRemoteControl extends InstanceBase {
 		}
 		if (!host) {
 			this.checkStatus(
-				InstanceStatus.BadConfig,
+				base.InstanceStatus.BadConfig,
 				`No host defined for ${secondary ? 'secondary' : 'primary'} core`,
 				secondary,
 			)
 			this.log('warn', `No host defined for ${secondary ? 'secondary' : 'primary'} core`)
 			return
 		}
-		this.checkStatus(InstanceStatus.Connecting, `Connecting to ${host}`, secondary)
+		this.checkStatus(base.InstanceStatus.Connecting, `Connecting to ${host}`, secondary)
 		let socket
 		if (secondary) {
 			if (!this.socket.sec.isDestroyed) this.socket.sec.destroy()
 			this.socket.sec.removeAllListeners()
-			this.socket.sec = new TCPHelper(host, port)
+			this.socket.sec = new base.TCPHelper(host, port)
 			socket = this.socket.sec
 		} else {
 			if (!this.socket.pri.isDestroyed) this.socket.pri.destroy()
 			this.socket.pri.removeAllListeners()
-			this.socket.pri = new TCPHelper(host, port)
+			this.socket.pri = new base.TCPHelper(host, port)
 			socket = this.socket.pri
 		}
 
@@ -307,7 +277,7 @@ class QsysRemoteControl extends InstanceBase {
 
 	async login(user = this.config.user, pass = this.secrets.pass) {
 		const login = {
-			jsonrpc: 2.0,
+			jsonrpc: `2.0`,
 			method: 'Logon',
 			params: {},
 		}
@@ -333,7 +303,8 @@ class QsysRemoteControl extends InstanceBase {
 			this.updateStatus(this.moduleStatus.status, this.moduleStatus.message)
 			if (
 				this.changeGroupSet &&
-				(this.moduleStatus.status == InstanceStatus.Ok || this.moduleStatus.status == InstanceStatus.UnknownWarning)
+				(this.moduleStatus.status == base.InstanceStatus.Ok ||
+					this.moduleStatus.status == base.InstanceStatus.UnknownWarning)
 			)
 				this.resetChangeGroup()
 		},
@@ -367,127 +338,188 @@ class QsysRemoteControl extends InstanceBase {
 		}
 	}
 
-	checkStatus(status, message, secondary) {
-		this.debug(`checkStatus from ${!secondary ? 'Primary' : 'Secondary'} \nStatus: ${status} Message: ${message}`)
-		const newStatus = {
-			status: InstanceStatus.UnknownWarning,
-			message: '',
-			logLevel: 'debug',
-			logMessage: '',
+	/**
+	 * @typedef {Object} StatusResult
+	 * @property {import('@companion-module/base').InstanceStatus} status
+	 * @property {string} message
+	 * @property {string} [logLevel]
+	 * @property {string} [logMessage]
+	 */
+
+	/**
+	 * @returns {StatusResult}
+	 */
+	#getHealthyRedundantStatus() {
+		const { primary, secondary } = this.moduleStatus
+
+		const stateKey = `${primary.state}:${secondary.state}`
+		const stateResults = {
+			'Active:Standby': {
+				status: base.InstanceStatus.Ok,
+				message: 'Primary core active',
+				logLevel: 'info',
+				logMessage: '',
+			},
+			'Standby:Active': {
+				status: base.InstanceStatus.Ok,
+				message: 'Secondary core active',
+				logLevel: 'info',
+				logMessage: '',
+			},
+			'Active:Active': {
+				status: base.InstanceStatus.UnknownError,
+				message: 'Both cores active',
+				logLevel: 'error',
+				logMessage: 'Both cores active',
+			},
+			'Standby:Standby': {
+				status: base.InstanceStatus.UnknownError,
+				message: 'Both cores in standby',
+				logLevel: 'error',
+				logMessage: 'Both cores in standby',
+			},
 		}
-		if (secondary) {
-			if (this.moduleStatus.secondary.status == status && this.moduleStatus.secondary.message == message) return
-			this.moduleStatus.secondary.status = status
-			this.moduleStatus.secondary.message = message
-		} else {
-			if (this.moduleStatus.primary.status == status && this.moduleStatus.secondary.primary == message) return
-			this.moduleStatus.primary.status = status
-			this.moduleStatus.primary.message = message
+
+		const result = stateResults[stateKey] ?? {
+			status: base.InstanceStatus.UnknownWarning,
+			message: `Unexpected state. Primary: ${primary.state}. Secondary: ${secondary.state}`,
+			logLevel: 'warn',
+			logMessage: `Unexpected state. Primary: ${primary.state}. Secondary: ${secondary.state}`,
 		}
-		if (this.config.redundant) {
-			if (
-				this.moduleStatus.primary.status == InstanceStatus.Ok &&
-				this.moduleStatus.secondary.status == InstanceStatus.Ok
-			) {
-				if (this.moduleStatus.primary.state == 'Active' && this.moduleStatus.secondary.state == 'Standby') {
-					newStatus.status = InstanceStatus.Ok
-					newStatus.message = 'Primary core active'
-					newStatus.logLevel = 'info'
-					newStatus.logMessage = ''
-				} else if (this.moduleStatus.primary.state == 'Standby' && this.moduleStatus.secondary.state == 'Active') {
-					newStatus.status = InstanceStatus.Ok
-					newStatus.message = 'Secondary core active'
-					newStatus.logLevel = 'info'
-					newStatus.logMessage = ''
-				} else if (this.moduleStatus.primary.state == 'Active' && this.moduleStatus.secondary.state == 'Active') {
-					newStatus.status = InstanceStatus.UnknownError
-					newStatus.message = 'Both cores active'
-					newStatus.logLevel = 'error'
-					newStatus.logMessage = 'Both cores active'
-				} else if (this.moduleStatus.primary.state == 'Standby' && this.moduleStatus.secondary.state == 'Standby') {
-					newStatus.status = InstanceStatus.UnknownError
-					newStatus.message = `Both cores in standby`
-					newStatus.logLevel = 'error'
-					newStatus.logMessage = 'Both cores in standby'
-				} else {
-					newStatus.status = InstanceStatus.UnknownWarning
-					newStatus.message = `Unexpected state. Primary: ${this.moduleStatus.primary.state}. Secondary: ${this.moduleStatus.secondary.state}`
-					newStatus.logLevel = 'warn'
-					newStatus.logMessage = `Unexpected state. Primary: ${this.moduleStatus.primary.state}. Secondary: ${this.moduleStatus.secondary.state}`
-				}
-				if (this.moduleStatus.primary.design_code !== this.moduleStatus.secondary.design_code) {
-					newStatus.status = InstanceStatus.UnknownWarning
-					newStatus.message = 'Cores reporting different designs'
-					newStatus.logLevel = 'error'
-					newStatus.logMessage = `Cores running different designs. Primary: ${this.moduleStatus.primary.design_name}. Secondary: ${this.moduleStatus.secondary.design_name}`
-				}
-				if (this.moduleStatus.primary.emulator) {
-					newStatus.status = InstanceStatus.UnknownWarning
-					newStatus.message = 'Primary core in Emulator mode'
-					newStatus.logLevel = 'warn'
-					newStatus.logMessage = 'Primary core in Emulator mode'
-				}
-				if (this.moduleStatus.secondary.emulator) {
-					newStatus.status = InstanceStatus.UnknownWarning
-					newStatus.message = 'Secondary core in Emulator mode'
-					newStatus.logLevel = 'warn'
-					newStatus.logMessage = 'Secondary core in Emulator mode'
-				}
-				if (!this.moduleStatus.primary.redundant || !this.moduleStatus.secondary.redundant) {
-					newStatus.status = InstanceStatus.UnknownWarning
-					newStatus.message = 'Cores not configured for redundant mode'
-					newStatus.logLevel = 'error'
-					newStatus.logMessage = 'Cores not configured for redundant mode'
-				}
-			} else if (
-				this.moduleStatus.primary.status == InstanceStatus.Ok ||
-				this.moduleStatus.secondary.status == InstanceStatus.Ok
-			) {
-				newStatus.status = InstanceStatus.UnknownWarning
-				newStatus.message = `Redundancy compromised`
-				newStatus.logLevel = 'warn'
-				newStatus.logMessage = 'Redundancy compromised'
-			} else if (this.moduleStatus.primary.status == this.moduleStatus.secondary.status) {
-				newStatus.status = this.moduleStatus.primary.status
-				newStatus.message = this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message
-				newStatus.logLevel = 'info'
-				newStatus.logMessage =
-					`Core states: ` + this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message
-			} else {
-				newStatus.status = InstanceStatus.UnknownError
-				newStatus.message = `Core connections in unexpected & inconsistent states`
-				newStatus.logLevel = 'warn'
-				newStatus.logMessage =
-					`Core states: ` + this.moduleStatus.primary.message + ' : ' + this.moduleStatus.secondary.message
+
+		// Apply overrides in priority order
+		if (!primary.redundant || !secondary.redundant)
+			return {
+				status: base.InstanceStatus.UnknownWarning,
+				message: 'Cores not configured for redundant mode',
+				logLevel: 'error',
+				logMessage: 'Cores not configured for redundant mode',
 			}
-		} else {
-			if (this.moduleStatus.primary.state == 'Active') {
-				newStatus.status = InstanceStatus.Ok
-				newStatus.message = 'Core active'
-				newStatus.logLevel = 'info'
-				newStatus.logMessage = ''
-			} else if (this.moduleStatus.primary.state == 'Standby') {
-				newStatus.status = InstanceStatus.UnknownWarning
-				newStatus.message = 'Core state standby'
-				newStatus.logLevel = 'warn'
-				newStatus.logMessage = 'Core state standby'
-			} else if (this.moduleStatus.primary.state == 'Idle') {
-				newStatus.status = InstanceStatus.UnknownError
-				newStatus.message = 'Core state idle'
-				newStatus.logLevel = 'warn'
-				newStatus.logMessage = 'Core state Idle'
-			} else {
-				newStatus.status = this.moduleStatus.primary.status
-				newStatus.message = this.moduleStatus.primary.message
-				newStatus.logLevel = 'info'
-				newStatus.logMessage = this.moduleStatus.primary.message
+		if (primary.design_code !== secondary.design_code)
+			return {
+				status: base.InstanceStatus.UnknownWarning,
+				message: 'Cores reporting different designs',
+				logLevel: 'error',
+				logMessage: `Cores running different designs. Primary: ${primary.design_name}. Secondary: ${secondary.design_name}`,
 			}
+		if (primary.emulator)
+			return {
+				status: base.InstanceStatus.UnknownWarning,
+				message: 'Primary core in Emulator mode',
+				logLevel: 'warn',
+				logMessage: 'Primary core in Emulator mode',
+			}
+		if (secondary.emulator)
+			return {
+				status: base.InstanceStatus.UnknownWarning,
+				message: 'Secondary core in Emulator mode',
+				logLevel: 'warn',
+				logMessage: 'Secondary core in Emulator mode',
+			}
+
+		return result
+	}
+
+	/**
+	 * @returns {StatusResult}
+	 */
+	#getDegradedRedundantStatus() {
+		const { primary, secondary } = this.moduleStatus
+
+		if (primary.status === base.InstanceStatus.Ok || secondary.status === base.InstanceStatus.Ok)
+			return {
+				status: base.InstanceStatus.UnknownWarning,
+				message: 'Redundancy compromised',
+				logLevel: 'warn',
+				logMessage: 'Redundancy compromised',
+			}
+
+		if (primary.status === secondary.status)
+			return {
+				status: primary.status,
+				message: `${primary.message} : ${secondary.message}`,
+				logLevel: 'info',
+				logMessage: `Core states: ${primary.message} : ${secondary.message}`,
+			}
+
+		return {
+			status: base.InstanceStatus.UnknownError,
+			message: 'Core connections in unexpected & inconsistent states',
+			logLevel: 'warn',
+			logMessage: `Core states: ${primary.message} : ${secondary.message}`,
 		}
-		if (this.moduleStatus.status == newStatus.status && this.moduleStatus.message == newStatus.message) return
+	}
+
+	/**
+	 * @returns {StatusResult}
+	 */
+	#getRedundantStatus() {
+		const { primary, secondary } = this.moduleStatus
+
+		if (primary.status !== base.InstanceStatus.Ok || secondary.status !== base.InstanceStatus.Ok) {
+			return this.#getDegradedRedundantStatus()
+		}
+
+		return this.#getHealthyRedundantStatus()
+	}
+
+	/**
+	 * @returns {StatusResult}
+	 */
+	#getNonRedundantStatus() {
+		const { primary } = this.moduleStatus
+
+		const stateResults = {
+			Active: { status: base.InstanceStatus.Ok, message: 'Core active', logLevel: 'info', logMessage: '' },
+			Standby: {
+				status: base.InstanceStatus.UnknownWarning,
+				message: 'Core state standby',
+				logLevel: 'warn',
+				logMessage: 'Core state standby',
+			},
+			Idle: {
+				status: base.InstanceStatus.UnknownError,
+				message: 'Core state idle',
+				logLevel: 'warn',
+				logMessage: 'Core state Idle',
+			},
+		}
+
+		return (
+			stateResults[primary.state] ?? {
+				status: primary.status,
+				message: primary.message,
+				logLevel: 'info',
+				logMessage: primary.message,
+			}
+		)
+	}
+
+	/**
+	 * @param {import('@companion-module/base').InstanceStatus} status
+	 * @param {string} message
+	 * @param {boolean} [secondary]
+	 */
+	checkStatus(status, message, secondary = false) {
+		this.debug(`checkStatus from ${secondary ? 'Secondary' : 'Primary'}\nStatus: ${status} Message: ${message}`)
+
+		// Update the relevant core's status, bail if unchanged
+		const core = secondary ? this.moduleStatus.secondary : this.moduleStatus.primary
+		if (core.status === status && core.message === message) return
+		core.status = status
+		core.message = message
+
+		// Determine new overall status
+		const newStatus = this.config.redundant ? this.#getRedundantStatus() : this.#getNonRedundantStatus()
+
+		// Bail if overall status unchanged
+		if (this.moduleStatus.status === newStatus.status && this.moduleStatus.message === newStatus.message) return
+
 		this.moduleStatus.status = newStatus.status
 		this.moduleStatus.message = newStatus.message
 		this.moduleStatus.logLevel = newStatus.logLevel
 		this.moduleStatus.logMessage = newStatus.logMessage
+
 		this.debouncedStatusUpdate()
 	}
 
@@ -537,7 +569,7 @@ class QsysRemoteControl extends InstanceBase {
 		}
 		this.checkFeedbacks('core-state')
 		this.setEngineVariableValues()
-		this.checkStatus(InstanceStatus.Ok, data.State.toString(), secondary)
+		this.checkStatus(base.InstanceStatus.Ok, data.State.toString(), secondary)
 	}
 
 	/**
@@ -702,20 +734,21 @@ class QsysRemoteControl extends InstanceBase {
 			control_set: {
 				name: 'Control.Set',
 				options: options.actions.controlSet(this.config),
-				subscribe: async (action, context) => {
-					if (action.options.relative) await this.addControl(action, context)
+				subscribe: async (action, _context) => {
+					if (action.options.relative) this.addControl(action)
 				},
-				unsubscribe: async (action, context) => await this.removeControl(action, context),
-				callback: async (evt, context) => {
+				unsubscribe: async (action, _context) => await this.removeControl(action),
+				callback: async (evt, _context) => {
 					const name = evt.options.name.trim()
-					if (name == '') return
+					if (name == '') throw new Error(`Invalid name supplied to: ${evt.id}`)
 					let value = evt.options.value
 					const control = this.controls.get(name)
 					if (evt.options.relative && evt.options.type == 'number') {
-						value = await calcRelativeValue(value, name, evt, context, this.controls, this)
-						if (value === undefined) {
-							await this.addControl(evt, context)
-							return
+						try {
+							value = calcRelativeValue(value, name, evt, this.controls)
+						} catch (err) {
+							this.addControl(evt)
+							throw err
 						}
 					}
 					value = convertValueType(value, evt.options.type)
@@ -739,12 +772,12 @@ class QsysRemoteControl extends InstanceBase {
 							await this.getControl(name)
 						}
 					} else {
-						this.log('warn', `Invalid value (NaN) could not complete ${evt.actionId}:${evt.id}`)
+						throw new Error(`Invalid value (NaN) could not complete ${evt.actionId}:${evt.id}`)
 					}
 				},
 				learn: async (evt, _context) => {
 					const name = evt.options.name.trim()
-					if (name == '') return undefined
+					if (name == '') throw new Error(`Invalid name supplied to: ${evt.id}`)
 					const control = this.controls.get(name)
 					if (control != undefined && control.value != null) {
 						let type = 'string'
@@ -765,15 +798,14 @@ class QsysRemoteControl extends InstanceBase {
 			control_toggle: {
 				name: 'Control.Toggle',
 				options: options.actions.controlToggle(),
-				subscribe: async (action, context) => await this.addControl(action, context),
-				unsubscribe: async (action, context) => await this.removeControl(action, context),
+				subscribe: async (action, _context) => this.addControl(action),
+				unsubscribe: async (action, _context) => await this.removeControl(action),
 				callback: async (evt, _context) => {
 					const name = evt.options.name.trim()
-					if (name == '') return
+					if (name == '') throw new Error(`Invalid name supplied to: ${evt.id}`)
 					const control = this.controls.get(name)
 					if (control === undefined || control.value == null) {
-						this.log('warn', `Control ${name} unavailable. Check named control name`)
-						return
+						throw new Error(`Control ${name} unavailable. Check named control name`)
 					}
 					const sent = await this.sendCommand('Control.Set', {
 						Name: name,
@@ -797,15 +829,15 @@ class QsysRemoteControl extends InstanceBase {
 			control_get: {
 				name: 'Control.Get',
 				options: options.actions.controlGet(),
-				subscribe: async (action, context) => await this.addControls(action, context),
-				unsubscribe: async (action, context) => await this.removeControls(action, context),
-				callback: async (evt, context) => {
-					const names = await namesArray(evt, context)
-					if (names.length == 0) return
+				subscribe: async (action, _context) => this.addControls(action),
+				unsubscribe: async (action, _context) => await this.removeControls(action),
+				callback: async (evt, _context) => {
+					const names = namesArray(evt)
+					if (names.length == 0) throw new Error('No names supplied')
 					names.forEach(async (name) => {
 						if (!this.controls.has(name)) {
 							evt.options.name = name
-							await this.addControl(evt, context)
+							this.addControl(evt)
 						}
 					})
 					await this.getControl(names)
@@ -912,10 +944,10 @@ class QsysRemoteControl extends InstanceBase {
 			mixer_setInputSolo: {
 				name: 'Mixer.SetInputSolo',
 				options: options.actions.mixer_setInputSolo(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					await this.sendCommand('Mixer.SetInputSolo', {
 						Name: evt.options.name.trim(),
-						Inputs: await context.parseVariablesInString(evt.options.inputs),
+						Inputs: evt.options.inputs,
 						Value: evt.options.value,
 					})
 				},
@@ -998,8 +1030,7 @@ class QsysRemoteControl extends InstanceBase {
 					let refID = evt.options.refID.trim()
 					refID = refID == '' ? `${this.label}:${evt.actionId}:${evt.id}` : refID
 					if (isNaN(output)) {
-						this.log(`warn`, `Output is a NaN cannot complete ${evt.actionId}:${evt.id}`)
-						return
+						throw new Error(`Output is a NaN cannot complete ${evt.actionId}:${evt.id}`)
 					}
 					await this.sendCommand('LoopPlayer.Start', {
 						Files: [
@@ -1021,29 +1052,27 @@ class QsysRemoteControl extends InstanceBase {
 			loopPlayer_stop: {
 				name: 'LoopPlayer.Stop',
 				options: options.actions.loopPlayer_stop(),
-				callback: async (evt, context) => {
-					const filteredOutputs = await buildFilteredOutputArray(evt, context, this)
-					if (filteredOutputs.length > 0) {
-						await this.sendCommand('LoopPlayer.Stop', {
-							Name: evt.options.name.trim(),
-							Outputs: filteredOutputs,
-							Log: true,
-						})
-					}
+				callback: async (evt, _context) => {
+					const filteredOutputs = buildFilteredOutputArray(evt, this)
+					if (filteredOutputs.length == 0) throw new Error(`No valid outputs`)
+					await this.sendCommand('LoopPlayer.Stop', {
+						Name: evt.options.name.trim(),
+						Outputs: filteredOutputs,
+						Log: true,
+					})
 				},
 			},
 			loopPlayer_cancel: {
 				name: 'LoopPlayer.Cancel',
 				options: options.actions.loopPlayer_cancel(),
-				callback: async (evt, context) => {
-					const filteredOutputs = await buildFilteredOutputArray(evt, context, this)
-					if (filteredOutputs.length > 0) {
-						await this.sendCommand('LoopPlayer.Cancel', {
-							Name: evt.options.name.trim(),
-							Outputs: filteredOutputs,
-							Log: true,
-						})
-					}
+				callback: async (evt, _context) => {
+					const filteredOutputs = buildFilteredOutputArray(evt, this)
+					if (filteredOutputs.length == 0) throw new Error(`No valid outputs`)
+					await this.sendCommand('LoopPlayer.Cancel', {
+						Name: evt.options.name.trim(),
+						Outputs: filteredOutputs,
+						Log: true,
+					})
 				},
 			},
 			snapshot_load: {
@@ -1070,9 +1099,10 @@ class QsysRemoteControl extends InstanceBase {
 			page_submit_message: {
 				name: 'PA.PageSubmit - Message',
 				options: options.actions.page_submit_message(),
-				callback: async (evt, context) => {
+				callback: async (evt, _context) => {
 					evt.options.output = evt.options.zones
-					const zones = await buildFilteredOutputArray(evt, context, this)
+					const zones = buildFilteredOutputArray(evt, this)
+					if (zones.length == 0) throw new Error(`No valid zones`)
 					await this.sendCommand('PA.PageSubmit', {
 						Mode: 'message',
 						Zones: zones,
@@ -1119,12 +1149,11 @@ class QsysRemoteControl extends InstanceBase {
 		}
 		feedbacks['control-string'] = {
 			name: 'Change text to reflect control value',
-			description: 'Depreciated',
+			description: 'Deprecated',
 			type: 'boolean',
 			options: options.feedbacks.controlString(),
 			callback: async (feedback, _context) => {
-				;(this.log('warn'),
-					`Feedback ${feedback.feedbackId}:${feedback.id} has been deprecated, use variables instead.`)
+				this.log('warn', `Feedback ${feedback.feedbackId}:${feedback.id} has been deprecated, use variables instead.`)
 			},
 		}
 		feedbacks['control-boolean'] = {
@@ -1135,15 +1164,15 @@ class QsysRemoteControl extends InstanceBase {
 				bgcolor: colours.red,
 			},
 			options: options.feedbacks.controlBoolean(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
-			callback: async (feedback, context) => {
+			subscribe: async (feedback, _context) => this.addControl(feedback),
+			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
+			callback: async (feedback, _context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback)
 					return false
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
@@ -1159,15 +1188,15 @@ class QsysRemoteControl extends InstanceBase {
 				bgcolor: colours.red,
 			},
 			options: options.feedbacks.controlThreshold(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			subscribe: async (feedback, _context) => this.addControl(feedback),
+			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback, context)
 					return false
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
@@ -1180,15 +1209,15 @@ class QsysRemoteControl extends InstanceBase {
 			description: 'Fade color over control value range',
 			type: 'advanced',
 			options: options.feedbacks.controlFade(colours),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			subscribe: async (feedback, _context) => this.addControl(feedback),
+			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback, context)
 					return false
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
@@ -1216,7 +1245,7 @@ class QsysRemoteControl extends InstanceBase {
 				const b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b
 
 				return {
-					bgcolor: combineRgb(r, g, b),
+					bgcolor: base.combineRgb(r, g, b),
 				}
 			},
 		}
@@ -1225,15 +1254,15 @@ class QsysRemoteControl extends InstanceBase {
 			description: 'Level Meter',
 			type: 'advanced',
 			options: options.feedbacks.levelMeter(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			subscribe: async (feedback, _context) => this.addControl(feedback),
+			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback, context)
 					return {}
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
@@ -1244,12 +1273,12 @@ class QsysRemoteControl extends InstanceBase {
 				}
 				const position = opt.position
 				const padding = opt.padding
-				let ofsX1 = 0
-				let ofsX2 = 0
-				let ofsY1 = 0
-				let ofsY2 = 0
-				let bWidth = 0
-				let bLength = 0
+				let ofsX1 = 0,
+					ofsX2 = 0,
+					ofsY1 = 0,
+					ofsY2 = 0,
+					bWidth = 0,
+					bLength = 0
 				switch (position) {
 					case 'left':
 						ofsX1 = padding
@@ -1322,31 +1351,30 @@ class QsysRemoteControl extends InstanceBase {
 			name: 'Indicator',
 			description: 'Show a position indicator on the button',
 			options: options.feedbacks.indicator(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
+			subscribe: async (feedback, context) => this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback, context)
 					return {}
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
 				}
 				if (opt.min >= opt.max) {
-					this.log('warn', `Invalid min/max choices for indicator.\n${JSON.stringify(opt)}`)
-					return {}
+					throw new Error(`Invalid min/max choices for indicator.\n${JSON.stringify(opt)}`)
 				}
 				const position = opt.position
 				const padding = opt.padding
-				let ofsX1 = 0
-				let ofsX2 = 0
-				let ofsY1 = 0
-				let ofsY2 = 0
-				let bWidth = 0
-				let bLength = 0
+				let ofsX1 = 0,
+					ofsX2 = 0,
+					ofsY1 = 0,
+					ofsY2 = 0,
+					bWidth = 0,
+					bLength = 0
 				const markerOffset = (bLength, value, offset) => {
 					return bLength * (value / 100) + offset
 				}
@@ -1391,7 +1419,7 @@ class QsysRemoteControl extends InstanceBase {
 					rectHeight: position == 'left' || position == 'right' ? 3 : opt.width,
 					strokeWidth: 1,
 					color: feedback.options.indicatorColor,
-					fillColor: combineRgb(128, 128, 128),
+					fillColor: base.combineRgb(128, 128, 128),
 					fillOpacity: 255,
 					offsetX: position == 'left' || position == 'right' ? ofsX1 : markerOffset(bLength, val, ofsX1),
 					offsetY:
@@ -1409,22 +1437,22 @@ class QsysRemoteControl extends InstanceBase {
 			name: 'LED',
 			description: 'Show a boolean LED on the button',
 			options: options.feedbacks.led(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			subscribe: async (feedback, _context) => this.addControl(feedback),
+			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback, context)
 					return {}
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
 				}
 				let options = {}
 				let imageBuf
-				if (opt.shape == 'cirlce') {
+				if (opt.shape == 'circle') {
 					const cirlceOptions = {
 						radius: Math.round(opt.radius),
 						color: Math.round(control.position) ? opt.colorOn : opt.colorOff,
@@ -1470,15 +1498,15 @@ class QsysRemoteControl extends InstanceBase {
 			name: 'Named Control Value Feedback',
 			type: 'value',
 			options: options.feedbacks.controlValue(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			subscribe: async (feedback, _context) => this.addControl(feedback),
+			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback, context)
 					return false
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
@@ -1490,15 +1518,15 @@ class QsysRemoteControl extends InstanceBase {
 			name: 'Named Control String Value Feedback',
 			type: 'value',
 			options: options.feedbacks.controlStringValue(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			subscribe: async (feedback, _context) => this.addControl(feedback),
+			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback, context)
 					return false
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
@@ -1510,15 +1538,15 @@ class QsysRemoteControl extends InstanceBase {
 			name: 'Named Control Position Feedback',
 			type: 'value',
 			options: options.feedbacks.controlPosition(),
-			subscribe: async (feedback, context) => await this.addControl(feedback, context),
-			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
+			subscribe: async (feedback, _context) => this.addControl(feedback),
+			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
 				const opt = feedback.options
-				const name = await context.parseVariablesInString(opt.name)
+				const name = opt.name
 				const control = this.controls.get(name)
 				if (control === undefined) {
 					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					await this.addControl(feedback, context)
+					this.addControl(feedback, context)
 					return false
 				} else {
 					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
@@ -1555,35 +1583,36 @@ class QsysRemoteControl extends InstanceBase {
 	 */
 
 	async callCommandObj(cmd, get_set = QRC_SET) {
-		cmd.jsonrpc = `2.0`
-		cmd.id = get_set
-		this.debug(`callCommandObj: ${JSON.stringify(cmd)}`)
+		const payload = { ...cmd, jsonrpc: '2.0', id: get_set }
+		this.debug(`callCommandObj: ${JSON.stringify(payload)}`)
 		return await queue
 			.add(
-				async () => {
+				async ({ signal }) => {
+					if (signal.aborted) return false
 					let sentPri = false
 					let sentSec = false
-					if (isCoreActive(this.moduleStatus.primary) || validMethodsToStandbyCore(cmd)) {
+					if (isCoreActive(this.moduleStatus.primary) || validMethodsToStandbyCore(payload)) {
 						if (isSocketOkToSend(this.socket.pri)) {
-							sentPri = await this.socket.pri.send(JSON.stringify(cmd) + '\x00')
-							this.logSentMessage(sentPri, cmd)
+							sentPri = await this.socket.pri.send(JSON.stringify(payload) + '\x00')
+							this.logSentMessage(sentPri, payload)
 						} else {
 							this.log(
 								'warn',
-								`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(cmd),
+								`Q-SYS Send to ${this.config.host} Failed as not connected. Message: ` + JSON.stringify(payload),
 							)
 						}
 					}
 
 					if (this.config.redundant) {
-						if (isCoreActive(this.moduleStatus.secondary) || validMethodsToStandbyCore(cmd)) {
+						if (isCoreActive(this.moduleStatus.secondary) || validMethodsToStandbyCore(payload)) {
 							if (isSocketOkToSend(this.socket.sec)) {
-								sentSec = await this.socket.sec.send(JSON.stringify(cmd) + '\x00')
-								this.logSentMessage(sentSec, cmd, this.config.hostSecondary)
+								sentSec = await this.socket.sec.send(JSON.stringify(payload) + '\x00')
+								this.logSentMessage(sentSec, payload, this.config.hostSecondary)
 							} else {
 								this.log(
 									'warn',
-									`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` + JSON.stringify(cmd),
+									`Q-SYS Send to ${this.config.hostSecondary} Failed as not connected. Message: ` +
+										JSON.stringify(payload),
 								)
 							}
 						}
@@ -1714,12 +1743,12 @@ class QsysRemoteControl extends InstanceBase {
 	 * @access private
 	 */
 
-	async addControls(action, context = this) {
+	async addControls(action) {
 		this.debug(`addControls: ${JSON.stringify(action)}`)
-		const names = await namesArray(action, context)
-		names.forEach(async (name) => {
+		const names = namesArray(action)
+		names.forEach((name) => {
 			action.options.name = name
-			await this.addControl(action, context)
+			this.addControl(action)
 		})
 	}
 
@@ -1729,10 +1758,10 @@ class QsysRemoteControl extends InstanceBase {
 	 * @access private
 	 */
 
-	async addControl(feedback, context = this) {
+	addControl(feedback) {
 		this.debug(`addControl: ${JSON.stringify(feedback)}\n Current size of this.controls: ${this.controls.size}`)
-		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
-		if (name == '') return
+		const name = feedback['options']['name'].trim()
+		if (name == '') throw new Error(`Invalid name supplied to: ${feedback.id}`)
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
 			if (control.actionIds === undefined) {
@@ -1777,28 +1806,28 @@ class QsysRemoteControl extends InstanceBase {
 	/**
 	 * Call removeControl for each element in a comma seperated list of control names
 	 * @param {CompanionActionInfo} action
-	 * @param {CompanionActionContext | InstanceBase} context
 	 * @access private
 	 */
 
-	async removeControls(action, context = this) {
+	async removeControls(action) {
 		this.debug(`removeControls: ${JSON.stringify(action)}`)
-		const names = await namesArray(action, context)
-		names.forEach(async (name) => {
-			action.options.name = name
-			await this.removeControl(action, context)
-		})
+		const names = namesArray(action)
+		await Promise.all(
+			names.map(async (name) => {
+				action.options.name = name
+				await this.removeControl(action)
+			}),
+		)
 	}
 
 	/**
 	 * @param {CompanionActionInfo | CompanionFeedbackInfo} feedback
-	 * @param {CompanionActionContext | CompanionFeedbackContext | InstanceBase} context
 	 * @access private
 	 */
 
-	async removeControl(feedback, context = this) {
+	async removeControl(feedback) {
 		this.debug(`removeControl: ${JSON.stringify(feedback)}\n Current size of this.controls: ${this.controls.size}`)
-		const name = (await context.parseVariablesInString(feedback['options']['name'])).trim()
+		const name = feedback['options']['name'].trim()
 		if (this.controls.has(name)) {
 			const control = this.controls.get(name)
 			if (feedback.feedbackId !== undefined) {
@@ -1886,7 +1915,7 @@ class QsysRemoteControl extends InstanceBase {
 				actionId: 'control_set',
 				options: {
 					name: update.Name,
-					value: control.value.toString(),
+					value: control.value?.toString() ?? '',
 					min: '',
 					max: '',
 					ramp: '',
@@ -1900,4 +1929,4 @@ class QsysRemoteControl extends InstanceBase {
 	}
 }
 
-runEntrypoint(QsysRemoteControl, UpgradeScripts)
+base.runEntrypoint(QsysRemoteControl, UpgradeScripts)

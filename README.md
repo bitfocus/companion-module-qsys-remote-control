@@ -152,7 +152,7 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 **V3.2.3**
 
 - Improvement: Let companion handle variable parsing
-- Improvement: Multiline `variables` config field. Requires Companion `4.3.0` or greater
+- Improvement: Multiline `variables` config field. Requires Companion `4.2.5` or greater
 - Improvement: Convert `isVisible` statements to `isVisibleExpression`
 - Improvement: Refactor `checkStatus`
 - Fix: `LED` feedback when `circle` shape selected

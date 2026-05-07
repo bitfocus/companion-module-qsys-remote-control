@@ -229,6 +229,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 
 			this.checkStatus(base.InstanceStatus.Ok, '', secondary)
 
+			this.checkFeedbacks()
 			//await this.initVariables()
 			this.checkKeepAlive()
 		}

@@ -1209,7 +1209,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			options: options.feedbacks.controlThreshold(),
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				const opt = feedback.options
 				const name = opt.name
 				this.ensureFeedbackControl(feedback.id, name)
@@ -1225,7 +1225,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			options: options.feedbacks.controlFade(colours),
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				const opt = feedback.options
 				const name = opt.name
 				this.ensureFeedbackControl(feedback.id, name)
@@ -1265,7 +1265,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			options: options.feedbacks.levelMeter(),
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				const opt = feedback.options
 				const name = opt.name
 				this.ensureFeedbackControl(feedback.id, name)
@@ -1357,7 +1357,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			options: options.feedbacks.indicator(),
 			subscribe: async (feedback, context) => this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				const opt = feedback.options
 				const name = opt.name
 				this.ensureFeedbackControl(feedback.id, name)
@@ -1438,7 +1438,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			options: options.feedbacks.led(),
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				const opt = feedback.options
 				const name = opt.name
 				this.ensureFeedbackControl(feedback.id, name)
@@ -1494,7 +1494,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			options: options.feedbacks.controlValue(),
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				const { name } = feedback.options
 				this.ensureFeedbackControl(feedback.id, name)
 				return this.controls.get(name)?.value ?? null
@@ -1506,7 +1506,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			options: options.feedbacks.controlStringValue(),
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				const { name } = feedback.options
 				this.ensureFeedbackControl(feedback.id, name)
 				return this.controls.get(name)?.strval ?? null
@@ -1518,7 +1518,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			options: options.feedbacks.controlPosition(),
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
-			callback: async (feedback, context) => {
+			callback: async (feedback, _context) => {
 				const { name } = feedback.options
 				this.ensureFeedbackControl(feedback.id, name)
 				return this.controls.get(name)?.position ?? null

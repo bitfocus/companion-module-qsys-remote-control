@@ -121,7 +121,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 		this.actions()
 		this.initFeedbacks()
 		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
-	
+
 		this.init_tcp(config.host, config.port)
 		if (config.redundant) {
 			this.init_tcp(config.hostSecondary, config.portSecondary, true)

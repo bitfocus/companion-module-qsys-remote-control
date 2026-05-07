@@ -118,13 +118,14 @@ export class QsysRemoteControl extends base.InstanceBase {
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		await this.initVariables(config.redundant)
+		this.actions()
+		this.initFeedbacks()
+		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
+	
 		this.init_tcp(config.host, config.port)
 		if (config.redundant) {
 			this.init_tcp(config.hostSecondary, config.portSecondary, true)
 		}
-		this.actions()
-		this.initFeedbacks()
-		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
 	}
 

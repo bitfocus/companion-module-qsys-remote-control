@@ -2,6 +2,7 @@
 	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
 	"id": "qsys-remote-control",
 	"name": "qsys-remote-control",
+	"type": "connection",
 	"shortname": "Q-SYS Remote",
 	"description": "Q-SYS Remote Control",
 	"version": "0.0.0",

@@ -39,37 +39,35 @@ const colours = {
 }
 
 export class QsysRemoteControl extends base.InstanceBase {
+	config = {
+		host: '',
+		port: '1710',
+		redundant: false,
+		verbose: false,
+		hostSecondary: '',
+		portSecondary: '1710',
+		user: '',
+		variables: '',
+		poll_interval: 1000,
+	}
+	secrets = { pass: '' }
+	pollQRCTimer = undefined
+	variables = []
+	moduleStatus = resetModuleStatus()
+	controls = new Map()
+	namesToGet = new Set()
+	feedbackIdsToCheck = new Set()
+	variablesToUpdate = new Map()
+	feedbackControlMap = new Map()
+	changeGroupSet = false
+	isRecordingActions = false
+	socket = {
+		pri: new base.TCPHelper('localhost', 1710),
+		sec: new base.TCPHelper('localhost', 1710),
+		buffer: { pri: '', sec: '' },
+	}
 	constructor(internal) {
 		super(internal)
-		this.config = {
-			host: '',
-			port: '1710',
-			redundant: false,
-			verbose: false,
-			hostSecondary: '',
-			portSecondary: '1710',
-			user: '',
-			variables: '',
-			poll_interval: 1000,
-		}
-		this.secrets = { pass: '' }
-		this.pollQRCTimer = undefined
-		this.variables = []
-		this.moduleStatus = resetModuleStatus()
-		this.controls = new Map()
-		this.namesToGet = new Set()
-		this.feedbackIdsToCheck = new Set()
-		this.variablesToUpdate = new Map()
-		this.changeGroupSet = false
-		this.isRecordingActions = false
-		this.socket = {
-			pri: new base.TCPHelper('localhost', 1710),
-			sec: new base.TCPHelper('localhost', 1710),
-			buffer: {
-				pri: '',
-				sec: '',
-			},
-		}
 		this.socket.pri.destroy()
 		this.socket.sec.destroy()
 	}
@@ -120,13 +118,14 @@ export class QsysRemoteControl extends base.InstanceBase {
 		this.killTimersDestroySockets()
 		this.moduleStatus = resetModuleStatus()
 		await this.initVariables(config.redundant)
+		this.actions()
+		this.initFeedbacks()
+		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
+
 		this.init_tcp(config.host, config.port)
 		if (config.redundant) {
 			this.init_tcp(config.hostSecondary, config.portSecondary, true)
 		}
-		this.actions()
-		this.initFeedbacks()
-		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
 		this.initPolling()
 	}
 
@@ -229,6 +228,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 
 			this.checkStatus(base.InstanceStatus.Ok, '', secondary)
 
+			this.checkFeedbacks()
 			//await this.initVariables()
 			this.checkKeepAlive()
 		}
@@ -672,6 +672,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 		this.namesToGet.clear()
 		this.feedbackIdsToCheck.clear()
 		this.variablesToUpdate.clear()
+		this.feedbackControlMap.clear()
 		this.changeGroupSet = false
 		if (this.pollQRCTimer !== undefined) {
 			clearTimeout(this.pollQRCTimer)
@@ -1169,14 +1170,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			callback: async (feedback, _context) => {
 				const opt = feedback.options
 				const name = opt.name
+				this.ensureFeedbackControl(feedback.id, name)
 				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback)
-					return false
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
+				if (control === undefined) return false
 				return (opt.value === 'true' && !!control.value) || (opt.value === 'false' && !control.value)
 			},
 		}
@@ -1193,14 +1189,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			callback: async (feedback, context) => {
 				const opt = feedback.options
 				const name = opt.name
+				this.ensureFeedbackControl(feedback.id, name)
 				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback, context)
-					return false
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
+				if (control === undefined) return false
 				return control.value >= opt.threshold
 			},
 		}
@@ -1214,14 +1205,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			callback: async (feedback, context) => {
 				const opt = feedback.options
 				const name = opt.name
+				this.ensureFeedbackControl(feedback.id, name)
 				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback, context)
-					return false
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
+				if (control === undefined) return {}
 				const numToRGB = (num) => {
 					return {
 						r: (num & 0xff0000) >> 16,
@@ -1259,14 +1245,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			callback: async (feedback, context) => {
 				const opt = feedback.options
 				const name = opt.name
+				this.ensureFeedbackControl(feedback.id, name)
 				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback, context)
-					return {}
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
+				if (control === undefined) return {}
 				if (opt.min >= opt.max) {
 					this.log('warn', `Invalid min/max choices for level-meter.\n${JSON.stringify(opt)}`)
 					return {}
@@ -1356,14 +1337,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			callback: async (feedback, context) => {
 				const opt = feedback.options
 				const name = opt.name
+				this.ensureFeedbackControl(feedback.id, name)
 				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback, context)
-					return {}
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
+				if (control === undefined) return {}
 				if (opt.min >= opt.max) {
 					throw new Error(`Invalid min/max choices for indicator.\n${JSON.stringify(opt)}`)
 				}
@@ -1442,14 +1418,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			callback: async (feedback, context) => {
 				const opt = feedback.options
 				const name = opt.name
+				this.ensureFeedbackControl(feedback.id, name)
 				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback, context)
-					return {}
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
+				if (control === undefined) return {}
 				let options = {}
 				let imageBuf
 				if (opt.shape == 'circle') {
@@ -1501,17 +1472,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
-				const opt = feedback.options
-				const name = opt.name
-				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback, context)
-					return false
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
-				return control.value ?? null
+				const { name } = feedback.options
+				this.ensureFeedbackControl(feedback.id, name)
+				return this.controls.get(name)?.value ?? null
 			},
 		}
 		feedbacks['control-string-value'] = {
@@ -1521,17 +1484,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
-				const opt = feedback.options
-				const name = opt.name
-				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback, context)
-					return false
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
-				return control.strval ?? null
+				const { name } = feedback.options
+				this.ensureFeedbackControl(feedback.id, name)
+				return this.controls.get(name)?.strval ?? null
 			},
 		}
 		feedbacks['control-position'] = {
@@ -1541,17 +1496,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, context) => {
-				const opt = feedback.options
-				const name = opt.name
-				const control = this.controls.get(name)
-				if (control === undefined) {
-					this.log('warn', `Control ${name} from ${feedback.id} not found`)
-					this.addControl(feedback, context)
-					return false
-				} else {
-					if (!control.feedbackIds.has(feedback.id)) control.feedbackIds.add(feedback.id)
-				}
-				return control.position ?? null
+				const { name } = feedback.options
+				this.ensureFeedbackControl(feedback.id, name)
+				return this.controls.get(name)?.position ?? null
 			},
 		}
 		this.setFeedbackDefinitions(feedbacks)
@@ -1832,6 +1779,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			const control = this.controls.get(name)
 			if (feedback.feedbackId !== undefined) {
 				control.feedbackIds.delete(feedback.id)
+				this.feedbackControlMap.delete(feedback.id)
 			} else {
 				control.actionIds.delete(feedback.id)
 			}
@@ -1841,6 +1789,62 @@ export class QsysRemoteControl extends base.InstanceBase {
 				if (this.namesToGet.has(name)) this.namesToGet.delete(name)
 				await this.changeGroup('Remove', this.id, name)
 			}
+		}
+	}
+
+	/**
+	 * Called at the top of every feedback callback that uses a named control.
+	 * Detects when the `name` option has changed since the last invocation and
+	 * moves the feedback's registration from the old control to the new one,
+	 * mirroring what subscribe/unsubscribe previously had to handle.
+	 * @param {string} feedbackId
+	 * @param {string} name  The current value of feedback.options.name (already trimmed)
+	 * @access private
+	 */
+	ensureFeedbackControl(feedbackId, name) {
+		const previousName = this.feedbackControlMap.get(feedbackId)
+
+		if (previousName === name) return // Nothing changed
+
+		if (previousName === undefined) {
+			// First callback invocation after subscribe – subscribe already
+			// called addControl, so just record the mapping and return.
+			this.feedbackControlMap.set(feedbackId, name)
+			return
+		}
+
+		// ── Name has changed ──────────────────────────────────────────────────
+		this.feedbackControlMap.set(feedbackId, name)
+
+		// Remove feedbackId from the old control
+		const oldControl = this.controls.get(previousName)
+		if (oldControl) {
+			oldControl.feedbackIds.delete(feedbackId)
+			if (oldControl.actionIds.size === 0 && oldControl.feedbackIds.size === 0) {
+				this.controls.delete(previousName)
+				if (this.namesToGet.has(previousName)) this.namesToGet.delete(previousName)
+				this.changeGroup('Remove', this.id, previousName).catch(() => {})
+			}
+		}
+
+		// Add feedbackId to the new control, creating it if necessary
+		if (this.controls.has(name)) {
+			this.controls.get(name).feedbackIds.add(feedbackId)
+		} else {
+			this.controls.set(name, {
+				actionIds: new Set(),
+				feedbackIds: new Set([feedbackId]),
+				value: null,
+				position: null,
+				strval: '',
+			})
+			this.variables.push(
+				{ name: `${name} Value`, variableId: `${sanitiseVariableId(name)}_value` },
+				{ name: `${name} Position`, variableId: `${sanitiseVariableId(name)}_position` },
+				{ name: `${name} String`, variableId: `${sanitiseVariableId(name)}_string` },
+			)
+			this.namesToGet.add(name)
+			this.debouncedVariableDefUpdate()
 		}
 	}
 

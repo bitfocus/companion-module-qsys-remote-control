@@ -572,6 +572,20 @@ export class QsysRemoteControl extends base.InstanceBase {
 		this.checkStatus(base.InstanceStatus.Ok, data.State.toString(), secondary)
 	}
 
+	/** Check the size of the TCP Socket recieve buffers and flush if excessively large
+	 * @param {boolean} secondary
+	 */
+
+	checkBufferSize(secondary) {
+		const MAX_BUFFER_SIZE = 1024 * 1024
+		const key = secondary ? 'sec' : 'pri'
+		const host = secondary ? this.config.hostSecondary : this.config.host
+		if (this.socket.buffer[key].length > MAX_BUFFER_SIZE) {
+			this.log('error', `Socket buffer overflow for ${host} — clearing`)
+			this.socket.buffer[key] = ''
+		}
+	}
+
 	/**
 	 * Process recieved data
 	 * @param {string} response Recieved message to process
@@ -581,6 +595,8 @@ export class QsysRemoteControl extends base.InstanceBase {
 
 	processResponse(response, secondary) {
 		this.debug(`processResponse from ${!secondary ? 'Primary' : 'Secondary'} \nResponse: ${response}`)
+		this.checkBufferSize(secondary)
+
 		let list = []
 		if (secondary) {
 			list = (this.socket.buffer.sec + response).split('\x00')
@@ -593,7 +609,14 @@ export class QsysRemoteControl extends base.InstanceBase {
 		//let refresh = false
 
 		list.forEach((jsonstr) => {
-			const obj = JSON.parse(jsonstr)
+			if (!jsonstr) return
+			let obj
+			try {
+				obj = JSON.parse(jsonstr)
+			} catch (e) {
+				this.log('warn', `Failed to parse JSON: ${e.message}`)
+				return
+			}
 
 			if (obj?.id == QRC_GET) {
 				// Response from Control.Get

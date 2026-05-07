@@ -98,13 +98,23 @@ function makePasswordSecret(_context, props) {
 		updatedFeedbacks: [],
 	}
 
-	if (props.config.pass) {
+	if (props.config?.pass && !props.secrets?.pass) {
 		result.updatedSecrets = {
 			pass: props.config.pass,
 		}
 		const config = props.config
 		delete config.pass
 		result.updatedConfig = config
+	} else if (props.config?.pass && props.secrets?.pass) {
+		// Shouldn't happen, but just in case
+		// just remove from config, trust secrets
+		const config = props.config
+		delete config.pass
+		result.updatedConfig = config
+	} else if (props.secrets?.pass == undefined) {
+		result.updatedSecrets = {
+			pass: '',
+		}
 	}
 
 	return result

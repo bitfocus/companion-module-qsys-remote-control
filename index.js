@@ -39,37 +39,35 @@ const colours = {
 }
 
 export class QsysRemoteControl extends base.InstanceBase {
+	config = {
+		host: '',
+		port: '1710',
+		redundant: false,
+		verbose: false,
+		hostSecondary: '',
+		portSecondary: '1710',
+		user: '',
+		variables: '',
+		poll_interval: 1000,
+	}
+	secrets = { pass: '' }
+	pollQRCTimer = undefined
+	variables = []
+	moduleStatus = resetModuleStatus()
+	controls = new Map()
+	namesToGet = new Set()
+	feedbackIdsToCheck = new Set()
+	variablesToUpdate = new Map()
+	feedbackControlMap = new Map()
+	changeGroupSet = false
+	isRecordingActions = false
+	socket = {
+		pri: new base.TCPHelper('localhost', 1710),
+		sec: new base.TCPHelper('localhost', 1710),
+		buffer: { pri: '', sec: '' },
+	}
 	constructor(internal) {
 		super(internal)
-		this.config = {
-			host: '',
-			port: '1710',
-			redundant: false,
-			verbose: false,
-			hostSecondary: '',
-			portSecondary: '1710',
-			user: '',
-			variables: '',
-			poll_interval: 1000,
-		}
-		this.secrets = { pass: '' }
-		this.pollQRCTimer = undefined
-		this.variables = []
-		this.moduleStatus = resetModuleStatus()
-		this.controls = new Map()
-		this.namesToGet = new Set()
-		this.feedbackIdsToCheck = new Set()
-		this.variablesToUpdate = new Map()
-		this.changeGroupSet = false
-		this.isRecordingActions = false
-		this.socket = {
-			pri: new base.TCPHelper('localhost', 1710),
-			sec: new base.TCPHelper('localhost', 1710),
-			buffer: {
-				pri: '',
-				sec: '',
-			},
-		}
 		this.socket.pri.destroy()
 		this.socket.sec.destroy()
 	}

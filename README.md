@@ -165,3 +165,9 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: Feedback control name registration better handled inside feedback callback now. Should resolve #75 
 - Improvement: Define properties on the class rather than in constructor
 - Chore: Update dependencies
+
+**V3.2.5**
+
+- Fix: Saftey in upgrade script handling password conversion to secret text
+- Improvement: Prevent possible unlimited recieve buffer growth in case of missing null bytes
+

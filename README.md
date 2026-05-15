@@ -159,3 +159,14 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: Other minor fixes and refactoring
 - Chore: Change imports to work in Companion `4.3.0` as a dev module
 - Chore: Update `companion-module-tools`
+
+**V3.2.4**
+
+- Fix: Feedback control name registration better handled inside feedback callback now.
+- Improvement: Define properties on the class rather than in constructor
+- Chore: Update dependencies
+
+**V3.2.5**
+
+- Fix: Saftey in upgrade script handling password conversion to secret text
+- Improvement: Prevent possible unlimited recieve buffer growth in case of missing null bytes

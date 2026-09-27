@@ -231,4 +231,17 @@ describe('change group', () => {
 		expect(traffic(socket)).toEqual([])
 		expect(self.changeGroupSet).toBe(true)
 	})
+
+	it('drops a pending rebuild when the config changes', async () => {
+		await connect(self)
+		addControls(self, 'gain', 'mute')
+		await vi.advanceTimersByTimeAsync(3000)
+		const changeGroup = vi.spyOn(self, 'changeGroup')
+
+		self.resetChangeGroup()
+		self.killTimersDestroySockets()
+		await vi.advanceTimersByTimeAsync(3000)
+
+		expect(changeGroup).not.toHaveBeenCalled()
+	})
 })

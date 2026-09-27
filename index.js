@@ -701,6 +701,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 		queue.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
+		this.resetChangeGroup.cancel()
 		this.throttledFeedbackIdCheck.cancel()
 		this.controls.clear()
 		this.namesToGet.clear()

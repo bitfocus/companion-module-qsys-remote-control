@@ -220,6 +220,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 				this.socket.buffer.pri = ''
 			}
 
+			// A new connection has no change group
+			this.changeGroupSet = false
+
 			this.debug(`Q-SYS Connected to ${host}:${port}`)
 
 			await this.login()
@@ -231,6 +234,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.checkFeedbacks()
 			//await this.initVariables()
 			this.checkKeepAlive()
+
+			// Rebuild here: a reconnect need not change the module status, so the status hook may not fire
+			this.resetChangeGroup()
 		}
 		const dataEvent = (d) => {
 			const response = d.toString()
@@ -301,10 +307,10 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.debug(`debouncedStatusUpdate`)
 			if (this.moduleStatus.logMessage !== '') this.log(this.moduleStatus.logLevel, this.moduleStatus.logMessage)
 			this.updateStatus(this.moduleStatus.status, this.moduleStatus.message)
+			// Change groups belong to a connection, so rebuild after every connect or failover
 			if (
-				this.changeGroupSet &&
-				(this.moduleStatus.status == base.InstanceStatus.Ok ||
-					this.moduleStatus.status == base.InstanceStatus.UnknownWarning)
+				this.moduleStatus.status == base.InstanceStatus.Ok ||
+				this.moduleStatus.status == base.InstanceStatus.UnknownWarning
 			)
 				this.resetChangeGroup()
 		},
@@ -1602,6 +1608,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 	 * @param {string} id Change Group ID
 	 * @param {string | string[] | MapIterator<string> | SetIterator<string> | null} controls Control names to add or remove
 	 * @param {number} rate Autopoll interval (mS)
+	 * @returns {Promise<boolean>} True if message send was successful
 	 * @access private
 	 */
 
@@ -1620,7 +1627,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 		}
 		this.debug(`changeGroup: ${JSON.stringify(obj)}`)
 		const getSet = type == 'Poll' || type == 'AutoPoll' ? QRC_GET : QRC_SET
-		await this.callCommandObj(obj, getSet)
+		return await this.callCommandObj(obj, getSet)
 	}
 
 	/**
@@ -1670,16 +1677,20 @@ export class QsysRemoteControl extends base.InstanceBase {
 		}, Math.round(this.config.poll_interval))
 	}
 	/**
-	 * Reinit default change group, and get all controls
+	 * Reinit default change group, and get all controls.
+	 * The only place changeGroupSet is set true, as only here does the group get every control
 	 * @access private
 	 */
 
 	resetChangeGroup = debounce(
 		async () => {
 			this.debug(`resetChangeGroup`)
+			// Poll with Control.Get until the group is rebuilt, rather than against the destroyed one
+			this.changeGroupSet = false
 			await this.changeGroup('Destroy', this.id)
+			if (this.controls.size === 0) return
 			await this.getControl(this.controls.keys())
-			await this.changeGroup('AddControl', this.id, this.controls.keys())
+			this.changeGroupSet = await this.changeGroup('AddControl', this.id, this.controls.keys())
 		},
 		1000,
 		{ leading: false, maxWait: 5000, trailing: true, signal: SIGNAL },
@@ -1697,8 +1708,12 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.setEngineVariableValues()
 			if (this.namesToGet.size > 0) {
 				await this.getControl(this.namesToGet.keys())
-				await this.changeGroup('AddControl', this.id, this.namesToGet.keys())
-				this.changeGroupSet = true
+				if (this.changeGroupSet) {
+					await this.changeGroup('AddControl', this.id, this.namesToGet.keys())
+				} else {
+					// Adding only the new names would leave a group missing every other control
+					this.resetChangeGroup()
+				}
 				this.namesToGet.clear()
 			}
 		},

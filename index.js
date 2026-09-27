@@ -315,7 +315,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 				this.resetChangeGroup()
 		},
 		1000,
-		{ leading: false, maxWait: 2000, trailing: true, signal: SIGNAL },
+		{ edges: ['trailing'], signal: SIGNAL },
 	)
 
 	/**
@@ -1701,7 +1701,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.changeGroupSet = await this.changeGroup('AddControl', this.id, this.controls.keys())
 		},
 		1000,
-		{ leading: false, maxWait: 5000, trailing: true, signal: SIGNAL },
+		{ edges: ['trailing'], signal: SIGNAL },
 	)
 
 	/**
@@ -1726,7 +1726,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			}
 		},
 		1000,
-		{ leading: false, maxWait: 5000, trailing: true, signal: SIGNAL },
+		{ edges: ['trailing'], signal: SIGNAL },
 	)
 
 	/**

@@ -235,7 +235,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			//await this.initVariables()
 			this.checkKeepAlive()
 
-			// Rebuild here: a reconnect need not change the module status, so the status hook may not fire
+			// Rebuild on every connect, rather than depend on the status hook, which only fires when the overall status changes
 			this.resetChangeGroup()
 		}
 		const dataEvent = (d) => {
@@ -475,6 +475,15 @@ export class QsysRemoteControl extends base.InstanceBase {
 	#getNonRedundantStatus() {
 		const { primary } = this.moduleStatus
 
+		const connectionResult = {
+			status: primary.status,
+			message: primary.message,
+			logLevel: 'info',
+			logMessage: primary.message,
+		}
+		// The core's last reported state only holds while connected to it
+		if (primary.status !== base.InstanceStatus.Ok) return connectionResult
+
 		const stateResults = {
 			Active: { status: base.InstanceStatus.Ok, message: 'Core active', logLevel: 'info', logMessage: '' },
 			Standby: {
@@ -491,14 +500,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			},
 		}
 
-		return (
-			stateResults[primary.state] ?? {
-				status: primary.status,
-				message: primary.message,
-				logLevel: 'info',
-				logMessage: primary.message,
-			}
-		)
+		return stateResults[primary.state] ?? connectionResult
 	}
 
 	/**

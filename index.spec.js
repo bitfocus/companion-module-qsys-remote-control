@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { InstanceStatus } from '@companion-module/base'
 import { QsysRemoteControl } from './index.js'
 
 // Stand-ins for the Companion host: an InstanceBase that swallows host calls, and a TCPHelper that records what is
@@ -113,6 +114,40 @@ afterEach(() => {
 	vi.useRealTimers()
 })
 
+describe('status, not redundant', () => {
+	it.each([
+		['end', [], InstanceStatus.Disconnected, 'Connection to core.local ended'],
+		['error', [new Error('read ECONNRESET')], InstanceStatus.ConnectionFailure, ''],
+	])('reports a connection %s, not the core state from before it', async (event, args, status, message) => {
+		const updateStatus = vi.spyOn(self, 'updateStatus')
+		const socket = await connect(self)
+		await vi.advanceTimersByTimeAsync(1500)
+		expect(updateStatus).toHaveBeenLastCalledWith(InstanceStatus.Ok, 'Core active')
+
+		socket.isConnected = false
+		socket.emit(event, ...args)
+		await vi.advanceTimersByTimeAsync(1500)
+		expect(updateStatus).toHaveBeenLastCalledWith(status, message)
+
+		await reconnect(self, socket)
+		await vi.advanceTimersByTimeAsync(1500)
+		expect(updateStatus).toHaveBeenLastCalledWith(InstanceStatus.Ok, 'Core active')
+	})
+
+	it('reports the core state while connected', async () => {
+		const updateStatus = vi.spyOn(self, 'updateStatus')
+		self.init_tcp(self.config.host, self.config.port)
+		const socket = self.socket.pri
+		socket.isConnected = true
+		socket.emit('connect')
+		await vi.advanceTimersByTimeAsync(0)
+		reply(self, { id: 2, result: { ...CORE_STATUS, State: 'Standby' } })
+		await vi.advanceTimersByTimeAsync(1500)
+
+		expect(updateStatus).toHaveBeenLastCalledWith(InstanceStatus.UnknownWarning, 'Core state standby')
+	})
+})
+
 describe('change group', () => {
 	it('builds the group with every control, then polls it', async () => {
 		const socket = await connect(self)
@@ -141,8 +176,7 @@ describe('change group', () => {
 		await vi.advanceTimersByTimeAsync(3000)
 		expect(self.changeGroupSet).toBe(true)
 
-		// TCPHelper reconnects the same socket. The core still reports Active, so the module status never changes and
-		// the status hook does not fire
+		// TCPHelper reconnects the same socket
 		socket.isConnected = false
 		socket.emit('end')
 		socket.sent.length = 0

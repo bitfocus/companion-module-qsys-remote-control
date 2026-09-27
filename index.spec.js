@@ -57,6 +57,8 @@ const CORE_STATUS = {
 	IsEmulator: false,
 }
 
+const UNKNOWN_CHANGE_GROUP = { code: 6, message: 'Unknown change group' }
+
 function reply(self, message) {
 	self.processResponse(JSON.stringify({ jsonrpc: '2.0', ...message }) + '\x00', false)
 }
@@ -198,6 +200,35 @@ describe('change group', () => {
 
 		expect(traffic(socket)).toContainEqual(['ChangeGroup.AddControl', ['gain', 'mute', 'level']])
 		expect(traffic(socket)).not.toContainEqual(['ChangeGroup.AddControl', ['level']])
+		expect(self.changeGroupSet).toBe(true)
+	})
+
+	it('rebuilds the group when a poll reports it unknown', async () => {
+		const socket = await connect(self)
+		addControls(self, 'gain', 'mute')
+		await vi.advanceTimersByTimeAsync(3000)
+		socket.sent.length = 0
+
+		reply(self, { id: 1, error: UNKNOWN_CHANGE_GROUP })
+		expect(self.changeGroupSet).toBe(false)
+
+		await vi.advanceTimersByTimeAsync(1000)
+		expect(traffic(socket)).toEqual(FULL_REBUILD)
+		expect(self.changeGroupSet).toBe(true)
+	})
+
+	it('ignores the unknown group error returned to its own Destroy', async () => {
+		const socket = await connect(self)
+		addControls(self, 'gain', 'mute')
+		await vi.advanceTimersByTimeAsync(3000)
+		socket.sent.length = 0
+
+		// A rebuild on a fresh connection destroys a group the core never had. Treating this like a poll's error
+		// would rebuild, destroy and error again, forever
+		reply(self, { id: 2, error: UNKNOWN_CHANGE_GROUP })
+		await vi.advanceTimersByTimeAsync(3000)
+
+		expect(traffic(socket)).toEqual([])
 		expect(self.changeGroupSet).toBe(true)
 	})
 })

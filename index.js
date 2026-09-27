@@ -635,6 +635,11 @@ export class QsysRemoteControl extends base.InstanceBase {
 						if (r.Component === undefined) this.updateControl(r) // Dont track Component values
 					})
 					//refresh = true
+				} else if (Number(obj.error?.code) === 6) {
+					// Unknown change group. Only ChangeGroup.Poll can return it on this id, so the core has lost our group
+					this.log('warn', `Change group ${this.id} unknown to core, rebuilding`)
+					this.changeGroupSet = false
+					this.resetChangeGroup()
 				} else if (obj.error !== undefined) {
 					this.log('error', JSON.stringify(obj.error))
 				}

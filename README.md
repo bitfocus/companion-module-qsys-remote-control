@@ -171,3 +171,16 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Fix: Saftey in upgrade script handling password conversion to secret text
 - Improvement: Prevent possible unlimited recieve buffer growth in case of missing null bytes
 
+**V3.2.6**
+
+- Fix: Controls keep updating after the connection to the core drops and comes back. The change group is now rebuilt on every new connection. #93 
+- Fix: Adding a control after a reconnect no longer leaves every other control without updates.
+- Fix: The change group is rebuilt whenever the core reports it doesn't recognise it, rather than logging an error on every poll. #93 
+- Fix: In non-redundant mode, a dropped connection now shows as Disconnected or Connection failure. It no longer keeps showing "Core active". #93 
+- Fix: A change group rebuild that was pending when the config changed no longer runs afterwards.
+- Module name is now "QSYS QRC" 
+- Added unit tests (vitest) for change group and connection status handling.
+- Added a Node CI workflow that runs lint, and tests 
+- Added a release workflow that builds the module and attaches the package to each published GitHub release.
+- The Companion module checks workflow now uploads the built package as an artifact.
+- The debounce options now use es-toolkit's own format. This changes no behaviour.

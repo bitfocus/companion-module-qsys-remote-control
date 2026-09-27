@@ -12,3 +12,4 @@ DEBUG-*
 !.yarn/versions
 qsys-remote-control-*.tgz
 *.zip
+coverage/

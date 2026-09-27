@@ -7,7 +7,10 @@
 		"format": "prettier -w .",
 		"package": "companion-module-build",
 		"lint:raw": "eslint",
-		"lint": "yarn lint:raw ."
+		"lint": "yarn lint:raw .",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage"
 	},
 	"license": "MIT",
 	"repository": {
@@ -22,8 +25,11 @@
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^2.8.0",
+		"@vitest/coverage-v8": "5.0.1",
 		"eslint": "^9.39.5",
-		"prettier": "~3.9.9"
+		"prettier": "~3.9.9",
+		"vite": "^8.3.0",
+		"vitest": "5.0.1"
 	},
 	"engines": {
 		"node": "^22.22"

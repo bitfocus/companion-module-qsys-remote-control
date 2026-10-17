@@ -1,6 +1,6 @@
 {
 	"name": "qsys-remote-control",
-	"version": "4.0.0-beta1",
+	"version": "4.0.1",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {

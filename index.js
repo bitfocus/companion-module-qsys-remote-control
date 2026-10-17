@@ -19,13 +19,9 @@ import { debounce, throttle } from 'es-toolkit'
 import PQueue from 'p-queue'
 import { graphics } from 'companion-module-utils'
 
-const queue = new PQueue({ concurrency: 1 })
 const QRC_GET = 1
 const QRC_SET = 2
 const QRC_LOGIN = 3
-
-const CONTROLLER = new AbortController()
-const SIGNAL = CONTROLLER.signal
 
 const KA_INTERVAL = 5000 //Interval on which to send NoOp keepalives
 
@@ -39,6 +35,10 @@ const colours = {
 }
 
 export class QsysRemoteControl extends base.InstanceBase {
+	// Declared before the debounces and throttles, which take its signal when they are created.
+	// Aborted only on destroy: an aborted signal disables them for good
+	#controller = new AbortController()
+	#queue = new PQueue({ concurrency: 1 })
 	config = {
 		host: '',
 		port: '1710',
@@ -204,13 +204,13 @@ export class QsysRemoteControl extends base.InstanceBase {
 		const errorEvent = (err) => {
 			this.checkStatus(base.InstanceStatus.ConnectionFailure, '', secondary)
 			this.log('error', `Network error from ${host}: ${err.message}`)
-			if (!this.config.redundant) queue.clear()
+			if (!this.config.redundant) this.#queue.clear()
 			this.checkKeepAlive()
 		}
 		const endEvent = () => {
 			this.checkStatus(base.InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
 			this.log('warn', `Connection to ${host} ended`)
-			if (!this.config.redundant) queue.clear()
+			if (!this.config.redundant) this.#queue.clear()
 			this.checkKeepAlive()
 		}
 		const connectEvent = async () => {
@@ -315,7 +315,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 				this.resetChangeGroup()
 		},
 		1000,
-		{ edges: ['trailing'], signal: SIGNAL },
+		{ edges: ['trailing'], signal: this.#controller.signal },
 	)
 
 	/**
@@ -700,7 +700,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 
 	killTimersDestroySockets() {
 		this.debug(`killTimersDestroySockets`)
-		queue.clear()
+		this.#queue.clear()
 		this.debouncedStatusUpdate.cancel()
 		this.debouncedVariableDefUpdate.cancel()
 		this.resetChangeGroup.cancel()
@@ -736,8 +736,8 @@ export class QsysRemoteControl extends base.InstanceBase {
 	destroy() {
 		this.debug(`destroy ${this.id}: ${this.label}`)
 		this.killTimersDestroySockets()
-		CONTROLLER.abort()
-		queue.clear()
+		this.#controller.abort()
+		this.#queue.clear()
 	}
 
 	/**
@@ -1569,7 +1569,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 	async callCommandObj(cmd, get_set = QRC_SET) {
 		const payload = { ...cmd, jsonrpc: '2.0', id: get_set }
 		this.debug(`callCommandObj: ${JSON.stringify(payload)}`)
-		return await queue
+		return await this.#queue
 			.add(
 				async ({ signal }) => {
 					if (signal.aborted) return false
@@ -1603,7 +1603,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 					}
 					return sentPri || sentSec
 				},
-				{ signal: SIGNAL, priority: get_set },
+				{ signal: this.#controller.signal, priority: get_set },
 			)
 			.catch(() => {
 				return false
@@ -1660,7 +1660,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 	 */
 
 	async getControlStatuses() {
-		this.debug(`getControlStatuses Queue Size ${queue.size}`)
+		this.debug(`getControlStatuses Queue Size ${this.#queue.size}`)
 		if (this.changeGroupSet) {
 			await this.changeGroup('Poll', this.id)
 		} else {
@@ -1701,7 +1701,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.changeGroupSet = await this.changeGroup('AddControl', this.id, this.controls.keys())
 		},
 		1000,
-		{ edges: ['trailing'], signal: SIGNAL },
+		{ edges: ['trailing'], signal: this.#controller.signal },
 	)
 
 	/**
@@ -1726,7 +1726,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			}
 		},
 		1000,
-		{ edges: ['trailing'], signal: SIGNAL },
+		{ edges: ['trailing'], signal: this.#controller.signal },
 	)
 
 	/**
@@ -1907,7 +1907,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.feedbackIdsToCheck.clear()
 		},
 		40,
-		{ edges: ['trailing'], signal: SIGNAL },
+		{ edges: ['trailing'], signal: this.#controller.signal },
 	)
 
 	/**
@@ -1923,7 +1923,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.variablesToUpdate.clear()
 		},
 		40,
-		{ edges: ['trailing'], signal: SIGNAL },
+		{ edges: ['trailing'], signal: this.#controller.signal },
 	)
 
 	/**

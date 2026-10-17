@@ -1074,7 +1074,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 						Files: [
 							{
 								Name: evt.options.file_name.trim(),
-								Mode: evt.options.mode,
+								Mode: evt.options.channel,
 								Output: output,
 							},
 						],

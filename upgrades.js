@@ -90,6 +90,71 @@ function fixBooleanValues(_context, props) {
 	return result
 }
 
+/** Action options converted from a true/false dropdown to a checkbox, by action id */
+export const checkboxActionOptions = {
+	mixer_setCrossPointMute: ['value'],
+	mixer_setCrossPointSolo: ['value'],
+	mixer_setInputMute: ['value'],
+	mixer_setInputSolo: ['value'],
+	mixer_setOutputMute: ['value'],
+	mixer_setCueMute: ['value'],
+	mixer_setInputCueEnable: ['value'],
+	mixer_setInputCueAfl: ['value'],
+	loopPlayer_start: ['loop'],
+}
+
+/** Number options that defaulted to '', with the number that replaces it, by action or feedback id */
+export const numberActionOptions = {
+	page_submit_message: { priority: 1 },
+}
+export const numberFeedbackOptions = {
+	'control-threshold': { threshold: 0 },
+	'control-fade': { low_threshold: 0, high_threshold: 0 },
+}
+
+function toNumber(value, fallback) {
+	const number = typeof value === 'string' && value.trim() !== '' ? Number(value) : value
+	return typeof number === 'number' && Number.isFinite(number) ? number : fallback
+}
+
+function convertNumberOptions(options, defaults = {}) {
+	let changed = false
+	for (const [key, fallback] of Object.entries(defaults)) {
+		if (typeof options[key] === 'number') continue
+		options[key] = toNumber(options[key], fallback)
+		changed = true
+	}
+	return changed
+}
+
+export function fixOptionTypes(_context, props) {
+	const result = {
+		updatedActions: [],
+		updatedConfig: null,
+		updatedFeedbacks: [],
+	}
+
+	for (const action of props.actions) {
+		let changed = false
+		for (const key of checkboxActionOptions[action.actionId] ?? []) {
+			// fixBooleanValues converted saved values in v3.0.0, but the dropdown default stayed the string 'true'
+			if (typeof action.options[key] !== 'string') continue
+			action.options[key] = action.options[key] === 'true'
+			changed = true
+		}
+		if (convertNumberOptions(action.options, numberActionOptions[action.actionId])) changed = true
+		if (changed) result.updatedActions.push(action)
+	}
+
+	for (const feedback of props.feedbacks) {
+		if (convertNumberOptions(feedback.options, numberFeedbackOptions[feedback.feedbackId])) {
+			result.updatedFeedbacks.push(feedback)
+		}
+	}
+
+	return result
+}
+
 function makePasswordSecret(_context, props) {
 	const result = {
 		updatedActions: [],
@@ -136,4 +201,5 @@ export default [
 	loopPlayerStartSeek,
 	fixBooleanValues,
 	makePasswordSecret,
+	fixOptionTypes,
 ]

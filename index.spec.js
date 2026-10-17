@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { InstanceStatus } from '@companion-module/base'
 import { QsysRemoteControl } from './index.js'
+import { checkboxActionOptions, numberActionOptions, numberFeedbackOptions } from './upgrades.js'
 
 // Stand-ins for the Companion host: an InstanceBase that swallows host calls, and a TCPHelper that records what is
 // sent instead of opening a socket. Everything else in base is the real thing
@@ -113,6 +114,48 @@ afterEach(() => {
 	self.killTimersDestroySockets()
 	vi.useRealTimers()
 })
+
+// The action and feedback definitions as the module registers them with Companion
+function definitions() {
+	const setActions = vi.spyOn(self, 'setActionDefinitions')
+	const setFeedbacks = vi.spyOn(self, 'setFeedbackDefinitions')
+	self.actions()
+	self.initFeedbacks()
+	return { actions: setActions.mock.lastCall[0], feedbacks: setFeedbacks.mock.lastCall[0] }
+}
+
+// The properties each input field type has in @companion-module/base 1.14
+const COMMON_PROPERTIES = [
+	'id',
+	'type',
+	'label',
+	'tooltip',
+	'description',
+	'isVisible',
+	'isVisibleExpression',
+	'isVisibleData',
+]
+const FIELD_PROPERTIES = {
+	'static-text': ['value'],
+	colorpicker: ['default', 'enableAlpha', 'returnType', 'presetColors'],
+	textinput: ['default', 'required', 'regex', 'useVariables', 'multiline'],
+	dropdown: ['choices', 'default', 'allowCustom', 'regex', 'minChoicesForSearch'],
+	multidropdown: ['choices', 'default', 'minChoicesForSearch', 'minSelection', 'maxSelection'],
+	checkbox: ['default'],
+	number: [
+		'default',
+		'required',
+		'min',
+		'max',
+		'step',
+		'range',
+		'showMinAsNegativeInfinity',
+		'showMaxAsPositiveInfinity',
+	],
+	'custom-variable': [],
+	'bonjour-device': [],
+	'secret-text': ['default', 'required', 'regex'],
+}
 
 describe('status, not redundant', () => {
 	it.each([
@@ -277,5 +320,99 @@ describe('change group', () => {
 		await vi.advanceTimersByTimeAsync(3000)
 
 		expect(changeGroup).not.toHaveBeenCalled()
+	})
+})
+
+describe('loopPlayer_start', () => {
+	it('sends the chosen channel as the file mode', async () => {
+		const socket = await connect(self)
+		const { actions } = definitions()
+		socket.sent.length = 0
+
+		await actions.loopPlayer_start.callback(
+			{
+				id: 'action0',
+				actionId: 'loopPlayer_start',
+				options: {
+					file_name: 'intro.wav',
+					channel: 'mono',
+					output: '2',
+					name: 'Loop Player',
+					startTime: 0,
+					seek: 0,
+					loop: true,
+					refID: 'ref',
+				},
+			},
+			{},
+		)
+
+		expect(socket.sent).toContainEqual(
+			expect.objectContaining({
+				method: 'LoopPlayer.Start',
+				params: expect.objectContaining({ Files: [{ Name: 'intro.wav', Mode: 'mono', Output: 2 }] }),
+			}),
+		)
+	})
+})
+
+describe('option definitions', () => {
+	const field = (defs, id, key) => defs[id].options.find((option) => option.id === key)
+
+	it('match the field type they declare', () => {
+		const { actions, feedbacks } = definitions()
+		const problems = []
+
+		for (const [id, def] of [...Object.entries(actions), ...Object.entries(feedbacks)]) {
+			for (const option of def.options) {
+				const where = `${id}.${option.id}`
+				if (typeof option.label !== 'string') problems.push(`${where}: no label`)
+				const properties = FIELD_PROPERTIES[option.type]
+				if (properties === undefined) problems.push(`${where}: unknown field type ${option.type}`)
+				for (const key of Object.keys(option)) {
+					if (properties && !COMMON_PROPERTIES.includes(key) && !properties.includes(key)) {
+						problems.push(`${where}: ${option.type} field has no ${key}`)
+					}
+				}
+				switch (option.type) {
+					case 'number':
+						for (const key of ['default', 'min', 'max']) {
+							if (typeof option[key] !== 'number') problems.push(`${where}: ${key} is not a number`)
+						}
+						break
+					case 'checkbox':
+						if (typeof option.default !== 'boolean') problems.push(`${where}: default is not a boolean`)
+						break
+					case 'dropdown':
+						if (option.choices.some((choice) => !['string', 'number'].includes(typeof choice.id))) {
+							problems.push(`${where}: choice id is not a string or number`)
+						}
+						if (!option.choices.some((choice) => choice.id === option.default)) {
+							problems.push(`${where}: default matches no choice`)
+						}
+						break
+				}
+			}
+		}
+
+		expect(problems).toEqual([])
+	})
+
+	it('define each option fixOptionTypes converts as the type it converts to', () => {
+		const { actions, feedbacks } = definitions()
+
+		for (const [id, keys] of Object.entries(checkboxActionOptions)) {
+			for (const key of keys) expect(field(actions, id, key)).toMatchObject({ type: 'checkbox', default: true })
+		}
+		for (const [defs, converted] of [
+			[actions, numberActionOptions],
+			[feedbacks, numberFeedbackOptions],
+		]) {
+			for (const [id, defaults] of Object.entries(converted)) {
+				for (const [key, value] of Object.entries(defaults)) {
+					expect(field(defs, id, key)).toMatchObject({ type: 'number', default: value })
+				}
+			}
+		}
 	})
 })

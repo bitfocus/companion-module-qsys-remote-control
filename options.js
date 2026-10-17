@@ -141,7 +141,6 @@ export const options = {
 					type: 'static-text',
 					id: 'filler2',
 					label: 'Warning',
-					width: 6,
 					value: 'Relative actions require Number Type',
 					isVisibleExpression: `$(options:relative) && $(options:type) != 'number'`,
 				},
@@ -184,7 +183,6 @@ export const options = {
 					type: 'static-text',
 					id: 'info',
 					label: '',
-					width: 6,
 					value: `This will invalidate change group ${id}, causing Qsys to send all values in the group`,
 				},
 			]
@@ -201,7 +199,6 @@ export const options = {
 					default: 0,
 					min: -100,
 					max: 20,
-					regex: Regex.NUMBER,
 				},
 				{
 					type: 'number',
@@ -210,7 +207,6 @@ export const options = {
 					default: 0,
 					min: 0,
 					max: 100,
-					regex: Regex.NUMBER,
 				},
 			]
 		},
@@ -226,7 +222,6 @@ export const options = {
 					default: 0,
 					min: 0,
 					max: 60,
-					regex: Regex.NUMBER,
 				},
 				{
 					type: 'number',
@@ -235,7 +230,6 @@ export const options = {
 					default: 0,
 					min: 0,
 					max: 100,
-					regex: Regex.NUMBER,
 				},
 			]
 		},
@@ -245,14 +239,10 @@ export const options = {
 				mixerInputs,
 				mixerOutputs,
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'value',
 					label: 'Value',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 			]
 		},
@@ -262,14 +252,10 @@ export const options = {
 				mixerInputs,
 				mixerOutputs,
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'value',
 					label: 'Value',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 			]
 		},
@@ -284,7 +270,6 @@ export const options = {
 					default: 0,
 					min: -100,
 					max: 20,
-					regex: Regex.NUMBER,
 				},
 				{
 					type: 'number',
@@ -293,7 +278,6 @@ export const options = {
 					default: 0,
 					min: 0,
 					max: 100,
-					regex: Regex.NUMBER,
 				},
 			]
 		},
@@ -302,14 +286,10 @@ export const options = {
 				name,
 				mixerInputs,
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'value',
 					label: 'Value',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 			]
 		},
@@ -318,14 +298,10 @@ export const options = {
 				name,
 				mixerInputs,
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'value',
 					label: 'Value',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 			]
 		},
@@ -340,7 +316,6 @@ export const options = {
 					default: 0,
 					min: -100,
 					max: 20,
-					regex: Regex.NUMBER,
 				},
 				{
 					type: 'number',
@@ -349,7 +324,6 @@ export const options = {
 					default: 0,
 					min: 0,
 					max: 100,
-					regex: Regex.NUMBER,
 				},
 			]
 		},
@@ -358,14 +332,10 @@ export const options = {
 				name,
 				mixerOutputs,
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'value',
 					label: 'Value',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 			]
 		},
@@ -374,14 +344,10 @@ export const options = {
 				name,
 				mixerCues,
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'value',
 					label: 'Value',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 			]
 		},
@@ -396,7 +362,6 @@ export const options = {
 					default: 0,
 					min: -100,
 					max: 20,
-					regex: Regex.NUMBER,
 				},
 				{
 					type: 'number',
@@ -405,7 +370,6 @@ export const options = {
 					default: 0,
 					min: 0,
 					max: 100,
-					regex: Regex.NUMBER,
 				},
 			]
 		},
@@ -415,14 +379,10 @@ export const options = {
 				mixerCues,
 				mixerInputs,
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'value',
 					label: 'Value',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 			]
 		},
@@ -432,14 +392,10 @@ export const options = {
 				mixerCues,
 				mixerInputs,
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'value',
 					label: 'Value',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 			]
 		},
@@ -476,28 +432,24 @@ export const options = {
 					id: 'startTime',
 					label: 'Start Time',
 					default: 0,
-					regex: Regex.NUMBER,
 					tooltip: `The time of day, in seconds, to start the job`,
 					min: 0,
+					max: Number.MAX_SAFE_INTEGER,
 				},
 				{
 					type: 'number',
 					id: 'seek',
 					label: 'Seek Time',
 					default: 0,
-					regex: Regex.NUMBER,
 					tooltip: `The time, in seconds, to seek into each file before playback.`,
 					min: 0,
+					max: Number.MAX_SAFE_INTEGER,
 				},
 				{
-					type: 'dropdown',
+					type: 'checkbox',
 					id: 'loop',
 					label: 'Loop',
-					default: 'true',
-					choices: [
-						{ id: true, label: 'True' },
-						{ id: false, label: 'False' },
-					],
+					default: true,
 				},
 				{
 					type: 'textinput',
@@ -545,6 +497,7 @@ export const options = {
 					default: 1,
 					tooltip: 'Specific bank number to recall from the snapshot',
 					min: 1,
+					max: Number.MAX_SAFE_INTEGER,
 				},
 				{
 					type: 'number',
@@ -552,6 +505,7 @@ export const options = {
 					label: 'Ramp',
 					tooltip: 'Time in seconds to ramp to banked snapshot',
 					min: 0,
+					max: Number.MAX_SAFE_INTEGER,
 					default: 0,
 				},
 			]
@@ -566,6 +520,7 @@ export const options = {
 					default: 1,
 					tooltip: 'Specific bank number to save to within the snapshot',
 					min: 1,
+					max: Number.MAX_SAFE_INTEGER,
 				},
 			]
 		},
@@ -587,8 +542,9 @@ export const options = {
 					label: 'Priority:',
 					tooltip: '1 is highest',
 					min: 1,
+					max: Number.MAX_SAFE_INTEGER,
 					required: true,
-					default: '',
+					default: 1,
 				},
 				{
 					type: 'textinput',
@@ -614,7 +570,6 @@ export const options = {
 					type: 'static-text',
 					id: 'info',
 					label: '',
-					width: 6,
 					value: 'Manually update Engine variables. Full response written to logs',
 				},
 			]
@@ -653,7 +608,6 @@ export const options = {
 					type: 'static-text',
 					id: 'filler1',
 					label: 'Warning',
-					width: 6,
 					value: 'Feedback deprecated, use variables instead.',
 				},
 			]
@@ -680,7 +634,7 @@ export const options = {
 					type: 'number',
 					id: 'threshold',
 					label: 'Threshold value',
-					default: '',
+					default: 0,
 					min: -10000,
 					max: 10000,
 					range: false,
@@ -694,7 +648,7 @@ export const options = {
 					type: 'number',
 					id: 'low_threshold',
 					label: 'Low threshold value',
-					default: '',
+					default: 0,
 					min: -10000,
 					max: 10000,
 					range: false,
@@ -703,7 +657,7 @@ export const options = {
 					type: 'number',
 					id: 'high_threshold',
 					label: 'High threshold value',
-					default: '',
+					default: 0,
 					min: -10000,
 					max: 10000,
 					range: false,
@@ -741,6 +695,8 @@ export const options = {
 					label: 'Maximum Value',
 					id: 'max',
 					default: 0,
+					min: Number.MIN_SAFE_INTEGER,
+					max: Number.MAX_SAFE_INTEGER,
 					tooltip: 'Value greater than or equal to this will result in fullscale metering',
 				},
 				{
@@ -748,6 +704,8 @@ export const options = {
 					label: 'Minimum Value',
 					id: 'min',
 					default: -100,
+					min: Number.MIN_SAFE_INTEGER,
+					max: Number.MAX_SAFE_INTEGER,
 					tooltip: 'Value less than or equal to this will result in no metering',
 				},
 				{
@@ -786,6 +744,7 @@ export const options = {
 				{
 					type: 'static-text',
 					id: 'info',
+					label: '',
 					isVisibleExpression: '!!$(options:valPos)',
 					value:
 						'Maximum Value and Minimum Value options should be set between 0.0 and 1.0 when Use Position is enabled',
@@ -814,12 +773,16 @@ export const options = {
 					label: 'Maximum Value',
 					id: 'max',
 					default: 0,
+					min: Number.MIN_SAFE_INTEGER,
+					max: Number.MAX_SAFE_INTEGER,
 				},
 				{
 					type: 'number',
 					label: 'Minimum Value',
 					id: 'min',
 					default: -100,
+					min: Number.MIN_SAFE_INTEGER,
+					max: Number.MAX_SAFE_INTEGER,
 				},
 				{
 					type: 'checkbox',
@@ -838,6 +801,7 @@ export const options = {
 				{
 					type: 'static-text',
 					id: 'info',
+					label: '',
 					isVisibleExpression: '!!$(options:valPos)',
 					value:
 						'Maximum Value and Minimum Value options should be set between 0.0 and 1.0 when Use Position is enabled',
@@ -949,6 +913,7 @@ export const options = {
 				{
 					type: 'static-text',
 					id: 'info',
+					label: '',
 					value: 'LED On when Control.Position >= 0.5',
 				},
 			]

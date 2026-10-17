@@ -184,3 +184,26 @@ Reference available here: https://q-syshelp.qsc.com/#External_Control_APIs/QRC/Q
 - Added a release workflow that builds the module and attaches the package to each published GitHub release.
 - The Companion module checks workflow now uploads the built package as an artifact.
 - The debounce options now use es-toolkit's own format. This changes no behaviour.
+
+**V4.0.0**
+
+- Feat: Update to API 2.2. Support Expressions in action and feedback options. Requires Companion `5.1` or greater
+- Feat: Add custom composite elements for layered buttons: `Signal Meter`, `Value Dial`, `Centred Dial`, `Width Dial`, `Indicator` and `LED`
+- Improvement: `Control.Set` `Ramp`, `Minimum` and `Maximum`, `Component.Set` `Ramp` and `LoopPlayer.Start` `Output` are number fields. Existing actions are upgraded
+- Improvement: True / False dropdowns are checkboxes (`Mixer.SetCrossPointMute`, `Mixer.SetCrossPointSolo`, `Mixer.SetInputMute`, `Mixer.SetInputSolo`, `Mixer.SetOutputMute`, `Mixer.SetCueMute`, `Mixer.SetInputCueEnable`, `Mixer.SetInputCueAfl`, `LoopPlayer.Start` `Loop`). Left on their default they sent the string `"true"` rather than a boolean. Existing actions are upgraded
+- Improvement: Aborting a running action drops its requests still waiting to be sent
+- Improvement: Controls are not polled while no active core is connected, so a core going offline no longer fills the log with failed sends
+- Improvement: Only controls in use are polled. A reply for a removed control, or a `Control.Set` learn, no longer adds a control to polling
+- Improvement: `Fade color over control value range` logs a warning when the low threshold is not below the high threshold
+- Improvement: Feedback control names are trimmed, and a feedback with no name yet is ignored
+- Fix: `LoopPlayer.Start` sends the chosen `Mono` / `Stereo` channel. It was never sent
+- Fix: `PA.PageSubmit` `Priority` defaulted to empty, which was sent to the core. It now defaults to `1`
+- Fix: A connection that drops while it is being set up stays marked as down
+- Fix: Host config fields validate the hostname or IP address
+- Remove: `Change text to reflect control value` feedback, deprecated since `V3.0.0`. Use variables instead
+- Deprecate: `Level Meter`, `Indicator` and `LED` feedbacks. Use the composite elements instead
+- Chore: Use `Node 26`
+- Chore: Update `@companion-module/base` to `2.2`, `@companion-module/tools` to `3.2`, `eslint` to `10`, `p-queue` to `10` and `companion-module-utils` to `0.6.1`
+- Chore: Option definitions match their field types: no `regex` on number fields, `min` and `max` on every number field, and labels on static text
+- Chore: Move the message queue and abort controller into the module class
+- Chore: Tests for option definitions, upgrade scripts, composite elements and connection handling

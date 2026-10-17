@@ -25,11 +25,11 @@ jobs:
         with:
           # A release can be published against any tag, not just the default branch
           ref: ${{ github.event.release.tag_name }}
-      - name: Use Node.js 22.x
+      - name: Use Node.js 26.x
         # This should match the version of Node.js you have defined in the manifest.json runtime field
         uses: actions/setup-node@v7
         with:
-          node-version: 22.x
+          node-version: 26.x
       - name: Prepare Environment
         run: |
           corepack enable

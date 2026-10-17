@@ -1,4 +1,10 @@
-import { CreateConvertToBooleanFeedbackUpgradeScript } from '@companion-module/base'
+import {
+	CreateConvertToBooleanFeedbackUpgradeScript,
+	FixupNumericOrVariablesValueToExpressions,
+} from '@companion-module/base'
+
+// Companion passes every saved action and feedback option to upgrade scripts as { value, isExpression }
+const fixed = (value) => ({ value, isExpression: false })
 
 function redundantCores(_context, props) {
 	const result = {
@@ -18,7 +24,7 @@ function redundantCores(_context, props) {
 	return result
 }
 
-function relativeControlSet(_context, props) {
+export function relativeControlSet(_context, props) {
 	const result = {
 		updatedActions: [],
 		updatedConfig: null,
@@ -28,11 +34,11 @@ function relativeControlSet(_context, props) {
 	for (const action of props.actions) {
 		switch (action.actionId) {
 			case 'control_set':
-				action.options.relative ??= false
-				action.options.min ??= ''
-				action.options.max ??= ''
-				action.options.type ??= 'string'
-				action.options.ramp ??= ''
+				action.options.relative ??= fixed(false)
+				action.options.min ??= fixed('')
+				action.options.max ??= fixed('')
+				action.options.type ??= fixed('string')
+				action.options.ramp ??= fixed('')
 				result.updatedActions.push(action)
 				break
 		}
@@ -41,7 +47,7 @@ function relativeControlSet(_context, props) {
 	return result
 }
 
-function loopPlayerStartSeek(_context, props) {
+export function loopPlayerStartSeek(_context, props) {
 	const result = {
 		updatedActions: [],
 		updatedConfig: null,
@@ -51,8 +57,8 @@ function loopPlayerStartSeek(_context, props) {
 	for (const action of props.actions) {
 		switch (action.actionId) {
 			case 'loopPlayer_start':
-				action.options.seek ??= 0
-				action.options.refID ??= ''
+				action.options.seek ??= fixed(0)
+				action.options.refID ??= fixed('')
 				result.updatedActions.push(action)
 				break
 		}
@@ -61,7 +67,7 @@ function loopPlayerStartSeek(_context, props) {
 	return result
 }
 
-function fixBooleanValues(_context, props) {
+export function fixBooleanValues(_context, props) {
 	const result = {
 		updatedActions: [],
 		updatedConfig: null,
@@ -78,11 +84,11 @@ function fixBooleanValues(_context, props) {
 			case 'mixer_setCueMute':
 			case 'mixer_setInputCueEnable':
 			case 'mixer_setInputCueAfl':
-				action.options.value = action.options.value === 'true'
+				action.options.value = fixed(action.options.value?.value === 'true')
 				result.updatedActions.push(action)
 				break
 			case 'loopPlayer_start':
-				action.options.loop = action.options.loop === 'true'
+				action.options.loop = fixed(action.options.loop?.value === 'true')
 				result.updatedActions.push(action)
 		}
 	}
@@ -120,8 +126,9 @@ function toNumber(value, fallback) {
 function convertNumberOptions(options, defaults = {}) {
 	let changed = false
 	for (const [key, fallback] of Object.entries(defaults)) {
-		if (typeof options[key] === 'number') continue
-		options[key] = toNumber(options[key], fallback)
+		const option = options[key]
+		if (option?.isExpression || typeof option?.value === 'number') continue
+		options[key] = fixed(toNumber(option?.value, fallback))
 		changed = true
 	}
 	return changed
@@ -138,8 +145,9 @@ export function fixOptionTypes(_context, props) {
 		let changed = false
 		for (const key of checkboxActionOptions[action.actionId] ?? []) {
 			// fixBooleanValues converted saved values in v3.0.0, but the dropdown default stayed the string 'true'
-			if (typeof action.options[key] !== 'string') continue
-			action.options[key] = action.options[key] === 'true'
+			const option = action.options[key]
+			if (option?.isExpression || typeof option?.value !== 'string') continue
+			action.options[key] = fixed(option.value === 'true')
 			changed = true
 		}
 		if (convertNumberOptions(action.options, numberActionOptions[action.actionId])) changed = true
@@ -150,6 +158,38 @@ export function fixOptionTypes(_context, props) {
 		if (convertNumberOptions(feedback.options, numberFeedbackOptions[feedback.feedbackId])) {
 			result.updatedFeedbacks.push(feedback)
 		}
+	}
+
+	return result
+}
+
+/** Action options converted from a text input to a number field, with the number a blank value becomes, by action id */
+export const textToNumberActionOptions = {
+	control_set: { ramp: 0, min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
+	component_set: { ramp: 0 },
+	loopPlayer_start: { output: 1 },
+}
+
+export function textToNumberOptions(_context, props) {
+	const result = {
+		updatedActions: [],
+		updatedConfig: null,
+		updatedFeedbacks: [],
+	}
+
+	for (const action of props.actions) {
+		let changed = false
+		for (const [key, fallback] of Object.entries(textToNumberActionOptions[action.actionId] ?? {})) {
+			const option = action.options[key]
+			// A blank value had no effect, so it becomes the field's default rather than an expression of nothing
+			const blank = option === undefined || (!option.isExpression && String(option.value ?? '').trim() === '')
+			const converted = blank ? fixed(fallback) : FixupNumericOrVariablesValueToExpressions(option)
+			// The helper always returns a new object, so compare what it holds
+			if (converted.isExpression === option?.isExpression && converted.value === option?.value) continue
+			action.options[key] = converted
+			changed = true
+		}
+		if (changed) result.updatedActions.push(action)
 	}
 
 	return result
@@ -202,4 +242,5 @@ export default [
 	fixBooleanValues,
 	makePasswordSecret,
 	fixOptionTypes,
+	textToNumberOptions,
 ]

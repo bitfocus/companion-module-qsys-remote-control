@@ -5,7 +5,7 @@ const name = {
 	id: 'name',
 	label: 'Name:',
 	default: '',
-	useVariables: { local: true },
+	useVariables: true,
 	regex: Regex.SOMETHING,
 }
 
@@ -14,7 +14,7 @@ const valueString = {
 	id: 'value',
 	label: 'Value:',
 	default: '',
-	useVariables: { local: true },
+	useVariables: true,
 }
 
 const mixerInputs = {
@@ -22,7 +22,7 @@ const mixerInputs = {
 	id: 'inputs',
 	label: 'Inputs',
 	default: '1',
-	useVariables: { local: true },
+	useVariables: true,
 	tooltip: `User Mixer IO String Syntax`,
 	description:
 		'Accepts: * (all), numbers (1 2 3), ranges (1-6), combinations (1-6 9), negation (1-8 !3), or Companion variables. Examples: "1-8 !3", "* !3-5", "1 2 3", "1-6 9 15-20"',
@@ -32,7 +32,7 @@ const mixerOutputs = {
 	id: 'outputs',
 	label: 'Outputs',
 	default: '1',
-	useVariables: { local: true },
+	useVariables: true,
 	tooltip: `User Mixer IO String Syntax`,
 	description:
 		'Accepts: * (all), numbers (1 2 3), ranges (1-6), combinations (1-6 9), negation (1-8 !3), or Companion variables. Examples: "1-8 !3", "* !3-5", "1 2 3", "1-6 9 15-20"',
@@ -43,7 +43,7 @@ const mixerCues = {
 	id: 'cues',
 	label: 'Cues',
 	default: '1',
-	useVariables: { local: true },
+	useVariables: true,
 	tooltip: `User Mixer IO String Syntax`,
 	description:
 		'Accepts: * (all), numbers (1 2 3), ranges (1-6), combinations (1-6 9), negation (1-8 !3), or Companion variables. Examples: "1-8 !3", "* !3-5", "1 2 3", "1-6 9 15-20"',
@@ -70,7 +70,6 @@ const paddingOption = {
 	min: 0,
 	max: 72,
 	default: 1,
-	required: true,
 }
 
 const offsetOption = {
@@ -81,7 +80,6 @@ const offsetOption = {
 	min: 0,
 	max: 20,
 	default: 5,
-	required: true,
 }
 
 export const options = {
@@ -94,6 +92,7 @@ export const options = {
 					type: 'dropdown',
 					id: 'type',
 					label: 'Type',
+					disableAutoExpression: true,
 					choices: [
 						{ id: 'boolean', label: 'Boolean' },
 						{ id: 'number', label: 'Number' },
@@ -103,11 +102,12 @@ export const options = {
 					tooltip: `Data type to be sent`,
 				},
 				{
-					type: 'textinput',
+					type: 'number',
 					id: 'ramp',
 					label: 'Ramp:',
-					default: '',
-					useVariables: { local: true },
+					default: 0,
+					min: 0,
+					max: Number.MAX_SAFE_INTEGER,
 					isVisibleExpression: `$(options:type) == 'number'`,
 					tooltip: `Time in seconds to ramp to new value`,
 				},
@@ -116,24 +116,29 @@ export const options = {
 					id: 'relative',
 					label: 'Relative',
 					default: false,
+					disableAutoExpression: true,
 					tooltip: `Relative actions only work with numerical values. Resultant value = current value + new value`,
 					isVisibleExpression: `$(options:type) == 'number'`,
 				},
 				{
-					type: 'textinput',
+					type: 'number',
 					id: 'min',
 					label: 'Minimum:',
-					default: '',
-					useVariables: { local: true },
+					default: Number.MIN_SAFE_INTEGER,
+					min: Number.MIN_SAFE_INTEGER,
+					max: Number.MAX_SAFE_INTEGER,
+					showMinAsNegativeInfinity: true,
 					tooltip: 'Relative action will be constrained to this lower limit',
 					isVisibleExpression: `$(options:relative) && $(options:type) == 'number'`,
 				},
 				{
-					type: 'textinput',
+					type: 'number',
 					id: 'max',
 					label: 'Maximum:',
-					default: '',
-					useVariables: { local: true },
+					default: Number.MAX_SAFE_INTEGER,
+					min: Number.MIN_SAFE_INTEGER,
+					max: Number.MAX_SAFE_INTEGER,
+					showMaxAsPositiveInfinity: true,
 					tooltip: 'Relative action will be constrained to this upper limit',
 					isVisibleExpression: `$(options:relative) && $(options:type) == 'number'`,
 				},
@@ -165,15 +170,17 @@ export const options = {
 					id: 'control_name',
 					label: 'Control Name:',
 					default: '',
-					useVariables: { local: true },
+					useVariables: true,
 				},
 				valueString,
 				{
-					type: 'textinput',
+					type: 'number',
 					id: 'ramp',
 					label: 'Ramp:',
-					default: '',
-					useVariables: { local: true },
+					default: 0,
+					min: 0,
+					max: Number.MAX_SAFE_INTEGER,
+					tooltip: `Time in seconds to ramp to new value`,
 				},
 			]
 		},
@@ -406,7 +413,7 @@ export const options = {
 					id: 'file_name',
 					label: 'File Name:',
 					default: '',
-					useVariables: { local: true },
+					useVariables: true,
 				},
 				{
 					type: 'dropdown',
@@ -419,12 +426,14 @@ export const options = {
 					],
 				},
 				{
-					type: 'textinput',
+					type: 'number',
 					id: 'output',
 					label: 'Output',
-					default: '1',
-					useVariables: { local: true },
-					tooltip: ` The Loop Player output number for playback`,
+					default: 1,
+					min: 1,
+					max: Number.MAX_SAFE_INTEGER,
+					asInteger: true,
+					tooltip: `The Loop Player output number for playback`,
 				},
 				name,
 				{
@@ -456,7 +465,7 @@ export const options = {
 					id: 'refID',
 					label: 'Reference ID',
 					default: '',
-					useVariables: { local: true },
+					useVariables: true,
 					tooltip: `Reference ID returned in error messages. Auto-populated if left blank`,
 				},
 			]
@@ -469,7 +478,7 @@ export const options = {
 					id: 'output',
 					label: 'Output',
 					default: '1',
-					useVariables: { local: true },
+					useVariables: true,
 					tooltip: `Comma seperated list of outputs to cancel. Ie. 1, 2, 3, 4`,
 				},
 			]
@@ -482,7 +491,7 @@ export const options = {
 					id: 'output',
 					label: 'Output',
 					default: '1',
-					useVariables: { local: true },
+					useVariables: true,
 					tooltip: `Comma seperated list of outputs to cancel. Ie. 1, 2, 3, 4`,
 				},
 			]
@@ -532,9 +541,8 @@ export const options = {
 					label: 'Zone Number(s):',
 					tooltip: 'Comma-seperated for multiple zones',
 					regex: Regex.SOMETHING,
-					required: true,
 					default: '',
-					useVariables: { local: true },
+					useVariables: true,
 				},
 				{
 					type: 'number',
@@ -543,7 +551,6 @@ export const options = {
 					tooltip: '1 is highest',
 					min: 1,
 					max: Number.MAX_SAFE_INTEGER,
-					required: true,
 					default: 1,
 				},
 				{
@@ -552,7 +559,7 @@ export const options = {
 					label: 'Preamble:',
 					tooltip: 'File name of the preamble',
 					default: '',
-					useVariables: { local: true },
+					useVariables: true,
 				},
 				{
 					type: 'textinput',
@@ -560,7 +567,7 @@ export const options = {
 					label: 'Message:',
 					tooltip: 'File name of the message',
 					default: '',
-					useVariables: { local: true },
+					useVariables: true,
 				},
 			]
 		},
@@ -713,6 +720,7 @@ export const options = {
 					label: 'Use Position',
 					id: 'valPos',
 					default: false,
+					disableAutoExpression: true,
 				},
 				{
 					type: 'checkbox',
@@ -731,6 +739,7 @@ export const options = {
 					label: 'Custom Color',
 					id: 'customColor',
 					default: false,
+					disableAutoExpression: true,
 				},
 				{
 					type: 'colorpicker',
@@ -789,6 +798,7 @@ export const options = {
 					label: 'Use Position',
 					id: 'valPos',
 					default: false,
+					disableAutoExpression: true,
 				},
 				{
 					type: 'colorpicker',
@@ -836,6 +846,7 @@ export const options = {
 					label: 'Shape',
 					id: 'shape',
 					default: 'circle',
+					disableAutoExpression: true,
 					choices: [
 						{ id: 'circle', label: 'Circle' },
 						{ id: 'rectangle', label: 'Rectangle' },

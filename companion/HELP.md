@@ -51,12 +51,25 @@ The mixer control API uses a string specification to determine to which inputs a
 - Feedback on boolean control value
 - Feedback if control value at or exceeds threshold
 - Fade color over control value range
-- Indicator
-- LED
-- Level Meter
+- Indicator (Deprecated)
+- LED (Deprecated)
+- Level Meter (Deprecated)
 - Named Control Position
 - Named Control String Value
 - Named Control Value
+
+**Composite Elements**
+
+Graphics elements for layered buttons. Feed each one from a named control's variables, e.g. `$(label:Gain_value)` or `$(label:Gain_position)`, where `label` is the connection's label. Sizes and offsets are percentages of the button.
+
+- Signal Meter: a bargraph along one edge of the button, in audio metering colours or a single colour. Use in place of the Level Meter feedback
+- Value Dial: a knob-style arc, filling from the minimum as the value rises
+- Centred Dial: an arc growing out from zero, clockwise above it and anticlockwise below, for pan or cut and boost
+- Width Dial: an arc growing both ways from 12 o'clock, a dot at the minimum and the whole arc at the maximum
+- Indicator: a marker along one edge of the button showing where a value sits in its range. Use in place of the Indicator feedback
+- LED: a round or square LED, lit when the position is 0.5 or more. Use in place of the LED feedback
+
+The meter, dials and indicator take the ends of their range as options.
 
 **Variables**
 

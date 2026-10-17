@@ -1,16 +1,10 @@
-// eslint-disable-next-line no-unused-vars
-import base from '@companion-module/base'
-
-import {
-	// eslint-disable-next-line no-unused-vars
-	QsysRemoteControl,
-} from './index.js'
+import { InstanceStatus } from '@companion-module/base'
 
 /**
  * Perform type conversion on value
  * @param {number} value
  * @param {string} name
- * @param {base.CompanionActionInfo} evt
+ * @param {import('@companion-module/base').CompanionActionInfo} evt
  * @param {Map<string, object>} controls
  * @returns {number | undefined}
  * @throws If Calculation fails or is a NaN
@@ -72,8 +66,8 @@ export const sanitiseVariableId = (id, substitute = '_') => id.replaceAll(/[^a-z
 
 /**
  * Build valid array of outputs
- * @param {base.CompanionActionInfo} evt
- * @param {QsysRemoteControl} self
+ * @param {import('@companion-module/base').CompanionActionInfo} evt
+ * @param {import('./index.js').default} self
  * @returns {number[]}
  * @since 3.0.0
  */
@@ -98,12 +92,12 @@ export const buildFilteredOutputArray = (evt, self) => {
 
 export const resetModuleStatus = () => {
 	return {
-		status: base.InstanceStatus.Connecting,
+		status: InstanceStatus.Connecting,
 		message: '',
 		logLevel: 'debug',
 		logMessage: '',
 		primary: {
-			status: base.InstanceStatus.Connecting,
+			status: InstanceStatus.Connecting,
 			message: '',
 			state: null,
 			design_name: '',
@@ -112,7 +106,7 @@ export const resetModuleStatus = () => {
 			design_code: '',
 		},
 		secondary: {
-			status: base.InstanceStatus.Connecting,
+			status: InstanceStatus.Connecting,
 			message: '',
 			state: null,
 			design_name: '',
@@ -156,7 +150,7 @@ export const isCoreActive = (engine) => {
 
 /**
  * Parse array of names from comma seperated list
- * @param {base.CompanionActionInfo} action
+ * @param {import('@companion-module/base').CompanionActionInfo} action
  * @returns {string[]}
  */
 
@@ -185,3 +179,23 @@ export const valueToPercent = (value, min = 0, max = 100, invert = false) => {
 	let result = Number.isNaN(percent) || percent < 0 ? 0 : Math.round(percent)
 	return invert ? 100 - result : result
 }
+
+/**
+ * Variable definitions keyed by variable id, as setVariableDefinitions takes them
+ * @param {{ variableId: string, name: string }[]} variables
+ * @returns {import('@companion-module/base').CompanionVariableDefinitions}
+ */
+
+export const variableDefinitions = (variables) =>
+	Object.fromEntries(variables.map(({ variableId, name }) => [variableId, { name }]))
+
+/**
+ * Advanced feedback result for an image drawn by companion-module-utils, which draws 32 bit ARGB
+ * @param {Uint8Array} buffer
+ * @returns {import('@companion-module/base').CompanionAdvancedFeedbackResult}
+ */
+
+export const imageResult = (buffer) => ({
+	imageBuffer: Buffer.from(buffer).toString('base64'),
+	imageBufferEncoding: { pixelFormat: 'ARGB' },
+})

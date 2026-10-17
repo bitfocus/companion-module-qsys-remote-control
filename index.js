@@ -1,10 +1,13 @@
 import UpgradeScripts from './upgrades.js'
 
-import base from '@companion-module/base'
+export { UpgradeScripts }
+
+import { InstanceBase, InstanceStatus, TCPHelper, combineRgb } from '@companion-module/base'
 import { configFields } from './config.js'
 import { options } from './options.js'
 import {
 	buildFilteredOutputArray,
+	imageResult,
 	calcRelativeValue,
 	convertValueType,
 	isCoreActive,
@@ -14,10 +17,12 @@ import {
 	sanitiseVariableId,
 	validMethodsToStandbyCore,
 	valueToPercent,
+	variableDefinitions,
 } from './utils.js'
 import { debounce, throttle } from 'es-toolkit'
 import PQueue from 'p-queue'
 import { graphics } from 'companion-module-utils'
+import { UpdateCompositeElements } from './composites.js'
 
 const QRC_GET = 1
 const QRC_SET = 2
@@ -26,15 +31,15 @@ const QRC_LOGIN = 3
 const KA_INTERVAL = 5000 //Interval on which to send NoOp keepalives
 
 const colours = {
-	black: base.combineRgb(0, 0, 0),
-	white: base.combineRgb(255, 255, 255),
-	red: base.combineRgb(255, 0, 0),
-	green: base.combineRgb(0, 204, 0),
-	greenBright: base.combineRgb(0, 255, 0),
-	yellow: base.combineRgb(255, 255, 0),
+	black: combineRgb(0, 0, 0),
+	white: combineRgb(255, 255, 255),
+	red: combineRgb(255, 0, 0),
+	green: combineRgb(0, 204, 0),
+	greenBright: combineRgb(0, 255, 0),
+	yellow: combineRgb(255, 255, 0),
 }
 
-export class QsysRemoteControl extends base.InstanceBase {
+export default class QsysRemoteControl extends InstanceBase {
 	// Declared before the debounces and throttles, which take its signal when they are created.
 	// Aborted only on destroy: an aborted signal disables them for good
 	#controller = new AbortController()
@@ -62,8 +67,8 @@ export class QsysRemoteControl extends base.InstanceBase {
 	changeGroupSet = false
 	isRecordingActions = false
 	socket = {
-		pri: new base.TCPHelper('localhost', 1710),
-		sec: new base.TCPHelper('localhost', 1710),
+		pri: new TCPHelper('localhost', 1710),
+		sec: new TCPHelper('localhost', 1710),
 		buffer: { pri: '', sec: '' },
 	}
 	constructor(internal) {
@@ -120,7 +125,8 @@ export class QsysRemoteControl extends base.InstanceBase {
 		await this.initVariables(config.redundant)
 		this.actions()
 		this.initFeedbacks()
-		this.subscribeFeedbacks() // ensures control hashmap is updated with all feedbacks when config is changed
+		UpdateCompositeElements(this)
+		this.checkAllFeedbacks() // Runs every feedback callback, which registers its control
 
 		this.init_tcp(config.host, config.port)
 		if (config.redundant) {
@@ -178,7 +184,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 		}
 
 		if (!('variables' in this.config) || this.config.variables === '') {
-			this.setVariableDefinitions(this.variables) // This gets called in addControls if there are vars
+			this.setVariableDefinitions(variableDefinitions(this.variables)) // This gets called in addControls if there are vars
 			return
 		}
 		for (const v of this.config.variables.split(',')) {
@@ -202,13 +208,13 @@ export class QsysRemoteControl extends base.InstanceBase {
 	init_tcp(host, port, secondary = false) {
 		this.debug(`init_tcp for ${!secondary ? 'Primary' : 'Secondary'} \nHost: ${host} Port: ${port}`)
 		const errorEvent = (err) => {
-			this.checkStatus(base.InstanceStatus.ConnectionFailure, '', secondary)
+			this.checkStatus(InstanceStatus.ConnectionFailure, '', secondary)
 			this.log('error', `Network error from ${host}: ${err.message}`)
 			if (!this.config.redundant) this.#queue.clear()
 			this.checkKeepAlive()
 		}
 		const endEvent = () => {
-			this.checkStatus(base.InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
+			this.checkStatus(InstanceStatus.Disconnected, `Connection to ${host} ended`, secondary)
 			this.log('warn', `Connection to ${host} ended`)
 			if (!this.config.redundant) this.#queue.clear()
 			this.checkKeepAlive()
@@ -229,9 +235,12 @@ export class QsysRemoteControl extends base.InstanceBase {
 
 			await this.sendCommand('StatusGet', 0)
 
-			this.checkStatus(base.InstanceStatus.Ok, '', secondary)
+			// The connection can end while these wait in the queue, which then drops them. Carrying on would mark it Ok
+			if (!isSocketOkToSend(socket)) return
 
-			this.checkFeedbacks()
+			this.checkStatus(InstanceStatus.Ok, '', secondary)
+
+			this.checkAllFeedbacks()
 			//await this.initVariables()
 			this.checkKeepAlive()
 
@@ -247,24 +256,24 @@ export class QsysRemoteControl extends base.InstanceBase {
 		}
 		if (!host) {
 			this.checkStatus(
-				base.InstanceStatus.BadConfig,
+				InstanceStatus.BadConfig,
 				`No host defined for ${secondary ? 'secondary' : 'primary'} core`,
 				secondary,
 			)
 			this.log('warn', `No host defined for ${secondary ? 'secondary' : 'primary'} core`)
 			return
 		}
-		this.checkStatus(base.InstanceStatus.Connecting, `Connecting to ${host}`, secondary)
+		this.checkStatus(InstanceStatus.Connecting, `Connecting to ${host}`, secondary)
 		let socket
 		if (secondary) {
 			if (!this.socket.sec.isDestroyed) this.socket.sec.destroy()
 			this.socket.sec.removeAllListeners()
-			this.socket.sec = new base.TCPHelper(host, port)
+			this.socket.sec = new TCPHelper(host, port)
 			socket = this.socket.sec
 		} else {
 			if (!this.socket.pri.isDestroyed) this.socket.pri.destroy()
 			this.socket.pri.removeAllListeners()
-			this.socket.pri = new base.TCPHelper(host, port)
+			this.socket.pri = new TCPHelper(host, port)
 			socket = this.socket.pri
 		}
 
@@ -308,10 +317,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			if (this.moduleStatus.logMessage !== '') this.log(this.moduleStatus.logLevel, this.moduleStatus.logMessage)
 			this.updateStatus(this.moduleStatus.status, this.moduleStatus.message)
 			// Change groups belong to a connection, so rebuild after every connect or failover
-			if (
-				this.moduleStatus.status == base.InstanceStatus.Ok ||
-				this.moduleStatus.status == base.InstanceStatus.UnknownWarning
-			)
+			if (this.moduleStatus.status == InstanceStatus.Ok || this.moduleStatus.status == InstanceStatus.UnknownWarning)
 				this.resetChangeGroup()
 		},
 		1000,
@@ -361,25 +367,25 @@ export class QsysRemoteControl extends base.InstanceBase {
 		const stateKey = `${primary.state}:${secondary.state}`
 		const stateResults = {
 			'Active:Standby': {
-				status: base.InstanceStatus.Ok,
+				status: InstanceStatus.Ok,
 				message: 'Primary core active',
 				logLevel: 'info',
 				logMessage: '',
 			},
 			'Standby:Active': {
-				status: base.InstanceStatus.Ok,
+				status: InstanceStatus.Ok,
 				message: 'Secondary core active',
 				logLevel: 'info',
 				logMessage: '',
 			},
 			'Active:Active': {
-				status: base.InstanceStatus.UnknownError,
+				status: InstanceStatus.UnknownError,
 				message: 'Both cores active',
 				logLevel: 'error',
 				logMessage: 'Both cores active',
 			},
 			'Standby:Standby': {
-				status: base.InstanceStatus.UnknownError,
+				status: InstanceStatus.UnknownError,
 				message: 'Both cores in standby',
 				logLevel: 'error',
 				logMessage: 'Both cores in standby',
@@ -387,7 +393,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 		}
 
 		const result = stateResults[stateKey] ?? {
-			status: base.InstanceStatus.UnknownWarning,
+			status: InstanceStatus.UnknownWarning,
 			message: `Unexpected state. Primary: ${primary.state}. Secondary: ${secondary.state}`,
 			logLevel: 'warn',
 			logMessage: `Unexpected state. Primary: ${primary.state}. Secondary: ${secondary.state}`,
@@ -396,28 +402,28 @@ export class QsysRemoteControl extends base.InstanceBase {
 		// Apply overrides in priority order
 		if (!primary.redundant || !secondary.redundant)
 			return {
-				status: base.InstanceStatus.UnknownWarning,
+				status: InstanceStatus.UnknownWarning,
 				message: 'Cores not configured for redundant mode',
 				logLevel: 'error',
 				logMessage: 'Cores not configured for redundant mode',
 			}
 		if (primary.design_code !== secondary.design_code)
 			return {
-				status: base.InstanceStatus.UnknownWarning,
+				status: InstanceStatus.UnknownWarning,
 				message: 'Cores reporting different designs',
 				logLevel: 'error',
 				logMessage: `Cores running different designs. Primary: ${primary.design_name}. Secondary: ${secondary.design_name}`,
 			}
 		if (primary.emulator)
 			return {
-				status: base.InstanceStatus.UnknownWarning,
+				status: InstanceStatus.UnknownWarning,
 				message: 'Primary core in Emulator mode',
 				logLevel: 'warn',
 				logMessage: 'Primary core in Emulator mode',
 			}
 		if (secondary.emulator)
 			return {
-				status: base.InstanceStatus.UnknownWarning,
+				status: InstanceStatus.UnknownWarning,
 				message: 'Secondary core in Emulator mode',
 				logLevel: 'warn',
 				logMessage: 'Secondary core in Emulator mode',
@@ -432,9 +438,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 	#getDegradedRedundantStatus() {
 		const { primary, secondary } = this.moduleStatus
 
-		if (primary.status === base.InstanceStatus.Ok || secondary.status === base.InstanceStatus.Ok)
+		if (primary.status === InstanceStatus.Ok || secondary.status === InstanceStatus.Ok)
 			return {
-				status: base.InstanceStatus.UnknownWarning,
+				status: InstanceStatus.UnknownWarning,
 				message: 'Redundancy compromised',
 				logLevel: 'warn',
 				logMessage: 'Redundancy compromised',
@@ -449,7 +455,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			}
 
 		return {
-			status: base.InstanceStatus.UnknownError,
+			status: InstanceStatus.UnknownError,
 			message: 'Core connections in unexpected & inconsistent states',
 			logLevel: 'warn',
 			logMessage: `Core states: ${primary.message} : ${secondary.message}`,
@@ -462,7 +468,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 	#getRedundantStatus() {
 		const { primary, secondary } = this.moduleStatus
 
-		if (primary.status !== base.InstanceStatus.Ok || secondary.status !== base.InstanceStatus.Ok) {
+		if (primary.status !== InstanceStatus.Ok || secondary.status !== InstanceStatus.Ok) {
 			return this.#getDegradedRedundantStatus()
 		}
 
@@ -482,18 +488,18 @@ export class QsysRemoteControl extends base.InstanceBase {
 			logMessage: primary.message,
 		}
 		// The core's last reported state only holds while connected to it
-		if (primary.status !== base.InstanceStatus.Ok) return connectionResult
+		if (primary.status !== InstanceStatus.Ok) return connectionResult
 
 		const stateResults = {
-			Active: { status: base.InstanceStatus.Ok, message: 'Core active', logLevel: 'info', logMessage: '' },
+			Active: { status: InstanceStatus.Ok, message: 'Core active', logLevel: 'info', logMessage: '' },
 			Standby: {
-				status: base.InstanceStatus.UnknownWarning,
+				status: InstanceStatus.UnknownWarning,
 				message: 'Core state standby',
 				logLevel: 'warn',
 				logMessage: 'Core state standby',
 			},
 			Idle: {
-				status: base.InstanceStatus.UnknownError,
+				status: InstanceStatus.UnknownError,
 				message: 'Core state idle',
 				logLevel: 'warn',
 				logMessage: 'Core state Idle',
@@ -577,7 +583,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 		}
 		this.checkFeedbacks('core-state')
 		this.setEngineVariableValues()
-		this.checkStatus(base.InstanceStatus.Ok, data.State.toString(), secondary)
+		this.checkStatus(InstanceStatus.Ok, data.State.toString(), secondary)
 	}
 
 	/** Check the size of the TCP Socket recieve buffers and flush if excessively large
@@ -605,7 +611,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 		this.debug(`processResponse from ${!secondary ? 'Primary' : 'Secondary'} \nResponse: ${response}`)
 		this.checkBufferSize(secondary)
 
-		let list = []
+		let list
 		if (secondary) {
 			list = (this.socket.buffer.sec + response).split('\x00')
 			this.socket.buffer.sec = list.pop()
@@ -733,7 +739,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 	 * @since 1.0.0
 	 */
 
-	destroy() {
+	async destroy() {
 		this.debug(`destroy ${this.id}: ${this.label}`)
 		this.killTimersDestroySockets()
 		this.#controller.abort()
@@ -744,21 +750,26 @@ export class QsysRemoteControl extends base.InstanceBase {
 	 * Build command message and send
 	 * @param {string} command
 	 * @param {*} params
+	 * @param {AbortSignal} [signal] Aborts the request if it is still waiting to be sent
 	 * @return {Promise<boolean>}
 	 * @access private
 	 */
 
-	async sendCommand(command, params) {
+	async sendCommand(command, params, signal) {
 		this.debug(
 			`sendCommand: ${JSON.stringify({
 				method: command,
 				params: params,
 			})}`,
 		)
-		return await this.callCommandObj({
-			method: command,
-			params: params,
-		})
+		return await this.callCommandObj(
+			{
+				method: command,
+				params: params,
+			},
+			QRC_SET,
+			signal,
+		)
 	}
 
 	/**
@@ -772,11 +783,12 @@ export class QsysRemoteControl extends base.InstanceBase {
 			control_set: {
 				name: 'Control.Set',
 				options: options.actions.controlSet(this.config),
+				optionsToMonitorForSubscribe: ['name', 'relative'],
 				subscribe: async (action, _context) => {
 					if (action.options.relative) this.addControl(action)
 				},
 				unsubscribe: async (action, _context) => await this.removeControl(action),
-				callback: async (evt, _context) => {
+				callback: async (evt, context) => {
 					const name = evt.options.name.trim()
 					if (name == '') throw new Error(`Invalid name supplied to: ${evt.id}`)
 					let value = evt.options.value
@@ -796,8 +808,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 							Value: value,
 						}
 						const ramp = Number.parseFloat(evt.options.ramp)
-						if (evt.options.type == 'number' && !Number.isNaN(ramp) && ramp >= 0) params.Ramp = ramp
-						const sent = await this.sendCommand('Control.Set', params)
+						// A ramp of 0 is no ramp, and is left out as an empty ramp was before it became a number
+						if (evt.options.type == 'number' && ramp > 0) params.Ramp = ramp
+						const sent = await this.sendCommand('Control.Set', params, context.signal)
 						if (sent && control !== undefined) {
 							control.value = value //If message sent immediately update control value to make subsequent relative actions more responsive
 							this.variablesToUpdate.set(`${name}_value`, control.value)
@@ -807,13 +820,13 @@ export class QsysRemoteControl extends base.InstanceBase {
 								this.throttledFeedbackIdCheck()
 							}
 							// Follow with Control.Get to stay in sync
-							await this.getControl(name)
+							await this.getControl(name, context.signal)
 						}
 					} else {
 						throw new Error(`Invalid value (NaN) could not complete ${evt.actionId}:${evt.id}`)
 					}
 				},
-				learn: async (evt, _context) => {
+				learn: async (evt, context) => {
 					const name = evt.options.name.trim()
 					if (name == '') throw new Error(`Invalid name supplied to: ${evt.id}`)
 					const control = this.controls.get(name)
@@ -822,13 +835,12 @@ export class QsysRemoteControl extends base.InstanceBase {
 						if (typeof control.value == 'boolean') type = 'boolean'
 						if (typeof control.value == 'number') type = 'number'
 						return {
-							...evt.options,
 							relative: false,
 							value: control.value.toString(),
 							type: type,
 						}
 					} else {
-						await this.getControl(name)
+						await this.getControl(name, context.signal)
 					}
 					return undefined
 				},
@@ -836,19 +848,24 @@ export class QsysRemoteControl extends base.InstanceBase {
 			control_toggle: {
 				name: 'Control.Toggle',
 				options: options.actions.controlToggle(),
+				optionsToMonitorForSubscribe: ['name'],
 				subscribe: async (action, _context) => this.addControl(action),
 				unsubscribe: async (action, _context) => await this.removeControl(action),
-				callback: async (evt, _context) => {
+				callback: async (evt, context) => {
 					const name = evt.options.name.trim()
 					if (name == '') throw new Error(`Invalid name supplied to: ${evt.id}`)
 					const control = this.controls.get(name)
 					if (control === undefined || control.value == null) {
 						throw new Error(`Control ${name} unavailable. Check named control name`)
 					}
-					const sent = await this.sendCommand('Control.Set', {
-						Name: name,
-						Value: !control.value,
-					})
+					const sent = await this.sendCommand(
+						'Control.Set',
+						{
+							Name: name,
+							Value: !control.value,
+						},
+						context.signal,
+					)
 					// set our internal state in anticipation of success, allowing two presses
 					// of the button faster than the polling interval to correctly toggle the state
 					if (sent) {
@@ -860,16 +877,17 @@ export class QsysRemoteControl extends base.InstanceBase {
 							this.throttledFeedbackIdCheck()
 						}
 						// Follow with Control.Get to stay in sync
-						await this.getControl(name)
+						await this.getControl(name, context.signal)
 					}
 				},
 			},
 			control_get: {
 				name: 'Control.Get',
 				options: options.actions.controlGet(),
+				optionsToMonitorForSubscribe: ['name'],
 				subscribe: async (action, _context) => this.addControls(action),
 				unsubscribe: async (action, _context) => await this.removeControls(action),
-				callback: async (evt, _context) => {
+				callback: async (evt, context) => {
 					const names = namesArray(evt)
 					if (names.length == 0) throw new Error('No names supplied')
 					names.forEach(async (name) => {
@@ -878,284 +896,364 @@ export class QsysRemoteControl extends base.InstanceBase {
 							this.addControl(evt)
 						}
 					})
-					await this.getControl(names)
+					await this.getControl(names, context.signal)
 				},
 			},
 			component_set: {
 				name: 'Component.Set',
 				options: options.actions.componentSet(),
-				callback: async (evt, _context) => {
+				callback: async (evt, context) => {
 					let ramp = Number.parseFloat(evt.options.ramp)
 					if (Number.isNaN(ramp) || ramp < 0) ramp = 0
-					await this.sendCommand('Component.Set', {
-						Name: evt.options.name,
-						Controls: [
-							{
-								Name: evt.options.control_name.trim(),
-								Value: evt.options.value,
-								Ramp: ramp,
-							},
-						],
-					})
+					await this.sendCommand(
+						'Component.Set',
+						{
+							Name: evt.options.name,
+							Controls: [
+								{
+									Name: evt.options.control_name.trim(),
+									Value: evt.options.value,
+									Ramp: ramp,
+								},
+							],
+						},
+						context.signal,
+					)
 				},
 			},
 			changeGroup_invalidate: {
 				name: 'ChangeGroup.Invalidate',
 				options: options.actions.changeGroup_invalidate(this.id),
-				callback: async (_evt, _context) => {
-					await this.changeGroup('Invalidate', this.id)
+				callback: async (_evt, context) => {
+					await this.changeGroup('Invalidate', this.id, null, undefined, context.signal)
 				},
 			},
 			mixer_setCrossPointGain: {
 				name: 'Mixer.SetCrossPointGain',
 				options: options.actions.mixer_setCrossPointGain(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetCrossPointGain', {
-						Name: evt.options.name.trim(),
-						Inputs: evt.options.inputs,
-						Outputs: evt.options.outputs,
-						Value: evt.options.value,
-						Ramp: evt.options.ramp,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetCrossPointGain',
+						{
+							Name: evt.options.name.trim(),
+							Inputs: evt.options.inputs,
+							Outputs: evt.options.outputs,
+							Value: evt.options.value,
+							Ramp: evt.options.ramp,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setCrossPointDelay: {
 				name: 'Mixer.SetCrossPointDelay',
 				options: options.actions.mixer_setCrossPointDelay(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetCrossPointDelay', {
-						Name: evt.options.name.trim(),
-						Inputs: evt.options.inputs,
-						Outputs: evt.options.outputs,
-						Value: evt.options.value,
-						Ramp: evt.options.ramp,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetCrossPointDelay',
+						{
+							Name: evt.options.name.trim(),
+							Inputs: evt.options.inputs,
+							Outputs: evt.options.outputs,
+							Value: evt.options.value,
+							Ramp: evt.options.ramp,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setCrossPointMute: {
 				name: 'Mixer.SetCrossPointMute',
 				options: options.actions.mixer_setCrossPointMute(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetCrossPointMute', {
-						Name: evt.options.name.trim(),
-						Inputs: evt.options.inputs,
-						Outputs: evt.options.outputs,
-						Value: evt.options.value,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetCrossPointMute',
+						{
+							Name: evt.options.name.trim(),
+							Inputs: evt.options.inputs,
+							Outputs: evt.options.outputs,
+							Value: evt.options.value,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setCrossPointSolo: {
 				name: 'Mixer.SetCrossPointSolo',
 				options: options.actions.mixer_setCrossPointSolo(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetCrossPointSolo', {
-						Name: evt.options.name.trim(),
-						Inputs: evt.options.inputs,
-						Outputs: evt.options.outputs,
-						Value: evt.options.value,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetCrossPointSolo',
+						{
+							Name: evt.options.name.trim(),
+							Inputs: evt.options.inputs,
+							Outputs: evt.options.outputs,
+							Value: evt.options.value,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setInputGain: {
 				name: 'Mixer.SetInputGain',
 				options: options.actions.mixer_setInputGain(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetInputGain', {
-						Name: evt.options.name.trim(),
-						Inputs: evt.options.inputs,
-						Value: evt.options.value,
-						Ramp: evt.options.ramp,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetInputGain',
+						{
+							Name: evt.options.name.trim(),
+							Inputs: evt.options.inputs,
+							Value: evt.options.value,
+							Ramp: evt.options.ramp,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setInputMute: {
 				name: 'Mixer.SetInputMute',
 				options: options.actions.mixer_setInputMute(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetInputMute', {
-						Name: evt.options.name.trim(),
-						Inputs: evt.options.inputs,
-						Value: evt.options.value,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetInputMute',
+						{
+							Name: evt.options.name.trim(),
+							Inputs: evt.options.inputs,
+							Value: evt.options.value,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setInputSolo: {
 				name: 'Mixer.SetInputSolo',
 				options: options.actions.mixer_setInputSolo(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetInputSolo', {
-						Name: evt.options.name.trim(),
-						Inputs: evt.options.inputs,
-						Value: evt.options.value,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetInputSolo',
+						{
+							Name: evt.options.name.trim(),
+							Inputs: evt.options.inputs,
+							Value: evt.options.value,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setOutputGain: {
 				name: 'Mixer.SetOutputGain',
 				options: options.actions.mixer_setOutputGain(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetOutputGain', {
-						Name: evt.options.name.trim(),
-						Outputs: evt.options.outputs,
-						Value: evt.options.value,
-						Ramp: evt.options.ramp,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetOutputGain',
+						{
+							Name: evt.options.name.trim(),
+							Outputs: evt.options.outputs,
+							Value: evt.options.value,
+							Ramp: evt.options.ramp,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setOutputMute: {
 				name: 'Mixer.SetOutputMute',
 				options: options.actions.mixer_setOutputMute(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetOutputMute', {
-						Name: evt.options.name.trim(),
-						Outputs: evt.options.outputs,
-						Value: evt.options.value,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetOutputMute',
+						{
+							Name: evt.options.name.trim(),
+							Outputs: evt.options.outputs,
+							Value: evt.options.value,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setCueMute: {
 				name: 'Mixer.SetCueMute',
 				options: options.actions.mixer_setCueMute(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetCueMute', {
-						Name: evt.options.name.trim(),
-						Cues: evt.options.cues,
-						Value: evt.options.value,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetCueMute',
+						{
+							Name: evt.options.name.trim(),
+							Cues: evt.options.cues,
+							Value: evt.options.value,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setCueGain: {
 				name: 'Mixer.SetCueGain',
 				options: options.actions.mixer_setCueGain(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetCueGain', {
-						Name: evt.options.name.trim(),
-						Cues: evt.options.cues,
-						Value: evt.options.value,
-						Ramp: evt.options.ramp,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetCueGain',
+						{
+							Name: evt.options.name.trim(),
+							Cues: evt.options.cues,
+							Value: evt.options.value,
+							Ramp: evt.options.ramp,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setInputCueEnable: {
 				name: 'Mixer.SetInputCueEnable',
 				options: options.actions.mixer_setInputCueEnable(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetInputCueEnable', {
-						Name: evt.options.name.trim(),
-						Cues: evt.options.cues,
-						Inputs: evt.options.inputs,
-						Value: evt.options.value,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetInputCueEnable',
+						{
+							Name: evt.options.name.trim(),
+							Cues: evt.options.cues,
+							Inputs: evt.options.inputs,
+							Value: evt.options.value,
+						},
+						context.signal,
+					)
 				},
 			},
 			mixer_setInputCueAfl: {
 				name: 'Mixer.SetInputCueAfl',
 				options: options.actions.mixer_setInputCueAfl(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Mixer.SetInputCueAfl', {
-						Name: evt.options.name.trim(),
-						Cues: evt.options.cues,
-						Inputs: evt.options.inputs,
-						Value: evt.options.value,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Mixer.SetInputCueAfl',
+						{
+							Name: evt.options.name.trim(),
+							Cues: evt.options.cues,
+							Inputs: evt.options.inputs,
+							Value: evt.options.value,
+						},
+						context.signal,
+					)
 				},
 			},
 			loopPlayer_start: {
 				name: 'LoopPlayer.Start',
 				options: options.actions.loopPlayer_start(),
-				callback: async (evt, _context) => {
+				callback: async (evt, context) => {
 					const output = Number.parseInt(evt.options.output)
 					let refID = evt.options.refID.trim()
 					refID = refID == '' ? `${this.label}:${evt.actionId}:${evt.id}` : refID
 					if (isNaN(output)) {
 						throw new Error(`Output is a NaN cannot complete ${evt.actionId}:${evt.id}`)
 					}
-					await this.sendCommand('LoopPlayer.Start', {
-						Files: [
-							{
-								Name: evt.options.file_name.trim(),
-								Mode: evt.options.channel,
-								Output: output,
-							},
-						],
-						Name: evt.options.name, // Had to add name to the options array.
-						StartTime: Math.round(evt.options.startTime),
-						Seek: Math.round(evt.options.seek),
-						Loop: evt.options.loop,
-						Log: true,
-						RefID: refID,
-					})
+					await this.sendCommand(
+						'LoopPlayer.Start',
+						{
+							Files: [
+								{
+									Name: evt.options.file_name.trim(),
+									Mode: evt.options.channel,
+									Output: output,
+								},
+							],
+							Name: evt.options.name, // Had to add name to the options array.
+							StartTime: Math.round(evt.options.startTime),
+							Seek: Math.round(evt.options.seek),
+							Loop: evt.options.loop,
+							Log: true,
+							RefID: refID,
+						},
+						context.signal,
+					)
 				},
 			},
 			loopPlayer_stop: {
 				name: 'LoopPlayer.Stop',
 				options: options.actions.loopPlayer_stop(),
-				callback: async (evt, _context) => {
+				callback: async (evt, context) => {
 					const filteredOutputs = buildFilteredOutputArray(evt, this)
 					if (filteredOutputs.length == 0) throw new Error(`No valid outputs`)
-					await this.sendCommand('LoopPlayer.Stop', {
-						Name: evt.options.name.trim(),
-						Outputs: filteredOutputs,
-						Log: true,
-					})
+					await this.sendCommand(
+						'LoopPlayer.Stop',
+						{
+							Name: evt.options.name.trim(),
+							Outputs: filteredOutputs,
+							Log: true,
+						},
+						context.signal,
+					)
 				},
 			},
 			loopPlayer_cancel: {
 				name: 'LoopPlayer.Cancel',
 				options: options.actions.loopPlayer_cancel(),
-				callback: async (evt, _context) => {
+				callback: async (evt, context) => {
 					const filteredOutputs = buildFilteredOutputArray(evt, this)
 					if (filteredOutputs.length == 0) throw new Error(`No valid outputs`)
-					await this.sendCommand('LoopPlayer.Cancel', {
-						Name: evt.options.name.trim(),
-						Outputs: filteredOutputs,
-						Log: true,
-					})
+					await this.sendCommand(
+						'LoopPlayer.Cancel',
+						{
+							Name: evt.options.name.trim(),
+							Outputs: filteredOutputs,
+							Log: true,
+						},
+						context.signal,
+					)
 				},
 			},
 			snapshot_load: {
 				name: 'Snapshot.Load',
 				options: options.actions.snapshot_load(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Snapshot.Load', {
-						Name: evt.options.name.trim(),
-						Bank: Math.floor(evt.options.bank),
-						Ramp: evt.options.ramp,
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Snapshot.Load',
+						{
+							Name: evt.options.name.trim(),
+							Bank: Math.floor(evt.options.bank),
+							Ramp: evt.options.ramp,
+						},
+						context.signal,
+					)
 				},
 			},
 			snapshot_save: {
 				name: 'Snapshot.Save',
 				options: options.actions.snapshot_save(),
-				callback: async (evt, _context) => {
-					await this.sendCommand('Snapshot.Save', {
-						Name: evt.options.name.trim(),
-						Bank: Math.floor(evt.options.bank),
-					})
+				callback: async (evt, context) => {
+					await this.sendCommand(
+						'Snapshot.Save',
+						{
+							Name: evt.options.name.trim(),
+							Bank: Math.floor(evt.options.bank),
+						},
+						context.signal,
+					)
 				},
 			},
 			page_submit_message: {
 				name: 'PA.PageSubmit - Message',
 				options: options.actions.page_submit_message(),
-				callback: async (evt, _context) => {
+				callback: async (evt, context) => {
 					evt.options.output = evt.options.zones
 					const zones = buildFilteredOutputArray(evt, this)
 					if (zones.length == 0) throw new Error(`No valid zones`)
-					await this.sendCommand('PA.PageSubmit', {
-						Mode: 'message',
-						Zones: zones,
-						Priority: evt.options.priority,
-						Preamble: evt.options.preamble,
-						Message: evt.options.message,
-						Start: true,
-					})
+					await this.sendCommand(
+						'PA.PageSubmit',
+						{
+							Mode: 'message',
+							Zones: zones,
+							Priority: evt.options.priority,
+							Preamble: evt.options.preamble,
+							Message: evt.options.message,
+							Start: true,
+						},
+						context.signal,
+					)
 				},
 			},
 			statusGet: {
 				name: 'StatusGet',
 				options: options.actions.statusGet(),
-				callback: async (_evt, _context) => {
-					await this.sendCommand('StatusGet', 0)
+				callback: async (_evt, context) => {
+					await this.sendCommand('StatusGet', 0, context.signal)
 				},
 			},
 		})
@@ -1185,15 +1283,6 @@ export class QsysRemoteControl extends base.InstanceBase {
 				return core.state === feedback.options.state
 			},
 		}
-		feedbacks['control-string'] = {
-			name: 'Change text to reflect control value',
-			description: 'Deprecated',
-			type: 'boolean',
-			options: options.feedbacks.controlString(),
-			callback: async (feedback, _context) => {
-				this.log('warn', `Feedback ${feedback.feedbackId}:${feedback.id} has been deprecated, use variables instead.`)
-			},
-		}
 		feedbacks['control-boolean'] = {
 			name: 'Feedback on boolean control value',
 			type: 'boolean',
@@ -1202,12 +1291,10 @@ export class QsysRemoteControl extends base.InstanceBase {
 				bgcolor: colours.red,
 			},
 			options: options.feedbacks.controlBoolean(),
-			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, _context) => {
 				const opt = feedback.options
-				const name = opt.name
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, opt.name)
 				const control = this.controls.get(name)
 				if (control === undefined) return false
 				return (opt.value === 'true' && !!control.value) || (opt.value === 'false' && !control.value)
@@ -1221,12 +1308,10 @@ export class QsysRemoteControl extends base.InstanceBase {
 				bgcolor: colours.red,
 			},
 			options: options.feedbacks.controlThreshold(),
-			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, _context) => {
 				const opt = feedback.options
-				const name = opt.name
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, opt.name)
 				const control = this.controls.get(name)
 				if (control === undefined) return false
 				return control.value >= opt.threshold
@@ -1236,13 +1321,23 @@ export class QsysRemoteControl extends base.InstanceBase {
 			name: 'Fade color over control value range',
 			description: 'Fade color over control value range',
 			type: 'advanced',
+			affectedProperties: ['bgcolor'],
 			options: options.feedbacks.controlFade(colours),
-			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, _context) => {
 				const opt = feedback.options
-				const name = opt.name
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, opt.name)
+				if (opt.low_threshold >= opt.high_threshold) {
+					// The callback reruns on every change of the control's value, so warn when the thresholds are set
+					const previous = feedback.previousOptions
+					if (previous?.low_threshold !== opt.low_threshold || previous?.high_threshold !== opt.high_threshold) {
+						this.log(
+							'warn',
+							`Fade color over control value range: the low threshold (${opt.low_threshold}) must be below the high threshold (${opt.high_threshold})`,
+						)
+					}
+					return {}
+				}
 				const control = this.controls.get(name)
 				if (control === undefined) return {}
 				const numToRGB = (num) => {
@@ -1268,23 +1363,22 @@ export class QsysRemoteControl extends base.InstanceBase {
 				const b = Math.round((hi_rgb.b - lo_rgb.b) * ratio) + lo_rgb.b
 
 				return {
-					bgcolor: base.combineRgb(r, g, b),
+					bgcolor: combineRgb(r, g, b),
 				}
 			},
 		}
 		feedbacks['level-meter'] = {
 			name: 'Level Meter',
-			description: 'Level Meter',
+			description: 'Level Meter (Deprecated)',
 			type: 'advanced',
+			affectedProperties: ['imageBuffer'],
 			options: options.feedbacks.levelMeter(),
-			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, _context) => {
 				const opt = feedback.options
-				const name = opt.name
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, opt.name)
 				const control = this.controls.get(name)
-				if (control === undefined) return {}
+				if (control === undefined || feedback.image === undefined) return {}
 				if (opt.min >= opt.max) {
 					this.log('warn', `Invalid min/max choices for level-meter.\n${JSON.stringify(opt)}`)
 					return {}
@@ -1292,9 +1386,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 				const position = opt.position
 				const padding = opt.padding
 				let ofsX1 = 0,
-					ofsX2 = 0,
 					ofsY1 = 0,
-					ofsY2 = 0,
 					bWidth = 0,
 					bLength = 0
 				switch (position) {
@@ -1303,32 +1395,24 @@ export class QsysRemoteControl extends base.InstanceBase {
 						ofsY1 = opt.offset
 						bWidth = opt.width ?? 6
 						bLength = feedback.image.height - ofsY1 * 2
-						ofsX2 = ofsX1 + bWidth + 1
-						ofsY2 = ofsY1
 						break
 					case 'right':
 						ofsY1 = opt.offset
 						bWidth = opt.width ?? 6
 						bLength = feedback.image.height - ofsY1 * 2
-						ofsX2 = feedback.image.width - bWidth - padding
-						ofsX1 = ofsX2
-						ofsY2 = ofsY1
+						ofsX1 = feedback.image.width - bWidth - padding
 						break
 					case 'top':
 						ofsX1 = opt.offset
 						ofsY1 = padding
 						bWidth = opt.width ?? 7
 						bLength = feedback.image.width - ofsX1 * 2
-						ofsX2 = ofsX1
-						ofsY2 = ofsY1 + bWidth + 1
 						break
 					case 'bottom':
 						ofsX1 = opt.offset
 						bWidth = opt.width ?? 7
-						ofsY2 = feedback.image.height - bWidth - padding
+						ofsY1 = feedback.image.height - bWidth - padding
 						bLength = feedback.image.width - ofsX1 * 2
-						ofsX2 = ofsX1
-						ofsY1 = ofsY2
 				}
 
 				const colors = opt.customColor
@@ -1359,34 +1443,29 @@ export class QsysRemoteControl extends base.InstanceBase {
 					opacity: 255,
 				}
 				this.debug(`Feedback: ${JSON.stringify(feedback)}\n Bar Options: ${JSON.stringify(options)}`)
-				return {
-					imageBuffer: graphics.bar(options),
-				}
+				return imageResult(graphics.bar(options))
 			},
 		}
 		feedbacks['Indicator'] = {
 			type: 'advanced',
+			affectedProperties: ['imageBuffer'],
 			name: 'Indicator',
-			description: 'Show a position indicator on the button',
+			description: 'Show a position indicator on the button (Deprecated)',
 			options: options.feedbacks.indicator(),
-			subscribe: async (feedback, context) => this.addControl(feedback, context),
 			unsubscribe: async (feedback, context) => await this.removeControl(feedback, context),
 			callback: async (feedback, _context) => {
 				const opt = feedback.options
-				const name = opt.name
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, opt.name)
 				const control = this.controls.get(name)
-				if (control === undefined) return {}
+				if (control === undefined || feedback.image === undefined) return {}
 				if (opt.min >= opt.max) {
 					throw new Error(`Invalid min/max choices for indicator.\n${JSON.stringify(opt)}`)
 				}
 				const position = opt.position
 				const padding = opt.padding
 				let ofsX1 = 0,
-					ofsX2 = 0,
 					ofsY1 = 0,
-					ofsY2 = 0,
-					bWidth = 0,
+					bWidth,
 					bLength = 0
 				const markerOffset = (bLength, value, offset) => {
 					return bLength * (value / 100) + offset
@@ -1395,34 +1474,24 @@ export class QsysRemoteControl extends base.InstanceBase {
 					case 'left':
 						ofsX1 = padding
 						ofsY1 = opt.offset
-						bWidth = opt.width ?? 6
 						bLength = feedback.image.height - ofsY1 * 2 - 2
-						ofsX2 = ofsX1 + bWidth + 1
-						ofsY2 = ofsY1
 						break
 					case 'right':
 						ofsY1 = opt.offset
 						bWidth = opt.width ?? 6
 						bLength = feedback.image.height - ofsY1 * 2 - 2
-						ofsX2 = feedback.image.width - bWidth - padding
-						ofsX1 = ofsX2
-						ofsY2 = ofsY1
+						ofsX1 = feedback.image.width - bWidth - padding
 						break
 					case 'top':
 						ofsX1 = opt.offset
 						ofsY1 = padding
-						bWidth = opt.width ?? 7
 						bLength = feedback.image.width - ofsX1 * 2 - 2
-						ofsX2 = ofsX1
-						ofsY2 = ofsY1 + bWidth + 1
 						break
 					case 'bottom':
 						ofsX1 = opt.offset
 						bWidth = opt.width ?? 7
-						ofsY2 = feedback.image.height - bWidth - padding
+						ofsY1 = feedback.image.height - bWidth - padding
 						bLength = feedback.image.width - ofsX1 * 2 - 2
-						ofsX2 = ofsX1
-						ofsY1 = ofsY2
 				}
 				const val = valueToPercent(opt.valPos ? control.position : control.value, opt.min, opt.max)
 				const options = {
@@ -1432,7 +1501,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 					rectHeight: position == 'left' || position == 'right' ? 3 : opt.width,
 					strokeWidth: 1,
 					color: feedback.options.indicatorColor,
-					fillColor: base.combineRgb(128, 128, 128),
+					fillColor: combineRgb(128, 128, 128),
 					fillOpacity: 255,
 					offsetX: position == 'left' || position == 'right' ? ofsX1 : markerOffset(bLength, val, ofsX1),
 					offsetY:
@@ -1442,23 +1511,22 @@ export class QsysRemoteControl extends base.InstanceBase {
 				}
 				this.debug(`Feedback: ${JSON.stringify(feedback)}\n Rectangle Options: ${JSON.stringify(options)}`)
 
-				return { imageBuffer: graphics.rect(options) }
+				return imageResult(graphics.rect(options))
 			},
 		}
 		feedbacks['led'] = {
 			type: 'advanced',
+			affectedProperties: ['imageBuffer'],
 			name: 'LED',
-			description: 'Show a boolean LED on the button',
+			description: 'Show a boolean LED on the button (Deprecated)',
 			options: options.feedbacks.led(),
-			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, _context) => {
 				const opt = feedback.options
-				const name = opt.name
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, opt.name)
 				const control = this.controls.get(name)
-				if (control === undefined) return {}
-				let options = {}
+				if (control === undefined || feedback.image === undefined) return {}
+				let options
 				let imageBuf
 				if (opt.shape == 'circle') {
 					const cirlceOptions = {
@@ -1499,18 +1567,16 @@ export class QsysRemoteControl extends base.InstanceBase {
 					imageBuf = graphics.rect(options)
 				}
 
-				return { imageBuffer: imageBuf }
+				return imageBuf === undefined ? {} : imageResult(imageBuf)
 			},
 		}
 		feedbacks['control-value'] = {
 			name: 'Named Control Value Feedback',
 			type: 'value',
 			options: options.feedbacks.controlValue(),
-			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, _context) => {
-				const { name } = feedback.options
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, feedback.options.name)
 				return this.controls.get(name)?.value ?? null
 			},
 		}
@@ -1518,11 +1584,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			name: 'Named Control String Value Feedback',
 			type: 'value',
 			options: options.feedbacks.controlStringValue(),
-			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, _context) => {
-				const { name } = feedback.options
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, feedback.options.name)
 				return this.controls.get(name)?.strval ?? null
 			},
 		}
@@ -1530,11 +1594,9 @@ export class QsysRemoteControl extends base.InstanceBase {
 			name: 'Named Control Position Feedback',
 			type: 'value',
 			options: options.feedbacks.controlPosition(),
-			subscribe: async (feedback, _context) => this.addControl(feedback),
 			unsubscribe: async (feedback, _context) => await this.removeControl(feedback),
 			callback: async (feedback, _context) => {
-				const { name } = feedback.options
-				this.ensureFeedbackControl(feedback.id, name)
+				const name = this.ensureFeedbackControl(feedback.id, feedback.options.name)
 				return this.controls.get(name)?.position ?? null
 			},
 		}
@@ -1559,14 +1621,27 @@ export class QsysRemoteControl extends base.InstanceBase {
 	}
 
 	/**
+	 * The instance's signal, combined with a caller's so a request dies whichever aborts first. p-queue listens on
+	 * the result as soon as the task is queued, which keeps it propagating on Node 26
+	 * @param {AbortSignal} [signal]
+	 * @returns {AbortSignal}
+	 * @access private
+	 */
+
+	#combineSignal(signal) {
+		return signal ? AbortSignal.any([this.#controller.signal, signal]) : this.#controller.signal
+	}
+
+	/**
 	 * Add message to outbound queue and send
 	 * @param {object} cmd Command object to send
 	 * @param {QRC_GET | QRC_SET | QRC_LOGIN} get_set Get or Set method, defaults to Set (2)
+	 * @param {AbortSignal} [signal] Aborts the request if it is still waiting to be sent, as does destroying the instance
 	 * @return {Promise<boolean>}
 	 * @access private
 	 */
 
-	async callCommandObj(cmd, get_set = QRC_SET) {
+	async callCommandObj(cmd, get_set = QRC_SET, signal) {
 		const payload = { ...cmd, jsonrpc: '2.0', id: get_set }
 		this.debug(`callCommandObj: ${JSON.stringify(payload)}`)
 		return await this.#queue
@@ -1603,7 +1678,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 					}
 					return sentPri || sentSec
 				},
-				{ signal: this.#controller.signal, priority: get_set },
+				{ signal: this.#combineSignal(signal), priority: get_set },
 			)
 			.catch(() => {
 				return false
@@ -1616,11 +1691,12 @@ export class QsysRemoteControl extends base.InstanceBase {
 	 * @param {string} id Change Group ID
 	 * @param {string | string[] | MapIterator<string> | SetIterator<string> | null} controls Control names to add or remove
 	 * @param {number} rate Autopoll interval (mS)
+	 * @param {AbortSignal} [signal] Aborts the request if it is still waiting to be sent
 	 * @returns {Promise<boolean>} True if message send was successful
 	 * @access private
 	 */
 
-	async changeGroup(type, id, controls = null, rate = 1000) {
+	async changeGroup(type, id, controls = null, rate = 1000, signal) {
 		const obj = {
 			method: 'ChangeGroup.' + type,
 			params: {
@@ -1635,23 +1711,24 @@ export class QsysRemoteControl extends base.InstanceBase {
 		}
 		this.debug(`changeGroup: ${JSON.stringify(obj)}`)
 		const getSet = type == 'Poll' || type == 'AutoPoll' ? QRC_GET : QRC_SET
-		return await this.callCommandObj(obj, getSet)
+		return await this.callCommandObj(obj, getSet, signal)
 	}
 
 	/**
 	 * Get named control value
 	 * @param {string | MapIterator<string> | SetIterator<string> | string[]} name
+	 * @param {AbortSignal} [signal] Aborts the request if it is still waiting to be sent
 	 * @returns {Promise<boolean>} True if message send was successful
 	 * @access private
 	 */
 
-	async getControl(name) {
+	async getControl(name, signal) {
 		const cmd = {
 			method: 'Control.Get',
 			params: typeof name == 'object' ? [...name] : [name],
 		}
 		this.debug(`getControl: ${JSON.stringify(cmd)}`)
-		return await this.callCommandObj(cmd, QRC_GET)
+		return await this.callCommandObj(cmd, QRC_GET, signal)
 	}
 
 	/**
@@ -1661,12 +1738,26 @@ export class QsysRemoteControl extends base.InstanceBase {
 
 	async getControlStatuses() {
 		this.debug(`getControlStatuses Queue Size ${this.#queue.size}`)
+		// With no connected active core there is nothing to poll, and every attempt would log a failed send
+		if (!this.#canReachActiveCore()) return
 		if (this.changeGroupSet) {
 			await this.changeGroup('Poll', this.id)
 		} else {
 			//Directly get controls if we havent setup the changeGroup yet
-			await this.getControl(this.controls.keys())
+			await this.getControl(this.#usedControlNames())
 		}
+	}
+
+	/**
+	 * Whether a core that takes control requests is connected, as callCommandObj sends them only to an active core
+	 * @returns {boolean}
+	 * @access private
+	 */
+
+	#canReachActiveCore() {
+		const { primary, secondary } = this.moduleStatus
+		if (isCoreActive(primary) && isSocketOkToSend(this.socket.pri)) return true
+		return !!this.config.redundant && isCoreActive(secondary) && isSocketOkToSend(this.socket.sec)
 	}
 
 	/**
@@ -1696,9 +1787,10 @@ export class QsysRemoteControl extends base.InstanceBase {
 			// Poll with Control.Get until the group is rebuilt, rather than against the destroyed one
 			this.changeGroupSet = false
 			await this.changeGroup('Destroy', this.id)
-			if (this.controls.size === 0) return
-			await this.getControl(this.controls.keys())
-			this.changeGroupSet = await this.changeGroup('AddControl', this.id, this.controls.keys())
+			const names = this.#usedControlNames()
+			if (names.length === 0) return
+			await this.getControl(names)
+			this.changeGroupSet = await this.changeGroup('AddControl', this.id, names)
 		},
 		1000,
 		{ edges: ['trailing'], signal: this.#controller.signal },
@@ -1712,7 +1804,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 	debouncedVariableDefUpdate = debounce(
 		async () => {
 			this.debug(`debouncedVariableDefUpdate: ${JSON.stringify(this.variables)}`)
-			this.setVariableDefinitions(this.variables)
+			this.setVariableDefinitions(variableDefinitions(this.variables))
 			this.setEngineVariableValues()
 			if (this.namesToGet.size > 0) {
 				await this.getControl(this.namesToGet.keys())
@@ -1755,45 +1847,64 @@ export class QsysRemoteControl extends base.InstanceBase {
 		this.debug(`addControl: ${JSON.stringify(feedback)}\n Current size of this.controls: ${this.controls.size}`)
 		const name = feedback['options']['name'].trim()
 		if (name == '') throw new Error(`Invalid name supplied to: ${feedback.id}`)
-		if (this.controls.has(name)) {
-			const control = this.controls.get(name)
-			if (control.actionIds === undefined) {
-				control.actionIds = new Set()
-			}
-			if (control.feedbackIds === undefined) {
-				control.feedbackIds = new Set()
-			}
-			if (feedback.feedbackId !== undefined) {
-				control.feedbackIds.add(feedback.id)
-			} else {
-				control.actionIds.add(feedback.id)
-			}
+		const control = this.#useControl(name)
+		if (feedback.feedbackId !== undefined) {
+			control.feedbackIds.add(feedback.id)
 		} else {
-			this.controls.set(name, {
-				actionIds: new Set(feedback.feedbackId !== undefined ? [] : [feedback.id]),
-				feedbackIds: new Set(feedback.feedbackId !== undefined ? [feedback.id] : []),
-				value: null,
-				position: null,
-				strval: '',
-			})
+			control.actionIds.add(feedback.id)
+		}
+	}
 
-			this.variables.push(
-				{
-					name: `${name} Value`,
-					variableId: `${sanitiseVariableId(name)}_value`,
-				},
-				{
-					name: `${name} Position`,
-					variableId: `${sanitiseVariableId(name)}_position`,
-				},
-				{
-					name: `${name} String`,
-					variableId: `${sanitiseVariableId(name)}_string`,
-				},
-			)
+	/**
+	 * Whether an action, feedback or the variables config uses a control. Only those are polled: the map also holds
+	 * controls heard of only in a reply, such as one still on its way when its control was removed, or to a learn
+	 * @param {object} control
+	 * @returns {boolean}
+	 * @access private
+	 */
+
+	#isUsed(control) {
+		return control.actionIds.size > 0 || control.feedbackIds.size > 0
+	}
+
+	/**
+	 * Names of the controls to poll, and to put in the change group
+	 * @returns {string[]}
+	 * @access private
+	 */
+
+	#usedControlNames() {
+		return [...this.controls].filter(([, control]) => this.#isUsed(control)).map(([name]) => name)
+	}
+
+	/**
+	 * The entry for a control something is starting to use, created if the module has not heard of it. A control
+	 * nothing used until now has its variables defined, and is fetched and added to the change group
+	 * @param {string} name
+	 * @returns {object}
+	 * @access private
+	 */
+
+	#useControl(name) {
+		let control = this.controls.get(name)
+		if (control === undefined) {
+			control = { actionIds: new Set(), feedbackIds: new Set(), value: null, position: null, strval: '' }
+			this.controls.set(name, control)
+		}
+		if (!this.#isUsed(control)) {
+			const variableId = sanitiseVariableId(name)
+			// Variables are never removed, so a control used before still has its definitions
+			if (!this.variables.some((variable) => variable.variableId === `${variableId}_value`)) {
+				this.variables.push(
+					{ name: `${name} Value`, variableId: `${variableId}_value` },
+					{ name: `${name} Position`, variableId: `${variableId}_position` },
+					{ name: `${name} String`, variableId: `${variableId}_string` },
+				)
+			}
 			this.namesToGet.add(name)
 			this.debouncedVariableDefUpdate()
 		}
+		return control
 	}
 
 	/**
@@ -1839,31 +1950,22 @@ export class QsysRemoteControl extends base.InstanceBase {
 	}
 
 	/**
-	 * Called at the top of every feedback callback that uses a named control.
-	 * Detects when the `name` option has changed since the last invocation and
-	 * moves the feedback's registration from the old control to the new one,
-	 * mirroring what subscribe/unsubscribe previously had to handle.
+	 * Called at the top of every feedback callback that uses a named control. Feedbacks have no
+	 * subscribe hook, so this registers the feedback against its control on the first call, and
+	 * moves the registration when the `name` option changes.
 	 * @param {string} feedbackId
-	 * @param {string} name  The current value of feedback.options.name (already trimmed)
+	 * @param {string} name The current value of feedback.options.name
+	 * @returns {string} The trimmed control name
 	 * @access private
 	 */
 	ensureFeedbackControl(feedbackId, name) {
+		name = String(name ?? '').trim()
 		const previousName = this.feedbackControlMap.get(feedbackId)
 
-		if (previousName === name) return // Nothing changed
-
-		if (previousName === undefined) {
-			// First callback invocation after subscribe – subscribe already
-			// called addControl, so just record the mapping and return.
-			this.feedbackControlMap.set(feedbackId, name)
-			return
-		}
-
-		// ── Name has changed ──────────────────────────────────────────────────
-		this.feedbackControlMap.set(feedbackId, name)
+		if (previousName === name) return name // Nothing changed
 
 		// Remove feedbackId from the old control
-		const oldControl = this.controls.get(previousName)
+		const oldControl = previousName === undefined ? undefined : this.controls.get(previousName)
 		if (oldControl) {
 			oldControl.feedbackIds.delete(feedbackId)
 			if (oldControl.actionIds.size === 0 && oldControl.feedbackIds.size === 0) {
@@ -1873,25 +1975,16 @@ export class QsysRemoteControl extends base.InstanceBase {
 			}
 		}
 
-		// Add feedbackId to the new control, creating it if necessary
-		if (this.controls.has(name)) {
-			this.controls.get(name).feedbackIds.add(feedbackId)
-		} else {
-			this.controls.set(name, {
-				actionIds: new Set(),
-				feedbackIds: new Set([feedbackId]),
-				value: null,
-				position: null,
-				strval: '',
-			})
-			this.variables.push(
-				{ name: `${name} Value`, variableId: `${sanitiseVariableId(name)}_value` },
-				{ name: `${name} Position`, variableId: `${sanitiseVariableId(name)}_position` },
-				{ name: `${name} String`, variableId: `${sanitiseVariableId(name)}_string` },
-			)
-			this.namesToGet.add(name)
-			this.debouncedVariableDefUpdate()
+		// A feedback with no name yet has no control to register against
+		if (name === '') {
+			this.feedbackControlMap.delete(feedbackId)
+			return name
 		}
+		this.feedbackControlMap.set(feedbackId, name)
+
+		// Add feedbackId to the new control, creating it if necessary
+		this.#useControl(name).feedbackIds.add(feedbackId)
+		return name
 	}
 
 	/**
@@ -1906,7 +1999,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.checkFeedbacksById(...this.feedbackIdsToCheck)
 			this.feedbackIdsToCheck.clear()
 		},
-		40,
+		30,
 		{ edges: ['trailing'], signal: this.#controller.signal },
 	)
 
@@ -1922,7 +2015,7 @@ export class QsysRemoteControl extends base.InstanceBase {
 			this.setVariableValues(Object.fromEntries(this.variablesToUpdate))
 			this.variablesToUpdate.clear()
 		},
-		40,
+		30,
 		{ edges: ['trailing'], signal: this.#controller.signal },
 	)
 
@@ -1978,5 +2071,3 @@ export class QsysRemoteControl extends base.InstanceBase {
 		}
 	}
 }
-
-base.runEntrypoint(QsysRemoteControl, UpgradeScripts)

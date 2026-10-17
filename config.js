@@ -7,6 +7,7 @@ export const configFields = [
 		label: 'Redundant Cores?',
 		width: 6,
 		default: false,
+		disableAutoExpression: true,
 	},
 	{
 		type: 'static-text',
@@ -20,7 +21,7 @@ export const configFields = [
 		id: 'host',
 		label: 'Primary Target IP',
 		width: 6,
-		regex: Regex.IP | Regex.HOSTNAME,
+		regex: Regex.HOSTNAME,
 	},
 	{
 		type: 'textinput',
@@ -36,7 +37,7 @@ export const configFields = [
 		id: 'hostSecondary',
 		label: 'Secondary Target IP',
 		width: 6,
-		regex: Regex.IP | Regex.HOSTNAME,
+		regex: Regex.HOSTNAME,
 		isVisibleExpression: `$(options:redundant)`,
 	},
 	{

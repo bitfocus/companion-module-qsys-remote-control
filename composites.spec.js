@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import {
 	CompositeElementId,
 	INDICATOR_MARKER_WIDTH,
-	LED_THRESHOLD,
 	METER_DEFAULT_MAX,
 	METER_DEFAULT_MIN,
 	METER_STOPS,
@@ -287,16 +286,26 @@ describe('LED', () => {
 		})
 	})
 
-	it(`lights at a position of ${LED_THRESHOLD} and above, as the feedback does`, () => {
+	it('is lit while On is set, off by default', () => {
 		const options = { ...defaultsOf(CompositeElementId.Led), colorOn: 0x00ff00, colorOff: 0x330000, opacityOff: 40 }
 
+		expect(options.on).toBe(false)
 		for (const type of ['circle', 'box']) {
 			const element = shape(type)
-			expect(evaluate(element.color, { ...options, position: 0.5 }), type).toBe(0x00ff00)
-			expect(evaluate(element.opacity, { ...options, position: 1 }), type).toBe(100)
-			expect(evaluate(element.color, { ...options, position: 0.49 }), type).toBe(0x330000)
-			expect(evaluate(element.opacity, { ...options, position: 0 }), type).toBe(40)
+			expect(evaluate(element.color, { ...options, on: true }), type).toBe(0x00ff00)
+			expect(evaluate(element.opacity, { ...options, on: true }), type).toBe(100)
+			expect(evaluate(element.color, options), type).toBe(0x330000)
+			expect(evaluate(element.opacity, options), type).toBe(40)
 		}
+	})
+
+	// The feedback lit from a position of 0.5; the composite leaves that to an expression on On
+	it('takes On as a checkbox, pointing at expression mode for a variable', () => {
+		const on = definitionOf(CompositeElementId.Led).options.find((option) => option.id === 'on')
+
+		expect(on).toMatchObject({ type: 'checkbox', label: 'On', default: false })
+		expect(on.description).toMatch(/expression mode/)
+		expect(on.expressionDescription).toMatch(/_position\) >= 0\.5/)
 	})
 
 	it('draws the chosen shape only, at the chosen place and size', () => {

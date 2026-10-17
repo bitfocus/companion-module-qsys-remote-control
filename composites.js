@@ -134,9 +134,6 @@ export const INDICATOR_THICKNESS = 8
  */
 export const INDICATOR_MARKER_WIDTH = 50
 
-/** The LED is lit from this position up, as the LED feedback is: it lights when the position rounds to 1. */
-export const LED_THRESHOLD = 0.5
-
 /** `hour` on a clock face as a gauge angle. */
 function clockAngle(hour) {
 	return (hour % 12) * CLOCK_HOUR_DEGREES
@@ -154,7 +151,7 @@ const COLOR_ZERO = `$(options:colorZero)`
 const IS_VERTICAL = `(${POSITION} == 'left' || ${POSITION} == 'right')`
 const IS_METERING = `$(options:scheme) == '${SCHEME_CHOICES[0].id}'`
 const IS_SPECTRUM = `$(options:scheme) == '${DIAL_SCHEME_CHOICES[1].id}'`
-const IS_LIT = `$(options:position) >= ${LED_THRESHOLD}`
+const IS_LIT = `$(options:on)`
 
 /** Where `stop` sits on a bar running from the meter's min to its max. */
 function stopValue(at) {
@@ -487,9 +484,19 @@ export function UpdateCompositeElements(self) {
 		[CompositeElementId.Led]: {
 			type: 'composite',
 			name: 'LED',
-			description: `A round or square LED, lit when the position is ${LED_THRESHOLD} or more, as the LED feedback draws. Feed it a control's position, e.g. one of its position variables`,
+			description:
+				"A round or square LED, as the LED feedback draws, lit while On is set. Drive On from a control's variables in expression mode",
 			options: [
-				anyNumber('position', 'Position', "Set this to the control's position, e.g. one of its position variables", 0),
+				{
+					type: 'checkbox',
+					label: 'On',
+					id: 'on',
+					default: false,
+					description:
+						"Switch to expression mode to drive this from a control's variables, e.g. $(label:Gain_position) >= 0.5",
+					expressionDescription:
+						"True lights the LED. $(label:Gain_position) >= 0.5 lights it as the LED feedback does, where label is the connection's label",
+				},
 				{
 					type: 'dropdown',
 					label: 'Shape',

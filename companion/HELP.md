@@ -67,7 +67,7 @@ Graphics elements for layered buttons. Feed each one from a named control's vari
 - Centred Dial: an arc growing out from zero, clockwise above it and anticlockwise below, for pan or cut and boost
 - Width Dial: an arc growing both ways from 12 o'clock, a dot at the minimum and the whole arc at the maximum
 - Indicator: a marker along one edge of the button showing where a value sits in its range. Use in place of the Indicator feedback
-- LED: a round or square LED, lit when the position is 0.5 or more. Use in place of the LED feedback
+- LED: a round or square LED, lit while its On option is set. Use in place of the LED feedback
 
 The meter, dials and indicator take the ends of their range as options.
 
